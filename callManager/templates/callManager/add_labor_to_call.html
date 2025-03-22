@@ -1,0 +1,18 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Add Labor to {{ call_time.name }} - Callman{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6">Add Labor to {{ call_time.name }} at {{ call_time.time }}</h1>
+    
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                {{ form.as_p }}
+            </div>
+            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Labor</button>
+            <a href="{% url 'event_detail' call_time.event.id %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+        </form>
+    </div>
+{% endblock %}

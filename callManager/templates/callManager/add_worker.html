@@ -1,0 +1,29 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Add Worker - Callman{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6">Add a New Worker</h1>
+    
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-gray-700 font-semibold mb-1">Name</label>
+                    {{ form.name }}
+                </div>
+                <div>
+                    <label for="{{ form.phone_number.id_for_label }}" class="block text-gray-700 font-semibold mb-1">Phone Number</label>
+                    {{ form.phone_number }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Labor Types</label>
+                    {{ form.labor_types }}
+                </div>
+            </div>
+            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Worker</button>
+            <a href="{% url 'worker_list' %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+        </form>
+    </div>
+{% endblock %}

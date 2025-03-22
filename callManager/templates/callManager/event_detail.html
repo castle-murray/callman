@@ -1,0 +1,65 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}{{ event.event_name }} - Callman{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-bold mb-6">{{ event.event_name }}</h1>
+    
+    <!-- Event Details -->
+    <div class="bg-white p-6 rounded-lg shadow mb-6">
+        <p><strong>Date:</strong> {{ event.event_date }}</p>
+        <p><strong>Location:</strong> {{ event.event_location }}</p>
+        <p><strong>Description:</strong> {{ event.event_description|default:"No description provided" }}</p>
+        <p><strong>Created By:</strong> {{ event.created_by.user.get_full_name|default:"Unknown" }}</p>
+    </div>
+
+    <!-- Call Times and Labor Requirements -->
+    <div class="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 class="text-xl font-semibold mb-4">Call Times</h2>
+        {% if call_times %}
+            {% for call_time in call_times %}
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold">{{ call_time.name }} at {{ call_time.time }}</h3>
+                    <ul class="space-y-2">
+                        {% for labor in call_time.labor_requirements.all %}
+                            <li class="flex justify-between items-center">
+                                <span>{{ labor.labor_type.name }} - {{ labor.needed_labor }} needed</span>
+                                <a href="{% url 'fill_labor_call' labor.id %}" 
+                                   hx-get="{% url 'fill_labor_call' labor.id %}" 
+                                   hx-target="#worker-modal" 
+                                   hx-swap="innerHTML" 
+                                   class="text-blue-500 hover:underline">Fill Call</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{% url 'add_labor_to_call' call_time.id %}" class="mt-2 inline-block text-blue-500 hover:underline">Add Labor</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-gray-600">No call times defined yet.</p>
+        {% endif %}
+        <a href="{% url 'add_call_time' event.id %}" class="mt-4 inline-block bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Call Time</a>
+    </div>
+
+    <!-- Worker Modal Placeholder -->
+    <div id="worker-modal" class="mt-4"></div>
+
+    <!-- Labor Requests -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Labor Requests</h2>
+        {% if labor_requests %}
+            <ul class="space-y-2">
+                {% for request in labor_requests %}
+                    <li>
+                        {{ request.worker.name|default:"Unnamed Worker" }} - {{ request.labor_requirement.labor_type.name }} 
+                        ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }})
+                        - Load-In: {{ request.load_in_response|default:"Pending" }}, 
+                        Load-Out: {{ request.load_out_response|default:"Pending" }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-gray-600">No labor requests sent yet.</p>
+        {% endif %}
+    </div>
+{% endblock %}

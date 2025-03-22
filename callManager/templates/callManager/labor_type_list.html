@@ -1,0 +1,25 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Labor Types - {{ company.name }} - Callman{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-bold mb-6">Labor Types for {{ company.name }}</h1>
+
+    <div class="mb-6">
+        <a href="{% url 'create_labor_type' %}" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add New Labor Type</a>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow">
+        {% if labor_types %}
+            <ul class="space-y-4">
+                {% for labor_type in labor_types %}
+                    <li class="border-b pb-2">
+                        <h2 class="text-lg font-semibold">{{ labor_type.name }}</h2>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-gray-600">No labor types defined yet. Add one to get started!</p>
+        {% endif %}
+    </div>
+{% endblock %}

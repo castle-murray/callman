@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Confirm Assignment</title>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-4">Confirm Your Assignment</h1>
+        <p class="mb-4">Event: {{ assignment.labor.event.event_name }} - {{ assignment.labor.labor_type }}</p>
+        
+        <form hx-post="{% url 'confirm_assignment' assignment.token %}" hx-target="#response-message" hx-swap="innerHTML">
+            <div class="mb-4">
+                <label class="block text-gray-700">Load-In ({{ assignment.labor.event.load_in_time }}):</label>
+                <select name="load_in_response" class="w-full p-2 border rounded">
+                    <option value="">Select...</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700">Load-Out ({{ assignment.labor.event.load_out_time }}):</label>
+                <select name="load_out_response" class="w-full p-2 border rounded">
+                    <option value="">Select...</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="mb-4 hidden" id="message-field" hx-trigger="change from:select" hx-swap="none">
+                <label class="block text-gray-700">Message (if "Other"):</label>
+                <textarea name="response_message" class="w-full p-2 border rounded"></textarea>
+            </div>
+            <button type="submit" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit</button>
+        </form>
+        <div id="response-message"></div>
+    </div>
+
+    <script>
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                const messageField = document.getElementById('message-field');
+                if (document.querySelector('select[value="other"]:checked')) {
+                    messageField.classList.remove('hidden');
+                } else {
+                    messageField.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

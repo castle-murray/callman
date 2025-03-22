@@ -1,0 +1,45 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Callman{% endblock %}</title>
+        {% tailwind_css %}
+        <script src="https://unpkg.com/htmx.org@1.9.6" integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni" crossorigin="anonymous"></script>
+        {% block extra_head %}{% endblock %}
+    </head>
+    <body class="bg-gray-100 min-h-screen flex flex-col">
+        <header class="bg-white shadow">
+            <nav class="container mx-auto p-4">
+                <div class="flex justify-between items-center">
+                    <a href="{% url 'manager_dashboard' %}" class="text-xl font-bold text-gray-800">Callman</a>
+                    <div>
+                        {% if user.is_authenticated %}
+                        <span class="mr-4">Hello, {{ user.get_full_name|default:user.username }}</span>
+                        <a href="{% url 'manager_dashboard' %}" class="text-blue-500 hover:underline mr-4">Dashboard</a>
+                        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="text-blue-500 hover:underline">Logout</button>
+                        </form>
+                        {% else %}
+                        <a href="{% url 'login' %}" class="text-blue-500 hover:underline">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main class="container mx-auto p-6 flex-grow">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="bg-gray-800 text-white p-4">
+            <div class="container mx-auto text-center">
+                <p>© {% now "Y" %} Callman. All rights reserved.</p>
+            </div>
+        </footer>
+
+        {% block extra_scripts %}{% endblock %}
+    </body>
+</html>
