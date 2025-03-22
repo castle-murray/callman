@@ -4,14 +4,12 @@ from django.contrib.auth.decorators import login_required
 from .forms import CallTimeForm, LaborTypeForm, LaborRequirementForm, EventForm, WorkerForm
 from django.db.models import Sum, Q
 from datetime import datetime, timedelta
-import logging
 from twilio.rest import Client
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
 
 
 def confirm_assignment(request, token):
