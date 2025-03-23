@@ -265,9 +265,6 @@ def fill_labor_call(request, labor_requirement_id):
                     )
                     labor_request.sms_sent = True
                     labor_request.save()
-                    logger.info(f"SMS sent to {worker.name} at {worker.phone_number}: {message.sid}")
-                else:
-                    logger.warning(f"No phone number for {worker.name}, SMS not sent")
             if not created:
                 labor_request.requested = True
                 labor_request.save()
@@ -312,7 +309,6 @@ def sms_reply_webhook(request):
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().upper()
-        logger.info(f"Received SMS from {from_number}: {body}")
 
         # Find the LaborRequest by worker phone number and token
         labor_request = LaborRequest.objects.filter(
@@ -326,13 +322,10 @@ def sms_reply_webhook(request):
                 labor_request.response = body.lower()
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
-                logger.info(f"Updated LaborRequest {labor_request.id} with response: {body}")
                 return HttpResponse("Response recorded", content_type="text/plain")
             else:
-                logger.warning(f"Invalid response from {from_number}: {body}")
                 return HttpResponse("Invalid response. Reply YES, NO, or OTHER.", content_type="text/plain")
         else:
-            logger.warning(f"No matching LaborRequest found for {from_number}")
             return HttpResponse("No active request found.", content_type="text/plain")
 
     return HttpResponse("Invalid request method", status=400, content_type="text/plain")
