@@ -314,7 +314,6 @@ def sms_reply_webhook(request):
         labor_request = LaborRequest.objects.filter(
             worker__phone_number=from_number,
             sms_sent=True,
-            response__isnull=True  # Only update if not already responded
         ).order_by('-requested_at').first()
 
         if labor_request:
