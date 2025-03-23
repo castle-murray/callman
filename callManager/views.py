@@ -310,7 +310,7 @@ def sms_reply_webhook(request):
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().upper()
 
-        # Find the LaborRequest by worker phone number and token
+        # Find the most recent LaborRequest for this phone number
         labor_request = LaborRequest.objects.filter(
             worker__phone_number=from_number,
             sms_sent=True,
