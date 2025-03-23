@@ -279,11 +279,12 @@ def fill_labor_call(request, labor_requirement_id):
             if labor_requirement.labor_type not in worker.labor_types.all():
                 worker.labor_types.add(labor_requirement.labor_type)
             if created or not labor_request.sms_sent:
+                short_id = str(labor_request.token)[:3]  # First 3 chars of UUID
                 if worker.phone_number and settings.TWILIO_ENABLED:
                     try:
                         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
                         message = client.messages.create(
-                            body=f"Autorigger request for {labor_requirement.labor_type.name} on {event_date} at {current_call_time.time} ({current_call_time.name}). Reply YES {labor_request.token} to confirm, NO {labor_request.token} to decline.",
+                            body=f"Autorigger call {current_call_time.name} at {current_call_time.time}. Reply Y{short_id} or N{short_id}.",
                             from_=settings.TWILIO_PHONE_NUMBER,
                             to=str(worker.phone_number)
                         )
@@ -292,7 +293,6 @@ def fill_labor_call(request, labor_requirement_id):
                     except TwilioRestException as e:
                         sms_errors.append(worker.name)
                 elif worker.phone_number:
-                    # Simulate SMS sent in test mode
                     labor_request.sms_sent = True
                     labor_request.save()
                 else:
@@ -416,24 +416,23 @@ def sms_reply_webhook(request):
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().upper()
-
-        # Find the most recent LaborRequest for this phone number
-        labor_request = LaborRequest.objects.filter(
-            worker__phone_number=from_number,
-            sms_sent=True,
-        ).order_by('-requested_at').first()
-
-        if labor_request:
-            if body in ['YES', 'NO', 'OTHER']:
-                labor_request.response = body.lower()
+        if len(body) >= 4 and body[0] in ['Y', 'N'] and body[1].isdigit():
+            response = body[0]  # Y or N
+            short_id = body[1:4]  # Next 3 chars
+            labor_request = LaborRequest.objects.filter(
+                worker__phone_number=from_number,
+                token__startswith=short_id,  # Match first 3 chars of token
+                sms_sent=True
+            ).order_by('-requested_at').first()
+            if labor_request:
+                labor_request.response = 'yes' if response == 'Y' else 'no'
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
                 return HttpResponse("Response recorded", content_type="text/plain")
             else:
-                return HttpResponse("Invalid response. Reply YES, NO, or OTHER.", content_type="text/plain")
+                return HttpResponse("No matching request found.", content_type="text/plain")
         else:
-            return HttpResponse("No active request found.", content_type="text/plain")
-
+            return HttpResponse("Invalid format. Reply Y<3-digit-id> or N<3-digit-id>.", content_type="text/plain")
     return HttpResponse("Invalid request method", status=400, content_type="text/plain")
 
 
