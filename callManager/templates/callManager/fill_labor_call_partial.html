@@ -20,11 +20,10 @@
         {% include 'callManager/fill_labor_call_list_partial.html' %}
     </div>
 
-    <button type="button" 
-            hx-get="" 
-            hx-target="#worker-modal" 
-            hx-swap="innerHTML" 
+    <form action="{% url 'event_detail' labor_requirement.call_time.event.id %}">
+    <button type="submit" 
             class="mt-4 bg-red-500 text-white p-2 rounded hover:bg-red-600">Close</button>
+    </form>
     {% if message %}
         <p class="text-green-600 mt-2">{{ message }}</p>
     {% endif %}

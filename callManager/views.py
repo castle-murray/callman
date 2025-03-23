@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker
 from django.contrib.auth.decorators import login_required
 from .forms import CallTimeForm, LaborTypeForm, LaborRequirementForm, EventForm, WorkerForm, WorkerImportForm
-from django.db.models import Sum, Q, Case, When, IntegerField
+from django.db.models import Sum, Q, Case, When, IntegerField, Count
 from datetime import datetime, timedelta
 from twilio.rest import Client
 from django.conf import settings
@@ -38,14 +38,56 @@ def event_detail(request, event_id):
     manager = request.user.manager
     event = get_object_or_404(Event, id=event_id, company=manager.company)
     call_times = event.call_times.all()
-    labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event)
+    
+    # Get all labor requirements for the event
+    labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
+    
+    # Annotate labor requests with counts
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event=event
+    ).values('labor_requirement_id').annotate(
+        pending_count=Count('id', filter=Q(requested=True) & Q(response__isnull=True)),  # Only pending
+        confirmed_count=Count('id', filter=Q(response='yes')),
+        rejected_count=Count('id', filter=Q(response='no'))
+    )
+    
+    # Build labor_counts with defaults and display text
+    labor_counts = {lr.id: {'pending': 0, 'confirmed': 0, 'rejected': 0, 'display_text': f"{lr.needed_labor} needed (0 pending, 0 confirmed, 0 rejected)"} for lr in labor_requirements}
+    for lr in labor_requests:
+        labor_id = lr['labor_requirement_id']
+        pending = lr['pending_count']
+        confirmed = lr['confirmed_count']
+        rejected = lr['rejected_count']
+        needed = labor_requirements.get(id=labor_id).needed_labor
+        non_rejected = pending + confirmed
+        
+        if non_rejected > needed:
+            overbooked = non_rejected - needed
+            if confirmed >= needed:
+                display_text = f"{confirmed} filled"
+                if overbooked > 0:
+                    display_text += f", overbooked by {overbooked}"
+            else:
+                display_text = f"{needed} filled, overbooked by {overbooked} pending"
+        elif confirmed >= needed:
+            display_text = f"{confirmed} filled"
+        else:
+            display_text = f"{needed} needed ({pending} pending, {confirmed} confirmed, {rejected} rejected)"
+        
+        labor_counts[labor_id] = {
+            'pending': pending,
+            'confirmed': confirmed,
+            'rejected': rejected,
+            'display_text': display_text
+        }
     
     context = {
         'event': event,
         'call_times': call_times,
-        'labor_requests': labor_requests,
+        'labor_counts': labor_counts,
     }
     return render(request, 'callManager/event_detail.html', context)
+
 
 @login_required
 def manager_dashboard(request):
@@ -252,6 +294,7 @@ def fill_labor_call(request, labor_requirement_id):
         requested=True,
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
 
+    # In both fill_labor_call and fill_labor_call_list
     worker_conflicts = {}
     for labor_request in conflicting_requests:
         if labor_request.worker_id not in worker_conflicts:
@@ -260,12 +303,13 @@ def fill_labor_call(request, labor_requirement_id):
             'event': labor_request.labor_requirement.call_time.event.event_name,
             'call_time': f"{labor_request.labor_requirement.call_time.name} at {labor_request.labor_requirement.call_time.time}",
             'labor_type': labor_request.labor_requirement.labor_type.name,
-            'status': 'Confirmed' if labor_request.response == 'yes' else 'Pending'
+            'status': 'Confirmed' if labor_request.response == 'yes' else 'Rejected' if labor_request.response == 'no' else 'Pending',
+            'call_time_id': labor_request.labor_requirement.call_time.id,  # Add call time ID
+            'labor_type_id': labor_request.labor_requirement.labor_type.id  # Add labor type ID
         }
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
-
     if request.method == "POST":
         worker_ids = request.POST.getlist('worker_ids')
         sms_errors = []
@@ -374,11 +418,14 @@ def fill_labor_call_list(request, labor_requirement_id):
             'event': labor_request.labor_requirement.call_time.event.event_name,
             'call_time': f"{labor_request.labor_requirement.call_time.name} at {labor_request.labor_requirement.call_time.time}",
             'labor_type': labor_request.labor_requirement.labor_type.name,
-            'status': 'Confirmed' if labor_request.response == 'yes' else 'Pending'
+            'status': 'Confirmed' if labor_request.response == 'yes' else 'Rejected' if labor_request.response == 'no' else 'Pending',
+            'call_time_id': labor_request.labor_requirement.call_time.id,  # Add call time ID
+            'labor_type_id': labor_request.labor_requirement.labor_type.id  # Add labor type ID
         }
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
+
 
     context = {
         'labor_requirement': labor_requirement,

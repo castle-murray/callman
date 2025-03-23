@@ -1,6 +1,7 @@
 {% extends 'callManager/base.html' %}
+{% load callman_tags %}
 
-{% block title %}{{ event.event_name }} - Callman{% endblock %}
+{% block title %}{{ event.event_name }} - Autorigger{% endblock %}
 
 {% block content %}
     <h1 class="text-3xl font-bold mb-6">{{ event.event_name }}</h1>
@@ -22,14 +23,16 @@
                     <h3 class="text-lg font-semibold">{{ call_time.name }} at {{ call_time.time }}</h3>
                     <ul class="space-y-2">
                         {% for labor in call_time.labor_requirements.all %}
-                            <li class="flex justify-between items-center">
-                                <span>{{ labor.labor_type.name }} - {{ labor.needed_labor }} needed</span>
-                                <a href="{% url 'fill_labor_call' labor.id %}" 
-                                   hx-get="{% url 'fill_labor_call' labor.id %}" 
-                                   hx-target="#worker-modal" 
-                                   hx-swap="innerHTML" 
-                                   class="text-blue-500 hover:underline">Fill Call</a>
-                            </li>
+                            {% with counts=labor_counts|get_item:labor.id %}
+                                <li class="flex justify-between items-center">
+                                    <span>{{ labor.labor_type.name }} - {{ counts.display_text }}</span>
+                                    <a href="{% url 'fill_labor_call' labor.id %}" 
+                                       hx-get="{% url 'fill_labor_call' labor.id %}" 
+                                       hx-target="#worker-modal" 
+                                       hx-swap="innerHTML" 
+                                       class="text-blue-500 hover:underline">Fill Call</a>
+                                </li>
+                            {% endwith %}
                         {% endfor %}
                     </ul>
                     <a href="{% url 'add_labor_to_call' call_time.id %}" class="mt-2 inline-block text-blue-500 hover:underline">Add Labor</a>
@@ -42,7 +45,11 @@
     </div>
 
     <!-- Worker Modal Placeholder -->
-    <div id="worker-modal" class="mt-4"></div>
+    <div id="worker-modal" class="mt-4">
+        {% if request.path == '/labor/'|add:labor.id|add:'/fill/' %}
+            {% include 'callManager/fill_labor_call.html' %}
+        {% endif %}
+    </div>
 
     <!-- Labor Requests -->
     <div class="bg-white p-6 rounded-lg shadow">
@@ -52,9 +59,8 @@
                 {% for request in labor_requests %}
                     <li>
                         {{ request.worker.name|default:"Unnamed Worker" }} - {{ request.labor_requirement.labor_type.name }} 
-                        ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }})
-                        - Load-In: {{ request.load_in_response|default:"Pending" }}, 
-                        Load-Out: {{ request.load_out_response|default:"Pending" }}
+                        ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }}) 
+                        - Response: {{ request.response|default:"Pending" }}
                     </li>
                 {% endfor %}
             </ul>

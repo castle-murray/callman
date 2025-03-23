@@ -18,9 +18,23 @@
                             <div>
                                 {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
                                 {% if worker.id in worker_conflicts %}
-                                    <ul class="ml-4 {% if worker_data.is_confirmed %}text-green-600{% else %}text-red-600{% endif %}">
+                                    <ul class="ml-4">
                                         {% for conflict in worker_data.conflicts %}
-                                            <li>- {{ conflict.status }}: {{ conflict.event }} ({{ conflict.call_time }}, {{ conflict.labor_type }})</li>
+                                            <li>
+                                                - 
+                                                {% if conflict.status == 'Confirmed' %}
+                                                    {% if conflict.call_time_id == labor_requirement.call_time.id and conflict.labor_type_id == labor_requirement.labor_type.id %}
+                                                        <span class="text-green-600">Confirmed</span>
+                                                    {% else %}
+                                                        <span class="text-red-600">Confirmed (Other)</span>
+                                                    {% endif %}
+                                                {% elif conflict.status == 'Rejected' %}
+                                                    <span class="text-red-600">Rejected</span>
+                                                {% else %}
+                                                    <span class="text-yellow-600">Pending</span>
+                                                {% endif %}: 
+                                                {{ conflict.event }} ({{ conflict.call_time }}, {{ conflict.labor_type }})
+                                            </li>
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
