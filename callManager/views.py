@@ -1,15 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker
 from django.contrib.auth.decorators import login_required
-from .forms import CallTimeForm, LaborTypeForm, LaborRequirementForm, EventForm, WorkerForm
-from django.db.models import Sum, Q
+from .forms import CallTimeForm, LaborTypeForm, LaborRequirementForm, EventForm, WorkerForm, WorkerImportForm
+from django.db.models import Sum, Q, Case, When, IntegerField
 from datetime import datetime, timedelta
 from twilio.rest import Client
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-
+from io import TextIOWrapper
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 def confirm_assignment(request, token):
@@ -168,7 +169,7 @@ def add_worker(request):
 @login_required
 def worker_list(request):
     manager = request.user.manager
-    workers = Worker.objects.filter(labor_types__company=manager.company).distinct().order_by('name')
+    workers = Worker.objects.all().order_by('name')
     
     # Handle search query
     search_query = request.GET.get('search', '').strip()
@@ -192,8 +193,7 @@ def worker_list(request):
 @login_required
 def edit_worker(request, worker_id):
     manager = request.user.manager
-    worker = get_object_or_404(Worker, id=worker_id, labor_types__company=manager.company)
-    
+    worker = get_object_or_404(Worker, id=worker_id)  # No company filter
     if request.method == "POST":
         form = WorkerForm(request.POST, instance=worker, company=manager.company)
         if form.is_valid():
@@ -201,21 +201,41 @@ def edit_worker(request, worker_id):
             return redirect('worker_list')
     else:
         form = WorkerForm(instance=worker, company=manager.company)
-    
     context = {
         'form': form,
         'worker': worker,
     }
     return render(request, 'callManager/edit_worker.html', context)
 
+
 @login_required
 def fill_labor_call(request, labor_requirement_id):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
-    workers = Worker.objects.filter(
-        labor_types=labor_requirement.labor_type,
-        labor_types__company=manager.company
-    ).distinct()
+    
+    workers = Worker.objects.annotate(
+        has_labor_type=Case(
+            When(labor_types=labor_requirement.labor_type, then=0),
+            default=1,
+            output_field=IntegerField()
+        )
+    ).order_by('has_labor_type', 'name')
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        workers = workers.filter(
+            Q(name__icontains=search_query) |
+            Q(phone_number__icontains=search_query)
+        )
+
+    paginator = Paginator(workers, 10)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
 
     current_call_time = labor_requirement.call_time
     event_date = current_call_time.event.event_date
@@ -248,7 +268,7 @@ def fill_labor_call(request, labor_requirement_id):
 
     if request.method == "POST":
         worker_ids = request.POST.getlist('worker_ids')
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        sms_errors = []
         for worker_id in worker_ids:
             worker = Worker.objects.get(id=worker_id)
             labor_request, created = LaborRequest.objects.get_or_create(
@@ -256,31 +276,118 @@ def fill_labor_call(request, labor_requirement_id):
                 labor_requirement=labor_requirement,
                 defaults={'requested': True}
             )
+            if labor_requirement.labor_type not in worker.labor_types.all():
+                worker.labor_types.add(labor_requirement.labor_type)
             if created or not labor_request.sms_sent:
-                if worker.phone_number:
-                    message = client.messages.create(
-                        body=f"Autorigger request for {labor_requirement.labor_type.name} on {event_date} at {current_call_time.time} ({current_call_time.name}). Reply YES to confirm, NO to decline: {request.build_absolute_uri(labor_request.confirmation_url)}",
-                        from_=settings.TWILIO_PHONE_NUMBER,
-                        to=str(worker.phone_number)
-                    )
+                if worker.phone_number and settings.TWILIO_ENABLED:
+                    try:
+                        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                        message = client.messages.create(
+                            body=f"Autorigger request for {labor_requirement.labor_type.name} on {event_date} at {current_call_time.time} ({current_call_time.name}). Reply YES {labor_request.token} to confirm, NO {labor_request.token} to decline.",
+                            from_=settings.TWILIO_PHONE_NUMBER,
+                            to=str(worker.phone_number)
+                        )
+                        labor_request.sms_sent = True
+                        labor_request.save()
+                    except TwilioRestException as e:
+                        sms_errors.append(worker.name)
+                elif worker.phone_number:
+                    # Simulate SMS sent in test mode
                     labor_request.sms_sent = True
                     labor_request.save()
+                else:
+                    sms_errors.append(f"{worker.name} (no phone)")
             if not created:
                 labor_request.requested = True
                 labor_request.save()
-        return render(request, 'callManager/fill_labor_call_partial.html', {
+        message = f"Requests sent to {len(worker_ids)} workers."
+        if sms_errors:
+            message += f" SMS failed for: {', '.join(sms_errors)}."
+        context = {
             'labor_requirement': labor_requirement,
-            'workers': workers,
+            'workers': page_obj,
             'worker_conflicts': worker_conflicts,
-            'message': f"Requests sent to {len(worker_ids)} workers."
-        })
+            'page_obj': page_obj,
+            'search_query': search_query,
+            'message': message,
+        }
+        return render(request, 'callManager/fill_labor_call_partial.html', context)
 
     context = {
         'labor_requirement': labor_requirement,
-        'workers': workers,
+        'workers': page_obj,
         'worker_conflicts': worker_conflicts,
+        'page_obj': page_obj,
+        'search_query': search_query,
     }
-    return render(request, 'callManager/fill_labor_call_partial.html', context)
+    return render(request, 'callManager/fill_labor_call.html', context)
+
+@login_required
+def fill_labor_call_list(request, labor_requirement_id):
+    manager = request.user.manager
+    labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
+    
+    workers = Worker.objects.annotate(
+        has_labor_type=Case(
+            When(labor_types=labor_requirement.labor_type, then=0),
+            default=1,
+            output_field=IntegerField()
+        )
+    ).order_by('has_labor_type', 'name')
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        workers = workers.filter(
+            Q(name__icontains=search_query) |
+            Q(phone_number__icontains=search_query)
+        )
+
+    paginator = Paginator(workers, 10)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    current_call_time = labor_requirement.call_time
+    event_date = current_call_time.event.event_date
+    current_datetime = datetime.combine(event_date, current_call_time.time)
+
+    window_start = current_datetime - timedelta(hours=5)
+    window_end = current_datetime + timedelta(hours=5)
+
+    conflicting_requests = LaborRequest.objects.filter(
+        worker__in=workers,
+        labor_requirement__call_time__event__event_date=event_date,
+        labor_requirement__call_time__time__gte=window_start.time(),
+        labor_requirement__call_time__time__lte=window_end.time(),
+        requested=True,
+    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
+
+    worker_conflicts = {}
+    for labor_request in conflicting_requests:
+        if labor_request.worker_id not in worker_conflicts:
+            worker_conflicts[labor_request.worker_id] = {'conflicts': [], 'is_confirmed': False}
+        conflict_info = {
+            'event': labor_request.labor_requirement.call_time.event.event_name,
+            'call_time': f"{labor_request.labor_requirement.call_time.name} at {labor_request.labor_requirement.call_time.time}",
+            'labor_type': labor_request.labor_requirement.labor_type.name,
+            'status': 'Confirmed' if labor_request.response == 'yes' else 'Pending'
+        }
+        worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
+        if labor_request.response == 'yes':
+            worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
+
+    context = {
+        'labor_requirement': labor_requirement,
+        'workers': page_obj,
+        'worker_conflicts': worker_conflicts,
+        'page_obj': page_obj,
+        'search_query': search_query,
+    }
+    return render(request, 'callManager/fill_labor_call_list_partial.html', context)
 
 
 @login_required
@@ -314,7 +421,6 @@ def sms_reply_webhook(request):
         labor_request = LaborRequest.objects.filter(
             worker__phone_number=from_number,
             sms_sent=True,
-            response__isnull=True  # Only update if not already responded
         ).order_by('-requested_at').first()
 
         if labor_request:
@@ -329,3 +435,55 @@ def sms_reply_webhook(request):
             return HttpResponse("No active request found.", content_type="text/plain")
 
     return HttpResponse("Invalid request method", status=400, content_type="text/plain")
+
+
+@login_required
+def import_workers(request):
+    manager = request.user.manager
+    if request.method == "POST":
+        form = WorkerImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            vcf_file = TextIOWrapper(request.FILES['file'].file, encoding='utf-8')
+            imported = 0
+            errors = []
+            current_name = None
+            current_phone = None
+
+            for i, line in enumerate(vcf_file):
+                line = line.strip()
+                try:
+                    if line.startswith('END:VCARD'):
+                        if current_name or current_phone:
+                            # Normalize phone number to E.164
+                            if current_phone:
+                                current_phone = current_phone.replace(' ', '').replace('-', '')
+                                if current_phone.startswith('1') and len(current_phone) == 11:
+                                    current_phone = f"+{current_phone}"
+                                elif not current_phone.startswith('+') and len(current_phone) == 10:
+                                    current_phone = f"+1{current_phone}"
+
+                            worker, created = Worker.objects.get_or_create(
+                                phone_number=current_phone,
+                                defaults={'name': current_name.strip() if current_name else None}
+                            )
+                            if created:
+                                imported += 1
+                        current_name = None
+                        current_phone = None
+                    elif line.startswith('FN:'):
+                        current_name = line[3:].strip()
+                    elif line.startswith('TEL'):
+                        # Extract phone from TEL line (e.g., TEL;TYPE=CELL:+1234567890)
+                        parts = line.split(':')
+                        if len(parts) > 1:
+                            current_phone = parts[-1].strip()
+                except Exception as e:
+                    errors.append(f"Error at line {i + 1}: {str(e)} (Line: {line[:50]})")
+
+            message = f"Imported {imported} workers."
+            if errors:
+                message += f" Errors: {', '.join(errors[:5])}" + (f" and {len(errors) - 5} more" if len(errors) > 5 else "")
+            return render(request, 'callManager/import_workers.html', {'form': form, 'message': message})
+    else:
+        form = WorkerImportForm()
+    return render(request, 'callManager/import_workers.html', {'form': form})

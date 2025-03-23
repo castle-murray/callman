@@ -52,3 +52,6 @@ class WorkerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if company:
             self.fields['labor_types'].queryset = LaborType.objects.filter(company=company)
+
+class WorkerImportForm(forms.Form):
+    file = forms.FileField(label="Upload a CSV file with contacts")

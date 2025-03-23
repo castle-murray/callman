@@ -15,5 +15,7 @@ urlpatterns = [
     path('worker/list/', views.worker_list, name='worker_list'),
     path('worker/edit/<int:worker_id>/', views.edit_worker, name='edit_worker'),
     path('labor/<int:labor_requirement_id>/fill/', views.fill_labor_call, name='fill_labor_call'),
+    path('labor/<int:labor_requirement_id>/list/', views.fill_labor_call_list, name='fill_labor_call_list'),
     path('sms/reply/', views.sms_reply_webhook, name='sms_reply_webhook'),
+    path('worker/import/', views.import_workers, name='import_workers'),
 ]

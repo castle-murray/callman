@@ -1,0 +1,57 @@
+{% load callman_tags %}
+<form method="post" 
+      hx-post="{% url 'fill_labor_call' labor_requirement.id %}" 
+      hx-target="#worker-modal" 
+      hx-swap="innerHTML">
+    {% csrf_token %}
+    {% if workers %}
+        <ul class="space-y-2">
+            {% for worker in workers %}
+                {% with worker_data=worker_conflicts|get_item:worker.id %}
+                    <li class="flex justify-between items-center {% if worker_data.is_confirmed %}bg-green-100{% elif worker.id in worker_conflicts %}bg-yellow-100{% endif %}">
+                        <label class="flex items-center">
+                            <input type="checkbox" 
+                                   name="worker_ids" 
+                                   value="{{ worker.id }}" 
+                                   class="mr-2" 
+                                   {% if worker.id in worker_conflicts %}title="Worker has conflicting requests"{% endif %}>
+                            <div>
+                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
+                                {% if worker.id in worker_conflicts %}
+                                    <ul class="ml-4 {% if worker_data.is_confirmed %}text-green-600{% else %}text-red-600{% endif %}">
+                                        {% for conflict in worker_data.conflicts %}
+                                            <li>- {{ conflict.status }}: {{ conflict.event }} ({{ conflict.call_time }}, {{ conflict.labor_type }})</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </label>
+                    </li>
+                {% endwith %}
+            {% endfor %}
+        </ul>
+        <!-- Pagination -->
+        <div class="mt-4 flex justify-between">
+            {% if page_obj.has_previous %}
+                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-target="#fill-list" 
+                   class="text-blue-500 hover:underline">Previous</a>
+            {% else %}
+                <span class="text-gray-500">Previous</span>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-target="#fill-list" 
+                   class="text-blue-500 hover:underline">Next</a>
+            {% else %}
+                <span class="text-gray-500">Next</span>
+            {% endif %}
+        </div>
+        <button type="submit" class="mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Send Requests</button>
+    {% else %}
+        <p class="text-gray-600">No workers available.</p>
+    {% endif %}
+</form>
