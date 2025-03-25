@@ -1,10 +1,9 @@
 {% extends 'callManager/base.html' %}
 
-{% block title %}Add Call Time - {{ event.event_name }} - Callman{% endblock %}
+{% block title %}Add Call Time - Callman{% endblock %}
 
 {% block content %}
     <h1 class="text-2xl font-bold mb-6">Add Call Time to {{ event.event_name }}</h1>
-    
     <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
         <form method="post">
             {% csrf_token %}

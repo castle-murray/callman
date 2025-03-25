@@ -1,14 +1,30 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
 
-{% block title %}{{ event.event_name }} - Autorigger{% endblock %}
+{% block title %}{{ event.event_name }} - CallMan{% endblock %}
 
 {% block content %}
     <h1 class="text-3xl font-bold mb-6">{{ event.event_name }}</h1>
     
+    <!-- Send Messages Button -->
+    <form method="post" class="mb-6">
+        {% csrf_token %}
+        <input type="hidden" name="send_messages" value="true">
+        <button type="submit" class="bg-green-500 text-white p-2 rounded hover:bg-green-600">Send Messages</button>
+    </form>
+    {% if message %}
+        <p class="text-green-600 mb-4">{{ message }}</p>
+    {% endif %}
+
     <!-- Event Details -->
     <div class="bg-white p-6 rounded-lg shadow mb-6">
-        <p><strong>Date:</strong> {{ event.event_date }}</p>
+        <p><strong>Date:</strong> 
+            {% if event.is_single_day %}
+                {{ event.start_date }}
+            {% else %}
+                {{ event.start_date }} - {{ event.end_date }}
+            {% endif %}
+        </p>
         <p><strong>Location:</strong> {{ event.event_location }}</p>
         <p><strong>Description:</strong> {{ event.event_description|default:"No description provided" }}</p>
         <p><strong>Created By:</strong> {{ event.created_by.user.get_full_name|default:"Unknown" }}</p>
@@ -20,7 +36,7 @@
         {% if call_times %}
             {% for call_time in call_times %}
                 <div class="mb-4">
-                    <h3 class="text-lg font-semibold">{{ call_time.name }} at {{ call_time.time }}</h3>
+                    <h3 class="text-lg font-semibold">{{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h3>
                     <ul class="space-y-2">
                         {% for labor in call_time.labor_requirements.all %}
                             {% with counts=labor_counts|get_item:labor.id %}
@@ -59,7 +75,7 @@
                 {% for request in labor_requests %}
                     <li>
                         {{ request.worker.name|default:"Unnamed Worker" }} - {{ request.labor_requirement.labor_type.name }} 
-                        ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }}) 
+                        ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }} on {{ request.labor_requirement.call_time.date }}) 
                         - Response: {{ request.response|default:"Pending" }}
                     </li>
                 {% endfor %}

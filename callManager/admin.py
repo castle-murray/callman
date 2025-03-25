@@ -20,16 +20,16 @@ class ManagerAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('event_name', 'event_date', 'company', 'created_by')
+    list_display = ('event_name', 'company', 'created_by')
     search_fields = ('event_name', 'event_location', 'company__name')
-    list_filter = ('company', 'event_date')
-    date_hierarchy = 'event_date'
+    list_filter = ('company',) 
 
 @admin.register(CallTime)
 class CallTimeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'time', 'event')
+    list_display = ('name', 'date', 'time', 'event')
     search_fields = ('name', 'event__event_name')
-    list_filter = ('event__company', 'time')
+    list_filter = ('event__company', 'time', 'date')
+    date_hierarchy = 'date'
 
 @admin.register(LaborType)
 class LaborTypeAdmin(admin.ModelAdmin):

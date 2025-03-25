@@ -1,14 +1,49 @@
 {% extends 'callManager/base.html' %}
 
-{% block title %}Create Event - Callman{% endblock %}
+{% block title %}Create Event - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Create a New Event</h1>
-    <form method="post" class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-        {% csrf_token %}
-        <div class="space-y-4">
-            {{ form.as_p }}
-        </div>
-        <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Create Event</button>
-    </form>
+    <h1 class="text-2xl font-bold mb-6">Create New Event</h1>
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                {{ form.as_p }}
+            </div>
+            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Create Event</button>
+            <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isSingleDayCheckbox = document.getElementById('id_is_single_day');
+            const startDateInput = document.getElementById('id_start_date');
+            const endDateInput = document.getElementById('id_end_date');
+
+            function toggleEndDate() {
+                if (isSingleDayCheckbox.checked) {
+                    endDateInput.value = startDateInput.value;
+                    endDateInput.disabled = true;
+                    endDateInput.setAttribute('readonly', true);
+                } else {
+                    endDateInput.disabled = false;
+                    endDateInput.removeAttribute('readonly');
+                }
+            }
+
+            // Initial state
+            toggleEndDate();
+
+            // Update on checkbox change
+            isSingleDayCheckbox.addEventListener('change', toggleEndDate);
+
+            // Update end_date when start_date changes for single-day
+            startDateInput.addEventListener('change', function() {
+                if (isSingleDayCheckbox.checked) {
+                    endDateInput.value = startDateInput.value;
+                }
+            });
+        });
+    </script>
 {% endblock %}

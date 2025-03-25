@@ -38,8 +38,10 @@ class LaborType(models.Model):
 # Event model for concerts or entertainment gigs
 class Event(models.Model):
     event_name = models.CharField(max_length=200)
-    event_date = models.DateField()
     event_location = models.CharField(max_length=200)
+    start_date = models.DateField(null=True, blank=True )  # New start date
+    end_date = models.DateField(null=True, blank=True )    # New end date
+    is_single_day = models.BooleanField(default=False)  # New single-day flag
     event_description = models.TextField()
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='events')
     created_by = models.ForeignKey('Manager', on_delete=models.SET_NULL, null=True, blank=True)
@@ -49,6 +51,7 @@ class Event(models.Model):
 
 class CallTime(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='call_times')
+    date = models.DateField(null=True, blank=True)
     name = models.CharField(max_length=200)  # e.g., "Walk and Chalk", "Pre Rig"
     time = models.TimeField()  # e.g., 08:00, 09:00
 
@@ -79,28 +82,17 @@ class Worker(models.Model):
 
 
 # Tracks worker assignments and responses
-# callManager/models.py (partial)
 class LaborRequest(models.Model):
-    RESPONSE_CHOICES = (
-        ('yes', 'Yes'),
-        ('no', 'No'),
-        ('other', 'Other'),
-    )
-
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
     labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)
-    response_message = models.TextField(null=True, blank=True)
+    response = models.CharField(max_length=20, choices=[('yes', 'Yes'), ('no', 'No')], null=True, blank=True)
     requested_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     requested = models.BooleanField(default=False)
-    sms_sent = models.BooleanField(default=False)  # New field
+    sms_sent = models.BooleanField(default=False)
+    event_token = models.CharField(max_length=36, null=True, blank=True)  # Add this if missing
 
     def __str__(self):
-        worker_name = self.worker.name if self.worker.name is not None else "Unnamed Worker"
+        worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
         return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
-
-    @property
-    def confirmation_url(self):
-        return f"/confirm/{self.token}/"
