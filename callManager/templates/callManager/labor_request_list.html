@@ -4,122 +4,127 @@
 {% block title %}Labor Requests - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Labor Requests for {{ labor_requirement.labor_type.name }}</h1>
-    <div id="labor-request-content" class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-        <h2 class="text-xl font-semibold mb-4">
-            {{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time }} on {{ labor_requirement.call_time.date }} - {{ labor_requirement.needed_labor }} needed
-        </h2>
-
-        <h2 class="text-xl font-semibold mb-2 text-yellow-600">Pending Requests</h2>
-        {% if pending_requests %}
-            <ul class="space-y-2 mb-4">
-                {% for request in pending_requests %}
-                    <li class="flex items-center justify-between text-yellow-600">
-                        {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
-                        <div>
-                            <form method="post" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="confirm">
-                                <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Confirm</button>
-                            </form>
-                            <form method="post" class="inline ml-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="decline">
-                                <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Decline</button>
-                            </form>
-                            <form method="post" class="inline ml-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="delete">
-                                <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
-                            </form>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
+<h1 class="text-2xl font-bold mb-6">Labor Requests for {{ labor_requirement.labor_type.name }}</h1>
+<div id="labor-request-content" class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+    <h2 class="text-xl font-semibold mb-4">
+        {{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time }} on {{ labor_requirement.call_time.date }} - 
+        {% if is_filled %}
+        <span class="text-green-600">FILLED</span>
         {% else %}
-            <p class="text-gray-600 mb-4">No pending requests.</p>
+        {{ labor_requirement.needed_labor }} needed
         {% endif %}
+    </h2>
 
-        <h2 class="text-xl font-semibold mb-2 text-green-600">Confirmed Requests</h2>
-        {% if confirmed_requests %}
-            <ul class="space-y-2 mb-4">
-                {% for request in confirmed_requests %}
-                    <li class="flex items-center justify-between text-green-600">
-                        {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
-                        <div>
-                            <form method="post" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="decline">
-                                <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Decline</button>
-                            </form>
-                            <form method="post" class="inline ml-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="delete">
-                                <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
-                            </form>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-gray-600 mb-4">No confirmed requests.</p>
-        {% endif %}
-
-        <h2 class="text-xl font-semibold mb-2 text-red-600">Declined Requests</h2>
-        {% if declined_requests %}
-            <ul class="space-y-2 mb-4">
-                {% for request in declined_requests %}
-                    <li class="flex items-center justify-between text-red-600">
-                        {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
-                        <div>
-                            <form method="post" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="confirm">
-                                <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Confirm</button>
-                            </form>
-                            <form method="post" class="inline ml-2">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request.id }}">
-                                <input type="hidden" name="action" value="delete">
-                                <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
-                            </form>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-gray-600 mb-4">No declined requests.</p>
-        {% endif %}
-
-        <!-- Fill Call Section (below lists, only if not filled) -->
-        {% if not is_filled %}
-            <div class="mt-6">
-                <h3 class="text-lg font-semibold mb-2">Fill Call</h3>
-                <div class="mb-4">
-                    <input type="text" 
-                           name="search" 
-                           value="" 
-                           hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" 
-                           hx-target="#fill-list" 
-                           hx-trigger="keyup changed delay:300ms" 
-                           placeholder="Search by name or phone..." 
-                           class="w-full max-w-md p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" hx-trigger="load">
-                    <!-- HTMX will load the partial here -->
-                </div>
+    <h2 class="text-xl font-semibold mb-2 text-yellow-600">Pending Requests</h2>
+    {% if pending_requests %}
+    <ul class="space-y-2 mb-4">
+        {% for request in pending_requests %}
+        <li class="flex items-center justify-between text-yellow-600">
+            {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
+            <div>
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="confirm">
+                    <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Confirm</button>
+                </form>
+                <form method="post" class="inline ml-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="decline">
+                    <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Decline</button>
+                </form>
+                <form method="post" class="inline ml-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
+                </form>
             </div>
-        {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-600 mb-4">No pending requests.</p>
+    {% endif %}
 
-        {% if message %}
-            <p class="text-green-600 mt-2">{{ message }}</p>
-        {% endif %}
-        <a href="{% url 'event_detail' labor_requirement.call_time.event.id %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
+    <h2 class="text-xl font-semibold mb-2 text-green-600">Confirmed Requests</h2>
+    {% if confirmed_requests %}
+    <ul class="space-y-2 mb-4">
+        {% for request in confirmed_requests %}
+        <li class="flex items-center justify-between text-green-600">
+            {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
+            <div>
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="decline">
+                    <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Decline</button>
+                </form>
+                <form method="post" class="inline ml-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-600 mb-4">No confirmed requests.</p>
+    {% endif %}
+
+    <h2 class="text-xl font-semibold mb-2 text-red-600">Declined Requests</h2>
+    {% if declined_requests %}
+    <ul class="space-y-2 mb-4">
+        {% for request in declined_requests %}
+        <li class="flex items-center justify-between text-red-600">
+            {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
+            <div>
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="confirm">
+                    <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Confirm</button>
+                </form>
+                <form method="post" class="inline ml-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">Delete</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-600 mb-4">No declined requests.</p>
+    {% endif %}
+
+    <!-- Fill Call Section (below lists, only if not filled) -->
+    {% if not is_filled %}
+    <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-2">Fill Call</h3>
+        <div class="mb-4">
+            <input type="text" 
+            name="search" 
+            value="" 
+            hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" 
+            hx-target="#fill-list" 
+            hx-trigger="keyup changed delay:300ms" 
+            placeholder="Search by name or phone..." 
+            class="w-full max-w-md p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" hx-trigger="load">
+            <!-- HTMX will load the partial here -->
+        </div>
     </div>
+    {% endif %}
+
+    {% if message %}
+    <p class="text-green-600 mt-2">{{ message }}</p>
+    {% endif %}
+    <a href="{% url 'event_detail' labor_requirement.call_time.event.id %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
+</div>
 {% endblock %}
