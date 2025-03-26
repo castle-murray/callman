@@ -1,6 +1,7 @@
 # callManager/forms.py
+from django.contrib.auth.models import User
 from django import forms
-from .models import Event, CallTime, LaborRequirement, LaborType, Worker
+from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company
 
 class LaborTypeForm(forms.ModelForm):
     class Meta:
@@ -88,6 +89,10 @@ class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts")
 
 class WorkerRegistrationForm(forms.ModelForm):
+    username = forms.CharField(max_length=150, required=True)
+    password = forms.CharField(widget=forms.PasswordInput, required=True)
+    email = forms.EmailField(required=True)
+
     class Meta:
         model = Worker
         fields = ['name', 'phone_number', 'labor_types']
@@ -95,3 +100,16 @@ class WorkerRegistrationForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'readonly': 'readonly'}),
             'labor_types': forms.CheckboxSelectMultiple,
         }
+
+    def save(self, commit=True):
+        worker = super().save(commit=False)
+        user = User.objects.create_user(
+            username=self.cleaned_data['username'],
+            email=self.cleaned_data['email'],
+            password=self.cleaned_data['password']
+        )
+        worker.user = user
+        if commit:
+            worker.save()
+            self.save_m2m()  # Save labor_types
+        return worker

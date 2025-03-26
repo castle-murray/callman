@@ -71,11 +71,12 @@ class LaborRequirement(models.Model):
         unique_together = ('call_time', 'labor_type')
 
 
-# Worker profile (laborers who can be assigned, not all are users)
 class Worker(models.Model):
-    name = models.CharField(max_length=200, null=True, blank=True )  # Simplified from first_name/last_name
-    phone_number = PhoneNumberField(unique=True, null=True, blank=True)
-    labor_types = models.ManyToManyField('LaborType', related_name='workers', blank=True)  # Skills they can perform
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    phone_number = models.CharField(max_length=15)  # No unique constraint
+    name = models.CharField(max_length=200, blank=True)
+    companies = models.ManyToManyField('Company', related_name='workers', blank=True)  # Managers will populate this
+    labor_types = models.ManyToManyField('LaborType', blank=True)
 
     def __str__(self):
         return self.name or "Unnamed Worker"

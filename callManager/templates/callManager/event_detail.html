@@ -6,7 +6,6 @@
 {% block content %}
     <h1 class="text-3xl font-bold mb-6">{{ event.event_name }}</h1>
     
-    <!-- Send Messages Button -->
     <form method="post" class="mb-6">
         {% csrf_token %}
         <input type="hidden" name="send_messages" value="true">
@@ -16,7 +15,6 @@
         <p class="text-green-600 mb-4">{{ message }}</p>
     {% endif %}
 
-    <!-- Event Details -->
     <div class="bg-white p-6 rounded-lg shadow mb-6">
         <p><strong>Date:</strong> 
             {% if event.is_single_day %}
@@ -30,18 +28,21 @@
         <p><strong>Created By:</strong> {{ event.created_by.user.get_full_name|default:"Unknown" }}</p>
     </div>
 
-    <!-- Call Times and Labor Requirements -->
     <div class="bg-white p-6 rounded-lg shadow mb-6">
         <h2 class="text-xl font-semibold mb-4">Call Times</h2>
         {% if call_times %}
             {% for call_time in call_times %}
                 <div class="mb-4">
-                    <h3 class="text-lg font-semibold">{{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h3>
+                    <h3 class="text-lg font-semibold">
+                        <a href="{% url 'call_time_request_list' call_time.id %}" class="text-blue-500 hover:underline">
+                            {{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}
+                        </a>
+                    </h3>
                     <ul class="space-y-2">
                         {% for labor in call_time.labor_requirements.all %}
                             {% with counts=labor_counts|get_item:labor.id %}
                                 <li class="flex justify-between items-center">
-                                    <span>{{ labor.labor_type.name }} - {{ counts.display_text }}</span>
+                                    <span>{{ labor.labor_type.name }} - <a href="{% url 'labor_request_list' labor.id %}" class="text-blue-500 hover:underline">{{ counts.display_text }}</a></span>
                                     <a href="{% url 'fill_labor_call' labor.id %}" 
                                        hx-get="{% url 'fill_labor_call' labor.id %}" 
                                        hx-target="#worker-modal" 
@@ -60,14 +61,12 @@
         <a href="{% url 'add_call_time' event.id %}" class="mt-4 inline-block bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Call Time</a>
     </div>
 
-    <!-- Worker Modal Placeholder -->
     <div id="worker-modal" class="mt-4">
         {% if request.path == '/labor/'|add:labor.id|add:'/fill/' %}
             {% include 'callManager/fill_labor_call.html' %}
         {% endif %}
     </div>
 
-    <!-- Labor Requests -->
     <div class="bg-white p-6 rounded-lg shadow">
         <h2 class="text-xl font-semibold mb-4">Labor Requests</h2>
         {% if labor_requests %}

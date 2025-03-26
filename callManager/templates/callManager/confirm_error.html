@@ -6,6 +6,7 @@
     <h1 class="text-2xl font-bold mb-6">Error</h1>
     <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
         <p class="text-red-600">{{ message }}</p>
-        <a href="/" class="mt-4 inline-block text-blue-500 hover:underline">Return to Dashboard</a>
+        <p class="mt-4">New worker? <a href="{{ registration_url }}" class="text-blue-500 hover:underline">Register here</a>.</p>
+        <a href="/" class="mt-4 inline-block text-blue-500 hover:underline">Return to Home</a>
     </div>
 {% endblock %}

@@ -21,4 +21,7 @@ urlpatterns = [
     path('event/<int:event_id>/confirm/<uuid:event_token>/', views.confirm_event_requests, name='confirm_event_requests'),
     path('worker/register/', views.worker_registration, name='worker_registration'),
     path('worker/register/success/', views.registration_success, name='registration_success'),
+    path('labor/<int:labor_requirement_id>/requests/', views.labor_request_list, name='labor_request_list'),
+    path('calltime/<int:call_time_id>/requests/', views.call_time_request_list, name='call_time_request_list'),
+    path('labor/<int:labor_requirement_id>/fill-list/', views.fill_labor_request_list, name='fill_labor_request_list'),
 ]

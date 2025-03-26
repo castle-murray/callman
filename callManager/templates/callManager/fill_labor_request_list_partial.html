@@ -1,8 +1,5 @@
 {% load callman_tags %}
-<form method="post" 
-      hx-post="{% url 'fill_labor_call' labor_requirement.id %}" 
-      hx-target="#worker-modal" 
-      hx-swap="innerHTML">
+<form method="post" hx-post="{% url 'labor_request_list' labor_requirement.id %}" hx-target="#labor-request-content" hx-swap="outerHTML">
     {% csrf_token %}
     {% if workers %}
         <ul class="space-y-2">
@@ -46,8 +43,8 @@
         </ul>
         <div class="mt-4 flex justify-between">
             {% if page_obj.has_previous %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-blue-500 hover:underline">Previous</a>
             {% else %}
@@ -55,16 +52,16 @@
             {% endif %}
             <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-blue-500 hover:underline">Next</a>
             {% else %}
                 <span class="text-gray-500">Next</span>
             {% endif %}
         </div>
-        <button type="submit" class="mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Workers</button>
+        <button type="submit" class="mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Queue Request</button>
     {% else %}
-        <p class="text-gray-600">No workers available.</p>
+        <p class="text-gray-600">No workers available matching your search.</p>
     {% endif %}
 </form>
