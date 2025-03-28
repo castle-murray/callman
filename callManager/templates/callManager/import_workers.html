@@ -13,7 +13,7 @@
                 {{ form.file }}
             </div>
             <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Import Workers</button>
-            <a href="{% url 'worker_list' %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+            <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
         </form>
         {% if message %}
             <p class="mt-4 {% if 'Errors' in message %}text-red-600{% else %}text-green-600{% endif %}">{{ message }}</p>

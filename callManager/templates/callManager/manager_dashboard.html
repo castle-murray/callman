@@ -12,25 +12,24 @@
             <p class="text-2xl font-bold text-blue-600">{{ total_events }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
-            <h2 class="text-lg font-semibold text-gray-700">Labor Needed</h2>
+            <h2 class="text-lg font-semibold text-gray-700">Workers Needed</h2> <!-- Updated "Labor" to "Workers" -->
             <p class="text-2xl font-bold text-blue-600">{{ total_labor_needed }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
-            <h2 class="text-lg font-semibold text-gray-700">Total Assignments</h2>
-            <p class="text-2xl font-bold text-blue-600">{{ total_assignments }}</p>
+            <h2 class="text-lg font-semibold text-gray-700">Total Requests</h2> <!-- Fixed from "Assignments" -->
+            <p class="text-2xl font-bold text-blue-600">{{ total_requests }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
-            <h2 class="text-lg font-semibold text-gray-700">Confirmed Assignments</h2>
-            <p class="text-2xl font-bold text-blue-600">{{ confirmed_assignments }}</p>
+            <h2 class="text-lg font-semibold text-gray-700">Confirmed Requests</h2> <!-- Fixed from "Assignments" -->
+            <p class="text-2xl font-bold text-blue-600">{{ confirmed_requests }}</p>
         </div>
     </div>
 
     <!-- Action Buttons -->
     <div class="mb-6 flex space-x-4">
         <a href="{% url 'create_event' %}" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Create New Event</a>
-        <a href="{% url 'create_labor_type' %}" class="bg-green-500 text-white p-2 rounded hover:bg-green-600">Add Labor Type</a>
-        <a href="{% url 'labor_type_list' %}" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600">View Labor Types</a>
-        <a href="{% url 'worker_list' %}" class="bg-purple-500 text-white p-2 rounded hover:bg-purple-600">View Workers</a>
+        <a href="{% url 'view_skills' %}" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600">List Skills</a>
+        <a href="{% url 'view_workers' %}" class="bg-purple-500 text-white p-2 rounded hover:bg-purple-600">View Workers</a> <!-- Fixed from 'worker_list' -->
         <a href="{% url 'import_workers' %}" class="bg-indigo-500 text-white p-2 rounded hover:bg-indigo-600">Import Workers</a>
     </div>
 
@@ -42,8 +41,15 @@
                 {% for event in events %}
                     <div class="border-b pb-4">
                         <h3 class="text-lg font-medium">{{ event.event_name }}</h3>
-                        <p class="text-gray-600">Date: {{ event.event_date }} | Location: {{ event.event_location }}</p>
-                        <p class="text-gray-600">Load-In: {{ event.load_in_time }} | Load-Out: {{ event.load_out_time }}</p>
+                        <p class="text-gray-600">
+                            {% if event.is_single_day %}
+                                Date: {{ event.start_date }}
+                            {% else %}
+                                Dates: {{ event.start_date }} - {{ event.end_date }}
+                            {% endif %}
+                            | Location: {{ event.event_location|default:"Not specified" }}
+                        </p>
+                        <p class="text-gray-600">{{ event.event_description|default:"No description provided" }}</p>
                         <a href="{% url 'event_detail' event.id %}" class="text-blue-500 hover:underline">View Details</a>
                     </div>
                 {% endfor %}

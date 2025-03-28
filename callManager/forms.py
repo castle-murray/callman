@@ -113,3 +113,9 @@ class WorkerRegistrationForm(forms.ModelForm):
             worker.save()
             self.save_m2m()  # Save labor_types
         return worker
+
+
+class SkillForm(forms.ModelForm):
+    class Meta:
+        model = LaborType
+        fields = ['name']

@@ -1,0 +1,75 @@
+{% extends 'callManager/base.html' %}
+{% load callman_tags %}
+
+{% block title %}View Workers - CallMan{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6">View Workers</h1>
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4">Current Workers</h2>
+
+        <!-- Search Form -->
+        <form method="get" class="mb-4">
+            <input type="text" 
+                   name="search" 
+                   value="{{ search_query }}" 
+                   placeholder="Search by name or phone..." 
+                   class="w-full max-w-md p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </form>
+
+        {% if workers %}
+            <ul class="space-y-2">
+                {% for worker in workers %}
+                    <li class="flex items-center justify-between border-b py-2">
+                        <span>{{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})</span>
+                        <div>
+                            <a href="{% url 'edit_worker' worker.id %}" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2">Edit</a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="delete_id" value="{{ worker.id }}">
+                                <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <!-- Pagination -->
+            <div class="mt-4 flex justify-between">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" class="text-blue-500 hover:underline">Previous</a>
+                {% else %}
+                    <span class="text-gray-500">Previous</span>
+                {% endif %}
+                <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" class="text-blue-500 hover:underline">Next</a>
+                {% else %}
+                    <span class="text-gray-500">Next</span>
+                {% endif %}
+            </div>
+        {% else %}
+            <p class="text-gray-600">No workers found.</p>
+        {% endif %}
+
+        <!-- Add Worker Form -->
+        <h2 class="text-xl font-semibold mt-6 mb-2">Add New Worker</h2>
+        <form method="post" class="flex flex-col">
+            {% csrf_token %}
+            <input type="hidden" name="add_worker" value="true">
+            <div class="flex items-center mb-2">
+                {{ add_form.name.label_tag }}
+                {{ add_form.name }}
+            </div>
+            <div class="flex items-center mb-2">
+                {{ add_form.phone_number.label_tag }}
+                {{ add_form.phone_number }}
+            </div>
+            <div class="mb-2">
+                {{ add_form.labor_types.label_tag }} <!-- Displays as "Skills" -->
+                {{ add_form.labor_types }}
+            </div>
+            <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Add</button>
+        </form>
+    </div>
+{% endblock %}

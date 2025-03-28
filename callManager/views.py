@@ -1,7 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker
 from django.contrib.auth.decorators import login_required
-from .forms import CallTimeForm, LaborTypeForm, LaborRequirementForm, EventForm, WorkerForm, WorkerImportForm, WorkerRegistrationForm
+from .forms import (
+        CallTimeForm,
+        LaborTypeForm,
+        LaborRequirementForm,
+        EventForm,
+        WorkerForm,
+        WorkerImportForm,
+        WorkerRegistrationForm,
+        SkillForm,
+        )
 from django.db.models import Sum, Q, Case, When, IntegerField, Count
 from datetime import datetime, timedelta
 from twilio.rest import Client
@@ -12,6 +21,8 @@ from django.utils import timezone
 from io import TextIOWrapper
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import uuid
+from django.urls import reverse
+from urllib.parse import urlencode
 
 
 def confirm_assignment(request, token):
@@ -223,70 +234,130 @@ def create_event(request):
 
 
 @login_required
-def labor_type_list(request):
+def view_skills(request):
+    manager = request.user.manager
+    skills = LaborType.objects.filter(company=manager.company)
+
+    if request.method == "POST":
+        if 'delete_id' in request.POST:
+            skill_id = request.POST.get('delete_id')
+            skill = get_object_or_404(LaborType, id=skill_id, company=manager.company)
+            skill.delete()
+            return redirect('view_skills')
+        elif 'edit_id' in request.POST:
+            skill_id = request.POST.get('edit_id')
+            skill = get_object_or_404(LaborType, id=skill_id, company=manager.company)
+            form = SkillForm(request.POST, instance=skill)
+            if form.is_valid():
+                form.save()
+                return redirect('view_skills')
+        elif 'add_skill' in request.POST:
+            form = SkillForm(request.POST)
+            if form.is_valid():
+                skill = form.save(commit=False)
+                skill.company = manager.company
+                skill.save()
+                return redirect('view_skills')
+
+    # GET request: show all skills and forms
+    edit_forms = {skill.id: SkillForm(instance=skill) for skill in skills}
+    add_form = SkillForm()
+
+    context = {
+        'skills': skills,
+        'edit_forms': edit_forms,
+        'add_form': add_form,
+    }
+    return render(request, 'callManager/view_skills.html', context)
+
+
+@login_required
+def view_workers(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    
     manager = request.user.manager
     company = manager.company
-    labor_types = LaborType.objects.filter(company=company).order_by('name')
-    
-    context = {
-        'company': company,
-        'labor_types': labor_types,
-    }
-    return render(request, 'callManager/labor_type_list.html', context)
 
-
-@login_required
-def add_worker(request):
-    manager = request.user.manager
-    if request.method == "POST":
-        form = WorkerForm(request.POST, company=manager.company)
-        if form.is_valid():
-            form.save()
-            return redirect('worker_list')
-    else:
-        form = WorkerForm(company=manager.company)
-    
-    context = {
-        'form': form,
-    }
-    return render(request, 'callManager/add_worker.html', context)
-
-
-@login_required
-def worker_list(request):
-    manager = request.user.manager
     workers = Worker.objects.all().order_by('name')
-    
-    # Handle search query
+    print(f"Initial workers: {workers.count()}")
+
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers = workers.filter(
             Q(name__icontains=search_query) |
             Q(phone_number__icontains=search_query)
         )
-    
+        print(f"Filtered workers for '{search_query}': {workers.count()}")
+
+    paginator = Paginator(workers, 10)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    if request.method == "POST":
+        if 'delete_id' in request.POST:
+            worker_id = request.POST.get('delete_id')
+            worker = get_object_or_404(Worker, id=worker_id)
+            worker.delete()
+            # Preserve page and search in redirect
+            query_params = {}
+            if page_number != '1':  # Only include page if not 1
+                query_params['page'] = page_number
+            if search_query:
+                query_params['search'] = search_query
+            redirect_url = reverse('view_workers')  # Base URL
+            if query_params:
+                redirect_url += '?' + urlencode(query_params)  # Append query string
+            return redirect(redirect_url)
+        elif 'add_worker' in request.POST:
+            form = WorkerForm(request.POST, company=manager.company)
+            if form.is_valid():
+                worker = form.save(commit=False)
+                worker.save()
+                worker.companies.add(manager.company)
+                # Preserve page and search on add
+                query_params = {}
+                if page_number != '1':
+                    query_params['page'] = page_number
+                if search_query:
+                    query_params['search'] = search_query
+                redirect_url = reverse('view_workers')
+                if query_params:
+                    redirect_url += '?' + urlencode(query_params)
+                return redirect(redirect_url)
+
+    add_form = WorkerForm(company=manager.company)
+
     context = {
-        'workers': workers,
+        'workers': page_obj,
+        'page_obj': page_obj,
         'search_query': search_query,
+        'add_form': add_form,
     }
-    
-    # Check if this is an HTMX request
-    if request.headers.get('HX-Request') == 'true':
-        return render(request, 'callManager/worker_list_partial.html', context)
-    return render(request, 'callManager/worker_list.html', context)
+    return render(request, 'callManager/view_workers.html', context)
 
 
 @login_required
 def edit_worker(request, worker_id):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    
     manager = request.user.manager
-    worker = get_object_or_404(Worker, id=worker_id)  # No company filter
+    worker = get_object_or_404(Worker, id=worker_id)
+
     if request.method == "POST":
         form = WorkerForm(request.POST, instance=worker, company=manager.company)
         if form.is_valid():
             form.save()
-            return redirect('worker_list')
+            return redirect('view_workers')
     else:
         form = WorkerForm(instance=worker, company=manager.company)
+
     context = {
         'form': form,
         'worker': worker,
