@@ -27,29 +27,24 @@ from urllib.parse import urlencode
 
 def confirm_assignment(request, token):
     assignment = get_object_or_404(LaborRequest, token=token)
-    
     if request.method == "POST":
         load_in_response = request.POST.get('load_in_response')
         load_out_response = request.POST.get('load_out_response')
         response_message = request.POST.get('response_message', '')
-
         assignment.load_in_response = load_in_response
         assignment.load_out_response = load_out_response
         if 'other' in (load_in_response, load_out_response):
             assignment.response_message = response_message
         assignment.responded_at = timezone.now()
         assignment.save()
-
         return render(request, 'callManager/confirmation_success.html', {'assignment': assignment})
-
     return render(request, 'callManager/confirmation_form.html', {'assignment': assignment})
 
-
+@login_required
 def event_detail(request, event_id):
     manager = request.user.manager
     event = get_object_or_404(Event, id=event_id, company=manager.company)
     call_times = event.call_times.all()
-    
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event
@@ -58,7 +53,6 @@ def event_detail(request, event_id):
         confirmed_count=Count('id', filter=Q(response='yes')),
         rejected_count=Count('id', filter=Q(response='no'))
     )
-    
     labor_counts = {}
     for lr in labor_requirements:
         lr_id = lr.id
@@ -67,7 +61,6 @@ def event_detail(request, event_id):
         rejected = next((item['rejected_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
         needed = lr.needed_labor
         non_rejected = pending + confirmed
-        
         if non_rejected > needed:
             overbooked = non_rejected - needed
             if confirmed >= needed:
@@ -80,52 +73,68 @@ def event_detail(request, event_id):
             display_text = f"{confirmed} filled"
         else:
             display_text = f"{needed} needed ({pending} pending, {confirmed} confirmed, {rejected} rejected)"
-        
         labor_counts[lr_id] = {
             'pending': pending,
             'confirmed': confirmed,
             'rejected': rejected,
             'display_text': display_text,
-            'labor_requirement': lr  # Include for URL generation
+            'labor_requirement': lr
         }
-    
     if request.method == "POST" and 'send_messages' in request.POST:
         queued_requests = LaborRequest.objects.filter(
             labor_requirement__call_time__event=event,
             requested=True,
             sms_sent=False
-        )
+        ).select_related('worker')
         if queued_requests.exists():
             event_token = str(uuid.uuid4())
             sms_errors = []
-            print(f"TWILIO_ENABLED is set to: {settings.TWILIO_ENABLED}")
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
             confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{event_token}/")
             for labor_request in queued_requests:
+                worker = labor_request.worker
                 message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
-                if labor_request.worker.phone_number:
-                    if settings.TWILIO_ENABLED == 'enabled' and client:
-                        try:
-                            message = client.messages.create(
-                                body=message_body,
-                                from_=settings.TWILIO_PHONE_NUMBER,
-                                to=str(labor_request.worker.phone_number)
-                            )
+                if worker.phone_number:
+                    if worker.stop_sms:
+                        sms_errors.append(f"{worker.name} (opted out via STOP)")
+                    elif not worker.sms_consent:
+                        consent_body = "Reply 'Yes.' to receive job request messages from CallMan. Reply 'No.' or 'STOP' to opt out."
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=consent_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number)
+                                )
+                                print(f"Sent consent request to {worker.phone_number}")
+                            except TwilioRestException as e:
+                                sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
+                        else:
+                            print(f"Twilio disabled; consent queued for {worker.phone_number}")
+                    elif worker.sms_consent:
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=message_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number)
+                                )
+                                labor_request.sms_sent = True
+                                labor_request.event_token = event_token
+                                labor_request.save()
+                                print(f"Sent SMS to {worker.phone_number}")
+                            except TwilioRestException as e:
+                                sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
+                        else:
                             labor_request.sms_sent = True
                             labor_request.event_token = event_token
                             labor_request.save()
-                        except TwilioRestException as e:
-                            sms_errors.append(labor_request.worker.name)
-                    else:
-                        print(f"SMS to {labor_request.worker.phone_number}: {message_body}")
-                        labor_request.sms_sent = True
-                        labor_request.event_token = event_token
-                        labor_request.save()
+                            print(f"Twilio disabled; marked SMS sent for {worker.phone_number}")
                 else:
-                    sms_errors.append(f"{labor_request.worker.name} (no phone)")
-            message = f"Messages sent to {queued_requests.count()} workers."
+                    sms_errors.append(f"{worker.name} (no phone)")
+            message = f"Messages processed for {queued_requests.count()} workers."
             if sms_errors:
-                message += f" SMS failed for: {', '.join(sms_errors)}."
+                message += f" Errors: {', '.join(sms_errors)}."
         else:
             message = "No queued requests to send."
         context = {
@@ -135,7 +144,6 @@ def event_detail(request, event_id):
             'message': message,
         }
         return render(request, 'callManager/event_detail.html', context)
-
     context = {
         'event': event,
         'call_times': call_times,
@@ -152,23 +160,21 @@ def manager_dashboard(request):
     
     manager = request.user.manager
     company = manager.company
-
-    # Fetch company events
     events = Event.objects.filter(company=company).order_by('-start_date')
-    
-    # Quick stats
     total_events = events.count()
-    
-    # Calculate total labor needed, default to 0 if no labor requirements exist
     labor_agg = LaborRequirement.objects.filter(call_time__event__company=company).aggregate(total=Sum('needed_labor'))
     total_labor_needed = labor_agg['total'] if labor_agg['total'] is not None else 0
-    
-    total_requests = LaborRequest.objects.filter(labor_requirement__call_time__event__company=company).count()
+    total_requests = LaborRequest.objects.filter(
+            labor_requirement__call_time__event__company=company,
+            response=None).count()
     confirmed_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
         response='yes',
     ).count()
-
+    declined_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event__company=company,
+        response='no',
+    ).count()
     context = {
         'company': company,
         'events': events,
@@ -176,8 +182,30 @@ def manager_dashboard(request):
         'total_labor_needed': total_labor_needed,
         'total_requests': total_requests,
         'confirmed_requests': confirmed_requests,
+        'declined_requests': declined_requests,
     }
     return render(request, 'callManager/manager_dashboard.html', context)
+
+
+@login_required
+def declined_requests(request):
+    if request.method == "POST":
+        #delete request button
+        if 'delete_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            request = get_object_or_404(LaborRequest, id=request_id)
+            request.delete()
+            return redirect('declined_requests')
+    manager = request.user.manager
+    company = manager.company
+    declined_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event__company=company,
+        response='no',
+    ).select_related('worker', 'labor_requirement__call_time__event')
+    context = {
+        'requests': declined_requests,
+    }
+    return render(request, 'callManager/declined_requests.html', context)
 
 
 @login_required
@@ -237,7 +265,6 @@ def create_event(request):
 def view_skills(request):
     manager = request.user.manager
     skills = LaborType.objects.filter(company=manager.company)
-
     if request.method == "POST":
         if 'delete_id' in request.POST:
             skill_id = request.POST.get('delete_id')
@@ -258,11 +285,9 @@ def view_skills(request):
                 skill.company = manager.company
                 skill.save()
                 return redirect('view_skills')
-
     # GET request: show all skills and forms
     edit_forms = {skill.id: SkillForm(instance=skill) for skill in skills}
     add_form = SkillForm()
-
     context = {
         'skills': skills,
         'edit_forms': edit_forms,
@@ -275,21 +300,14 @@ def view_skills(request):
 def view_workers(request):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
-    
     manager = request.user.manager
-    company = manager.company
-
     workers = Worker.objects.all().order_by('name')
-    print(f"Initial workers: {workers.count()}")
-
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers = workers.filter(
             Q(name__icontains=search_query) |
             Q(phone_number__icontains=search_query)
         )
-        print(f"Filtered workers for '{search_query}': {workers.count()}")
-
     paginator = Paginator(workers, 10)
     page_number = request.GET.get('page', 1)
     try:
@@ -298,7 +316,6 @@ def view_workers(request):
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
-
     if request.method == "POST":
         if 'delete_id' in request.POST:
             worker_id = request.POST.get('delete_id')
@@ -330,9 +347,7 @@ def view_workers(request):
                 if query_params:
                     redirect_url += '?' + urlencode(query_params)
                 return redirect(redirect_url)
-
     add_form = WorkerForm(company=manager.company)
-
     context = {
         'workers': page_obj,
         'page_obj': page_obj,
@@ -346,10 +361,8 @@ def view_workers(request):
 def edit_worker(request, worker_id):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
-    
     manager = request.user.manager
     worker = get_object_or_404(Worker, id=worker_id)
-
     if request.method == "POST":
         form = WorkerForm(request.POST, instance=worker, company=manager.company)
         if form.is_valid():
@@ -357,7 +370,6 @@ def edit_worker(request, worker_id):
             return redirect('view_workers')
     else:
         form = WorkerForm(instance=worker, company=manager.company)
-
     context = {
         'form': form,
         'worker': worker,
@@ -369,23 +381,17 @@ def edit_worker(request, worker_id):
 def fill_labor_call(request, labor_requirement_id):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
-    
-    # Fetch distinct workers by ID
     worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
     worker_ids = [w['id'] for w in worker_data]
     workers = Worker.objects.filter(id__in=worker_ids)
-
-    # Sort by labor type match and name in Python
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
-
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers_list = [
             w for w in workers_list
             if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
         ]
-
     paginator = Paginator(workers_list, 10)
     page_number = request.GET.get('page', 1)
     try:
@@ -394,14 +400,11 @@ def fill_labor_call(request, labor_requirement_id):
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
-
     current_call_time = labor_requirement.call_time
     event_date = current_call_time.event.start_date
     current_datetime = datetime.combine(event_date, current_call_time.time)
-
     window_start = current_datetime - timedelta(hours=5)
     window_end = current_datetime + timedelta(hours=5)
-
     conflicting_requests = LaborRequest.objects.filter(
         worker__in=page_obj.object_list,
         labor_requirement__call_time__event__start_date=event_date,
@@ -409,7 +412,6 @@ def fill_labor_call(request, labor_requirement_id):
         labor_requirement__call_time__time__lte=window_end.time(),
         requested=True,
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-
     worker_conflicts = {}
     for labor_request in conflicting_requests:
         if labor_request.worker_id not in worker_conflicts:
@@ -425,7 +427,6 @@ def fill_labor_call(request, labor_requirement_id):
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
-
     if request.method == "POST":
         worker_ids = request.POST.getlist('worker_ids')
         sms_errors = []
@@ -451,7 +452,6 @@ def fill_labor_call(request, labor_requirement_id):
             'message': message,
         }
         return render(request, 'callManager/fill_labor_call_partial.html', context)
-
     context = {
         'labor_requirement': labor_requirement,
         'workers': page_obj,
@@ -466,23 +466,17 @@ def fill_labor_call(request, labor_requirement_id):
 def fill_labor_call_list(request, labor_requirement_id):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
-    
-    # Fetch distinct workers by ID
     worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
     worker_ids = [w['id'] for w in worker_data]
     workers = Worker.objects.filter(id__in=worker_ids)
-
-    # Sort by labor type match and name in Python
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
-
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers_list = [
             w for w in workers_list
             if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
         ]
-
     paginator = Paginator(workers_list, 10)
     page_number = request.GET.get('page', 1)
     try:
@@ -491,14 +485,11 @@ def fill_labor_call_list(request, labor_requirement_id):
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
-
     current_call_time = labor_requirement.call_time
     event_date = current_call_time.event.start_date
     current_datetime = datetime.combine(event_date, current_call_time.time)
-
     window_start = current_datetime - timedelta(hours=5)
     window_end = current_datetime + timedelta(hours=5)
-
     conflicting_requests = LaborRequest.objects.filter(
         worker__in=page_obj.object_list,
         labor_requirement__call_time__event__start_date=event_date,
@@ -506,7 +497,6 @@ def fill_labor_call_list(request, labor_requirement_id):
         labor_requirement__call_time__time__lte=window_end.time(),
         requested=True,
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-
     worker_conflicts = {}
     for labor_request in conflicting_requests:
         if labor_request.worker_id not in worker_conflicts:
@@ -522,7 +512,6 @@ def fill_labor_call_list(request, labor_requirement_id):
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
-
     context = {
         'labor_requirement': labor_requirement,
         'workers': page_obj,
@@ -548,6 +537,63 @@ def add_call_time(request, event_id):
         form = CallTimeForm(event=event)
     return render(request, 'callManager/add_call_time.html', {'form': form, 'event': event})
 
+
+@csrf_exempt
+def sms_webhook(request):
+    if request.method == "POST":
+        from_number = request.POST.get('From')
+        body = request.POST.get('Body', '').strip().lower()
+        try:
+            worker = Worker.objects.get(phone_number=from_number)
+            if body == 'yes.':
+                worker.sms_consent = True
+                worker.stop_sms = False
+                worker.save()
+                queued_requests = LaborRequest.objects.filter(worker=worker,requested=True,sms_sent=False).select_related('labor_requirement__call_time__event')
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                for req in queued_requests:
+                    event = req.labor_requirement.call_time.event
+                    confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{req.event_token}/")
+                    message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
+                    client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
+                    req.sms_sent = True
+                    req.save()
+                response = MessagingResponse()
+                response.message("Thank you! You’ll now receive job requests.")
+            elif body == 'no.':
+                worker.sms_consent = False
+                worker.save()
+                response = MessagingResponse()
+                response.message("You’ve opted out of job request messages.")
+            elif body == 'stop':
+                worker.sms_consent = False
+                worker.stop_sms = True
+                worker.save()
+                response = MessagingResponse()
+                response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
+            elif body == 'start':
+                worker.sms_consent = True
+                worker.stop_sms = False
+                worker.save()
+                queued_requests = LaborRequest.objects.filter(worker=worker,requested=True,sms_sent=False).select_related('labor_requirement__call_time__event')
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                for req in queued_requests:
+                    event = req.labor_requirement.call_time.event
+                    confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{req.event_token}/")
+                    message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
+                    client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
+                    req.sms_sent = True
+                    req.save()
+                response = MessagingResponse()
+                response.message("Welcome back! You’ll now receive job requests.")
+            else:
+                response = MessagingResponse()
+                response.message("Please reply 'Yes.' to consent, 'No.' to opt out, or 'STOP' to unsubscribe.")
+        except Worker.DoesNotExist:
+            response = MessagingResponse()
+            response.message("Number not recognized. Please contact support.")
+        return HttpResponse(str(response), content_type='text/xml')
+    return HttpResponse(status=400)
 
 @csrf_exempt
 def sms_reply_webhook(request):
@@ -585,7 +631,6 @@ def import_workers(request):
             errors = []
             current_name = None
             current_phone = None
-
             for i, line in enumerate(vcf_file):
                 line = line.strip()
                 try:
@@ -598,7 +643,6 @@ def import_workers(request):
                                     current_phone = f"+{current_phone}"
                                 elif not current_phone.startswith('+') and len(current_phone) == 10:
                                     current_phone = f"+1{current_phone}"
-
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
                                 defaults={'name': current_name.strip() if current_name else None}
@@ -616,7 +660,6 @@ def import_workers(request):
                             current_phone = parts[-1].strip()
                 except Exception as e:
                     errors.append(f"Error at line {i + 1}: {str(e)} (Line: {line[:50]})")
-
             message = f"Imported {imported} workers."
             if errors:
                 message += f" Errors: {', '.join(errors[:5])}" + (f" and {len(errors) - 5} more" if len(errors) > 5 else "")
@@ -634,7 +677,6 @@ def confirm_event_requests(request, event_id, event_token):
         requested=True,
         response__isnull=True
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-
     # Use first request's phone number only
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
@@ -643,14 +685,12 @@ def confirm_event_requests(request, event_id, event_token):
     ).select_related('worker').first()
     phone_number = first_request.worker.phone_number if first_request else ''
     registration_url = request.build_absolute_uri(f"/worker/register/?phone={phone_number}")
-
     if not labor_requests.exists():
         context = {
             'message': "No pending requests found for this link.",
             'registration_url': registration_url,
         }
         return render(request, 'callManager/confirm_error.html', context)
-
     if request.method == "POST":
         for labor_request in labor_requests:
             response_key = f"response_{labor_request.id}"
@@ -664,7 +704,6 @@ def confirm_event_requests(request, event_id, event_token):
             'registration_url': registration_url,
         }
         return render(request, 'callManager/confirm_success.html', context)
-
     context = {
         'event': event,
         'labor_requests': labor_requests,
@@ -692,13 +731,11 @@ def worker_registration(request):
     else:
         form = WorkerRegistrationForm(initial={'phone_number': phone_number})
         form.fields['phone_number'].disabled = True
-
     context = {
         'form': form,
         'phone_number': phone_number,
     }
     return render(request, 'callManager/worker_registration.html', context)
-
 def registration_success(request):
     return render(request, 'callManager/registration_success.html')
 
@@ -711,7 +748,6 @@ def labor_request_list(request, labor_requirement_id):
         labor_requirement=labor_requirement,
         requested=True
     ).select_related('worker')
-
     message = None
     if request.method == "POST":
         if 'request_id' in request.POST:
@@ -744,7 +780,6 @@ def labor_request_list(request, labor_requirement_id):
                     labor_request.requested = True
                     labor_request.save()
             message = f"{len(worker_ids)} workers queued for request."
-
         pending_requests = labor_requests.filter(response__isnull=True)
         confirmed_requests = labor_requests.filter(response='yes')
         declined_requests = labor_requests.filter(response='no')
@@ -757,11 +792,9 @@ def labor_request_list(request, labor_requirement_id):
             'message': message,
         }
         return render(request, 'callManager/labor_request_list.html', context)
-
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
-
     context = {
         'labor_requirement': labor_requirement,
         'pending_requests': pending_requests,
@@ -770,6 +803,7 @@ def labor_request_list(request, labor_requirement_id):
         'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
     }
     return render(request, 'callManager/labor_request_list.html', context)
+
 
 @login_required
 def fill_labor_request_list(request, labor_requirement_id):
@@ -780,18 +814,15 @@ def fill_labor_request_list(request, labor_requirement_id):
     worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
     worker_ids = [w['id'] for w in worker_data]
     workers = Worker.objects.filter(id__in=worker_ids)
-
     # Sort by labor type match and name in Python
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
-
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers_list = [
             w for w in workers_list
             if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
         ]
-
     paginator = Paginator(workers_list, 10)
     page_number = request.GET.get('page', 1)
     try:
@@ -800,14 +831,11 @@ def fill_labor_request_list(request, labor_requirement_id):
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
-
     current_call_time = labor_requirement.call_time
     event_date = current_call_time.event.start_date
     current_datetime = datetime.combine(event_date, current_call_time.time)
-
     window_start = current_datetime - timedelta(hours=5)
     window_end = current_datetime + timedelta(hours=5)
-
     conflicting_requests = LaborRequest.objects.filter(
         worker__in=page_obj.object_list,
         labor_requirement__call_time__event__start_date=event_date,
@@ -815,7 +843,6 @@ def fill_labor_request_list(request, labor_requirement_id):
         labor_requirement__call_time__time__lte=window_end.time(),
         requested=True,
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-
     worker_conflicts = {}
     for labor_request in conflicting_requests:
         if labor_request.worker_id not in worker_conflicts:
@@ -831,11 +858,6 @@ def fill_labor_request_list(request, labor_requirement_id):
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
-
-    print(f"Workers count for labor {labor_requirement_id}: {len(page_obj.object_list)}")
-    print(f"Worker IDs: {[w.id for w in page_obj.object_list]}")
-    print(f"Worker Names: {[w.name for w in page_obj.object_list]}")
-
     context = {
         'labor_requirement': labor_requirement,
         'workers': page_obj,
@@ -854,11 +876,9 @@ def call_time_request_list(request, call_time_id):
         labor_requirement__call_time=call_time,
         requested=True
     ).select_related('worker', 'labor_requirement__labor_type')
-
     labor_type_filter = request.GET.get('labor_type', 'All')
     if labor_type_filter != 'All':
         labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
-
     if request.method == "POST":
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
@@ -875,13 +895,10 @@ def call_time_request_list(request, call_time_id):
                 labor_request.delete()
                 message = "Request deleted successfully."
             return redirect('call_time_request_list', call_time_id=call_time_id)
-
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
-
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
-
     context = {
         'call_time': call_time,
         'pending_requests': pending_requests,

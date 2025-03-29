@@ -6,7 +6,7 @@
     <h1 class="text-3xl font-bold mb-6">{{ company.name }} Dashboard</h1>
 
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         <div class="bg-white p-4 rounded-lg shadow">
             <h2 class="text-lg font-semibold text-gray-700">Total Events</h2>
             <p class="text-2xl font-bold text-blue-600">{{ total_events }}</p>
@@ -16,13 +16,19 @@
             <p class="text-2xl font-bold text-blue-600">{{ total_labor_needed }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
-            <h2 class="text-lg font-semibold text-gray-700">Total Requests</h2> <!-- Fixed from "Assignments" -->
+            <h2 class="text-lg font-semibold text-gray-700">Pending Requests</h2> <!-- Fixed from "Assignments" -->
             <p class="text-2xl font-bold text-blue-600">{{ total_requests }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
             <h2 class="text-lg font-semibold text-gray-700">Confirmed Requests</h2> <!-- Fixed from "Assignments" -->
             <p class="text-2xl font-bold text-blue-600">{{ confirmed_requests }}</p>
         </div>
+        <a href={% url 'declined_requests' %}>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h2 class="text-lg font-semibold text-gray-700">Declined Requests</h2>
+            <p class="text-2xl font-bold text-blue-600">{{ declined_requests }}</p>
+        </div>
+        </a>
     </div>
 
     <!-- Action Buttons -->

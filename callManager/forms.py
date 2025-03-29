@@ -74,7 +74,7 @@ class LaborRequirementForm(forms.ModelForm):
 class WorkerForm(forms.ModelForm):
     class Meta:
         model = Worker
-        fields = ['name', 'phone_number', 'labor_types']
+        fields = ['name', 'phone_number', 'labor_types', 'sms_consent']
         widgets = {
             'labor_types': forms.CheckboxSelectMultiple,
         }

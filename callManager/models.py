@@ -77,6 +77,8 @@ class Worker(models.Model):
     name = models.CharField(max_length=200, blank=True)
     companies = models.ManyToManyField('Company', related_name='workers', blank=True)  # Managers will populate this
     labor_types = models.ManyToManyField('LaborType', blank=True)
+    sms_consent = models.BooleanField(default=False)
+    stop_sms = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name or "Unnamed Worker"
