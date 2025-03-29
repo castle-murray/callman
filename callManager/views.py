@@ -72,13 +72,11 @@ def event_detail(request, event_id):
     if request.method == "POST" and 'send_messages' in request.POST:
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event,requested=True,sms_sent=False).select_related('worker')
         if queued_requests.exists():
-            event_token = str(uuid.uuid4())
             sms_errors = []
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
-            confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{event_token}/")
+            worker_tokens = {}  # Track tokens per worker
             for labor_request in queued_requests:
                 worker = labor_request.worker
-                message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
                 if worker.phone_number:
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
@@ -97,20 +95,26 @@ def event_detail(request, event_id):
                             worker.save()
                             print(f"Twilio disabled; consent marked for {worker.phone_number}")
                     elif worker.sms_consent:
+                        # Unique token per worker
+                        if worker.id not in worker_tokens:
+                            worker_tokens[worker.id] = str(uuid.uuid4())
+                        token = worker_tokens[worker.id]
+                        confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{token}/")
+                        message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
                                 labor_request.sms_sent = True
-                                labor_request.event_token = event_token
+                                labor_request.event_token = token
                                 labor_request.save()
-                                print(f"Sent SMS to {worker.phone_number}")
+                                print(f"Sent SMS to {worker.phone_number} with token {token}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
                         else:
                             labor_request.sms_sent = True
-                            labor_request.event_token = event_token
+                            labor_request.event_token = token
                             labor_request.save()
-                            print(f"Twilio disabled; marked SMS sent for {worker.phone_number}")
+                            print(f"Twilio disabled; marked SMS sent for {worker.phone_number} with token {confirmation_url}")
                     else:
                         sms_errors.append(f"{worker.name} (awaiting consent)")
                 else:
@@ -646,25 +650,28 @@ def import_workers(request):
 
 def confirm_event_requests(request, event_id, event_token):
     event = get_object_or_404(Event, id=event_id)
-    labor_requests = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event,
-        event_token=event_token,
-        requested=True,
-        response__isnull=True
-    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-    # Use first request's phone number only
+    # Get worker phone from first request with this token
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         event_token=event_token,
         requested=True
     ).select_related('worker').first()
-    phone_number = first_request.worker.phone_number if first_request else ''
-    registration_url = request.build_absolute_uri(f"/worker/register/?phone={phone_number}")
+    if not first_request:
+        context = {'message': "No pending requests found for this link."}
+        return render(request, 'callManager/confirm_error.html', context)
+    
+    worker_phone = first_request.worker.phone_number
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event=event,
+        event_token=event_token,
+        requested=True,
+        response__isnull=True,
+        worker__phone_number=worker_phone  # Filter by worker's phone
+    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
+    
+    registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
     if not labor_requests.exists():
-        context = {
-            'message': "No pending requests found for this link.",
-            'registration_url': registration_url,
-        }
+        context = {'message': "No pending requests found for this link.",'registration_url': registration_url}
         return render(request, 'callManager/confirm_error.html', context)
     if request.method == "POST":
         for labor_request in labor_requests:
@@ -674,17 +681,11 @@ def confirm_event_requests(request, event_id, event_token):
                 labor_request.response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
-        context = {
-            'event': event,
-            'registration_url': registration_url,
-        }
+        context = {'event': event,'registration_url': registration_url}
         return render(request, 'callManager/confirm_success.html', context)
-    context = {
-        'event': event,
-        'labor_requests': labor_requests,
-        'registration_url': registration_url,
-    }
+    context = {'event': event,'labor_requests': labor_requests,'registration_url': registration_url}
     return render(request, 'callManager/confirm_event_requests.html', context)
+
 
 def worker_registration(request):
     phone_number = request.GET.get('phone', '')
