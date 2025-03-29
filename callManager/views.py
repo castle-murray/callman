@@ -720,10 +720,7 @@ def registration_success(request):
 def labor_request_list(request, labor_requirement_id):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
-    labor_requests = LaborRequest.objects.filter(
-        labor_requirement=labor_requirement,
-        requested=True
-    ).select_related('worker')
+    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
     message = None
     if request.method == "POST":
         if 'request_id' in request.POST:
@@ -742,20 +739,30 @@ def labor_request_list(request, labor_requirement_id):
                 message = "Request deleted successfully."
         elif 'worker_ids' in request.POST:
             worker_ids = request.POST.getlist('worker_ids')
-            sms_errors = []
             for worker_id in worker_ids:
                 worker = Worker.objects.get(id=worker_id)
-                labor_request, created = LaborRequest.objects.get_or_create(
-                    worker=worker,
-                    labor_requirement=labor_requirement,
-                    defaults={'requested': True, 'sms_sent': False}
-                )
+                labor_request, created = LaborRequest.objects.get_or_create(worker=worker,labor_requirement=labor_requirement,defaults={'requested': True, 'sms_sent': False})
                 if labor_requirement.labor_type not in worker.labor_types.all():
                     worker.labor_types.add(labor_requirement.labor_type)
                 if not created and not labor_request.sms_sent:
                     labor_request.requested = True
                     labor_request.save()
             message = f"{len(worker_ids)} workers queued for request."
+            # Return partial for HTMX "Queue Request"
+            if request.headers.get('HX-Request'):
+                pending_requests = labor_requests.filter(response__isnull=True)
+                confirmed_requests = labor_requests.filter(response='yes')
+                declined_requests = labor_requests.filter(response='no')
+                context = {
+                    'labor_requirement': labor_requirement,
+                    'pending_requests': pending_requests,
+                    'confirmed_requests': confirmed_requests,
+                    'declined_requests': declined_requests,
+                    'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
+                    'message': message,
+                }
+                return render(request, 'callManager/labor_request_content_partial.html', context)
+        # Full page for non-HTMX POSTs
         pending_requests = labor_requests.filter(response__isnull=True)
         confirmed_requests = labor_requests.filter(response='yes')
         declined_requests = labor_requests.filter(response='no')
@@ -768,6 +775,7 @@ def labor_request_list(request, labor_requirement_id):
             'message': message,
         }
         return render(request, 'callManager/labor_request_list.html', context)
+    # GET request
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
