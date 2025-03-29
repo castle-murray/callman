@@ -40,19 +40,14 @@ def confirm_assignment(request, token):
         return render(request, 'callManager/confirmation_success.html', {'assignment': assignment})
     return render(request, 'callManager/confirmation_form.html', {'assignment': assignment})
 
+
 @login_required
 def event_detail(request, event_id):
     manager = request.user.manager
     event = get_object_or_404(Event, id=event_id, company=manager.company)
     call_times = event.call_times.all()
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
-    labor_requests = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event
-    ).values('labor_requirement_id').annotate(
-        pending_count=Count('id', filter=Q(requested=True) & Q(response__isnull=True)),
-        confirmed_count=Count('id', filter=Q(response='yes')),
-        rejected_count=Count('id', filter=Q(response='no'))
-    )
+    labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event).values('labor_requirement_id').annotate(pending_count=Count('id', filter=Q(requested=True) & Q(response__isnull=True)),confirmed_count=Count('id', filter=Q(response='yes')),rejected_count=Count('id', filter=Q(response='no')))
     labor_counts = {}
     for lr in labor_requirements:
         lr_id = lr.id
@@ -73,19 +68,9 @@ def event_detail(request, event_id):
             display_text = f"{confirmed} filled"
         else:
             display_text = f"{needed} needed ({pending} pending, {confirmed} confirmed, {rejected} rejected)"
-        labor_counts[lr_id] = {
-            'pending': pending,
-            'confirmed': confirmed,
-            'rejected': rejected,
-            'display_text': display_text,
-            'labor_requirement': lr
-        }
+        labor_counts[lr_id] = {'pending': pending,'confirmed': confirmed,'rejected': rejected,'display_text': display_text,'labor_requirement': lr}
     if request.method == "POST" and 'send_messages' in request.POST:
-        queued_requests = LaborRequest.objects.filter(
-            labor_requirement__call_time__event=event,
-            requested=True,
-            sms_sent=False
-        ).select_related('worker')
+        queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event,requested=True,sms_sent=False).select_related('worker')
         if queued_requests.exists():
             event_token = str(uuid.uuid4())
             sms_errors = []
@@ -97,28 +82,24 @@ def event_detail(request, event_id):
                 if worker.phone_number:
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
-                    elif not worker.sms_consent:
+                    elif not worker.sms_consent and not worker.sent_consent_msg:
                         consent_body = "Reply 'Yes.' to receive job request messages from CallMan. Reply 'No.' or 'STOP' to opt out."
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
-                                client.messages.create(
-                                    body=consent_body,
-                                    from_=settings.TWILIO_PHONE_NUMBER,
-                                    to=str(worker.phone_number)
-                                )
+                                client.messages.create(body=consent_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
+                                worker.sent_consent_msg = True
+                                worker.save()
                                 print(f"Sent consent request to {worker.phone_number}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
                         else:
-                            print(f"Twilio disabled; consent queued for {worker.phone_number}")
+                            worker.sent_consent_msg = True
+                            worker.save()
+                            print(f"Twilio disabled; consent marked for {worker.phone_number}")
                     elif worker.sms_consent:
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
-                                client.messages.create(
-                                    body=message_body,
-                                    from_=settings.TWILIO_PHONE_NUMBER,
-                                    to=str(worker.phone_number)
-                                )
+                                client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
                                 labor_request.sms_sent = True
                                 labor_request.event_token = event_token
                                 labor_request.save()
@@ -130,6 +111,8 @@ def event_detail(request, event_id):
                             labor_request.event_token = event_token
                             labor_request.save()
                             print(f"Twilio disabled; marked SMS sent for {worker.phone_number}")
+                    else:
+                        sms_errors.append(f"{worker.name} (awaiting consent)")
                 else:
                     sms_errors.append(f"{worker.name} (no phone)")
             message = f"Messages processed for {queued_requests.count()} workers."
@@ -137,18 +120,9 @@ def event_detail(request, event_id):
                 message += f" Errors: {', '.join(sms_errors)}."
         else:
             message = "No queued requests to send."
-        context = {
-            'event': event,
-            'call_times': call_times,
-            'labor_counts': labor_counts,
-            'message': message,
-        }
+        context = {'event': event,'call_times': call_times,'labor_counts': labor_counts,'message': message}
         return render(request, 'callManager/event_detail.html', context)
-    context = {
-        'event': event,
-        'call_times': call_times,
-        'labor_counts': labor_counts,
-    }
+    context = {'event': event,'call_times': call_times,'labor_counts': labor_counts}
     return render(request, 'callManager/event_detail.html', context)
 
 
@@ -594,6 +568,7 @@ def sms_webhook(request):
             response.message("Number not recognized. Please contact support.")
         return HttpResponse(str(response), content_type='text/xml')
     return HttpResponse(status=400)
+
 
 @csrf_exempt
 def sms_reply_webhook(request):
