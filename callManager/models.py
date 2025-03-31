@@ -73,6 +73,7 @@ class CallTime(models.Model):
     original_date = models.DateField(null=True, blank=True)
     original_time = models.TimeField(null=True, blank=True)
     last_modified = models.DateTimeField(auto_now=True)
+    message = models.TextField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:  # New instance

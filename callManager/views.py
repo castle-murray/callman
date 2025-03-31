@@ -111,6 +111,7 @@ def event_detail(request, slug):
                             labor_request.sms_sent = True
                             labor_request.event_token = token
                             labor_request.save()
+                            print(message_body)
                     else:
                         sms_errors.append(f"{worker.name} (awaiting consent)")
                 else:
@@ -701,8 +702,8 @@ def import_workers(request):
     return render(request, 'callManager/import_workers.html', {'form': form})
 
 
-def confirm_event_requests(request, event_id, event_token):
-    event = get_object_or_404(Event, id=event_id)
+def confirm_event_requests(request, slug, event_token):
+    event = get_object_or_404(Event, slug=slug)
     # Get worker phone from first request with this token
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,

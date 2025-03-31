@@ -35,11 +35,12 @@ class EventForm(forms.ModelForm):
 class CallTimeForm(forms.ModelForm):
     class Meta:
         model = CallTime
-        fields = ['name', 'date', 'time']
+        fields = ['name', 'date', 'time', 'message']
         widgets = {
             'name': forms.TextInput(attrs={'autofocus': 'autofocus'}),
             'date': forms.DateInput(attrs={'type': 'date'}),
             'time': forms.TimeInput(attrs={'type': 'time'}),
+            'message': forms.Textarea(attrs={'rows': 4}),
         }
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event', None)
