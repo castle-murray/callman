@@ -1,6 +1,6 @@
 {% load callman_tags %}
 <form method="post" 
-      hx-post="{% url 'fill_labor_call' labor_requirement.id %}" 
+      hx-post="{% url 'fill_labor_call' labor_requirement.slug %}" 
       hx-target="#worker-modal" 
       hx-swap="innerHTML">
     {% csrf_token %}
@@ -23,7 +23,7 @@
                                             <li>
                                                 - 
                                                 {% if conflict.status == 'Confirmed' %}
-                                                    {% if conflict.call_time_id == labor_requirement.call_time.id and conflict.labor_type_id == labor_requirement.labor_type.id %}
+                                                    {% if conflict.call_time_id == labor_requirement.call_time.slug and conflict.labor_type_id == labor_requirement.labor_type.id %}
                                                         <span class="text-green-600">Confirmed</span>
                                                     {% else %}
                                                         <span class="text-red-600">Confirmed (Other)</span>
@@ -46,8 +46,8 @@
         </ul>
         <div class="mt-4 flex justify-between">
             {% if page_obj.has_previous %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-blue-500 hover:underline">Previous</a>
             {% else %}
@@ -55,8 +55,8 @@
             {% endif %}
             <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-blue-500 hover:underline">Next</a>
             {% else %}

@@ -7,7 +7,7 @@
     <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
         <form method="post">
             {% csrf_token %}
-            <div class="space-y-4">
+            <div autofocus class="space-y-4">
                 {{ form.as_p }}
             </div>
             <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Call Time</button>

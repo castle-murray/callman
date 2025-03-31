@@ -6,7 +6,7 @@
     <h1 class="text-2xl font-bold mb-6">Import Workers from VCF</h1>
     
     <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-        <form method="post" enctype="multipart/form-data">
+        <form class="mb-4"method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="space-y-4">
                 <label for="{{ form.file.id_for_label }}" class="block text-gray-700 font-semibold mb-1">Upload a .vcf file with contacts</label>
@@ -18,5 +18,27 @@
         {% if message %}
             <p class="mt-4 {% if 'Errors' in message %}text-red-600{% else %}text-green-600{% endif %}">{{ message }}</p>
         {% endif %}
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">How to Export a VCF File</h2>
+            <div class="text-gray-700">
+                <p class="font-semibold">From iPhone:</p>
+                <ol class="list-decimal list-inside space-y-1 ml-4">
+                    <li>Open the <strong>Contacts</strong> app.</li>
+                    <li>Tap <strong>Lists</strong> at the top left, then long-press <strong>All Contacts</strong>.</li>
+                    <li>Select <strong>Export</strong> from the menu.</li>
+                    <li>Choose your desired fields (e.g., "Select All Fields") and tap <strong>Done</strong>.</li>
+                    <li>Use <strong>Mail</strong> or another app to send the .vcf file to your computer or email accessible on this device.</li>
+                </ol>
+                <p class="font-semibold mt-4">From Android:</p>
+                <ol class="list-decimal list-inside space-y-1 ml-4">
+                    <li>Open the <strong>Contacts</strong> app (or Google Contacts).</li>
+                    <li>Go to <strong>Settings</strong> or tap the menu (three dots or lines).</li>
+                    <li>Select <strong>Import/Export</strong> > <strong>Export to .vcf file</strong>.</li>
+                    <li>Choose where to save (e.g., internal storage) and confirm.</li>
+                    <li>Transfer the .vcf file to your computer or email via <strong>Gmail</strong> or another method.</li>
+                </ol>
+            </div>
+        </div>
+
     </div>
 {% endblock %}

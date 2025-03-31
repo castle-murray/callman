@@ -31,15 +31,16 @@ class EventForm(forms.ModelForm):
             raise forms.ValidationError("End date must be on or after start date.")
         return cleaned_data
 
+
 class CallTimeForm(forms.ModelForm):
     class Meta:
         model = CallTime
         fields = ['name', 'date', 'time']
         widgets = {
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus'}),
             'date': forms.DateInput(attrs={'type': 'date'}),
             'time': forms.TimeInput(attrs={'type': 'time'}),
         }
-
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event', None)
         super().__init__(*args, **kwargs)
@@ -47,21 +48,24 @@ class CallTimeForm(forms.ModelForm):
             self.fields['date'].initial = event.start_date
             self.fields['date'].disabled = True
             self.fields['date'].widget.attrs['readonly'] = True
-
     def clean(self):
         cleaned_data = super().clean()
         date = cleaned_data.get('date')
         event = self.instance.event if self.instance and hasattr(self.instance, 'event') else None
-        if event:
-            if date < event.start_date or date > event.end_date:
-                raise forms.ValidationError("Call time date must be within the event's date range.")
+        if event and date:  # Ensure date is present
+            if date < event.start_date:
+                raise forms.ValidationError("Call time date cannot be before the event's start date.")
+            if event.end_date and date > event.end_date:  # Only check end_date if it exists
+                raise forms.ValidationError("Call time date cannot be after the event's end date.")
         return cleaned_data
+    
 
 class LaborRequirementForm(forms.ModelForm):
     class Meta:
         model = LaborRequirement
         fields = ['labor_type', 'needed_labor']
         widgets = {
+            'labor_type': forms.Select(attrs={'autofocus': 'autofocus'}),
             'needed_labor': forms.NumberInput(attrs={'min': 1}),
         }
 

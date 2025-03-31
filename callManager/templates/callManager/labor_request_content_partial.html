@@ -94,13 +94,13 @@
                 <input type="text" 
                        name="search" 
                        value="" 
-                       hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" 
+                       hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}" 
                        hx-target="#fill-list" 
                        hx-trigger="keyup changed delay:300ms" 
                        placeholder="Search by name or phone..." 
                        class="w-full max-w-md p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-            <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.id %}" hx-trigger="load">
+            <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}" hx-trigger="load">
                 <!-- HTMX will load the partial here -->
             </div>
         </div>
@@ -109,5 +109,5 @@
     {% if message %}
         <p class="text-green-600 mt-2">{{ message }}</p>
     {% endif %}
-    <a href="{% url 'event_detail' labor_requirement.call_time.event.id %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
+    <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
 </div>

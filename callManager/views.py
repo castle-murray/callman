@@ -23,6 +23,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import uuid
 from django.urls import reverse
 from urllib.parse import urlencode
+from django.contrib import messages
 
 
 def confirm_assignment(request, token):
@@ -42,9 +43,9 @@ def confirm_assignment(request, token):
 
 
 @login_required
-def event_detail(request, event_id):
+def event_detail(request, slug):
     manager = request.user.manager
-    event = get_object_or_404(Event, id=event_id, company=manager.company)
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
     call_times = event.call_times.all()
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
     labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event).values('labor_requirement_id').annotate(pending_count=Count('id', filter=Q(requested=True) & Q(response__isnull=True)),confirmed_count=Count('id', filter=Q(response='yes')),rejected_count=Count('id', filter=Q(response='no')))
@@ -74,7 +75,7 @@ def event_detail(request, event_id):
         if queued_requests.exists():
             sms_errors = []
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
-            worker_tokens = {}  # Track tokens per worker
+            worker_tokens = {}
             for labor_request in queued_requests:
                 worker = labor_request.worker
                 if worker.phone_number:
@@ -87,19 +88,16 @@ def event_detail(request, event_id):
                                 client.messages.create(body=consent_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
                                 worker.sent_consent_msg = True
                                 worker.save()
-                                print(f"Sent consent request to {worker.phone_number}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
                         else:
                             worker.sent_consent_msg = True
                             worker.save()
-                            print(f"Twilio disabled; consent marked for {worker.phone_number}")
                     elif worker.sms_consent:
-                        # Unique token per worker
                         if worker.id not in worker_tokens:
                             worker_tokens[worker.id] = str(uuid.uuid4())
                         token = worker_tokens[worker.id]
-                        confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{token}/")
+                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                         message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
@@ -107,14 +105,12 @@ def event_detail(request, event_id):
                                 labor_request.sms_sent = True
                                 labor_request.event_token = token
                                 labor_request.save()
-                                print(f"Sent SMS to {worker.phone_number} with token {token}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
                         else:
                             labor_request.sms_sent = True
                             labor_request.event_token = token
                             labor_request.save()
-                            print(f"Twilio disabled; marked SMS sent for {worker.phone_number} with token {confirmation_url}")
                     else:
                         sms_errors.append(f"{worker.name} (awaiting consent)")
                 else:
@@ -202,41 +198,49 @@ def create_labor_type(request):
 
 
 @login_required
-def add_labor_to_call(request, call_time_id):
+def add_labor_to_call(request, slug):
     manager = request.user.manager
-    call_time = get_object_or_404(CallTime, id=call_time_id, event__company=manager.company)
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     
     if request.method == "POST":
         form = LaborRequirementForm(request.POST, company=manager.company)
         if form.is_valid():
             labor_requirement = form.save(commit=False)
             labor_requirement.call_time = call_time
+            # Check for existing LaborRequirement
+            existing = LaborRequirement.objects.filter(
+                call_time=call_time,
+                labor_type=labor_requirement.labor_type
+            ).first()
+            if existing:
+                message = f"Labor requirement for {labor_requirement.labor_type.name} already exists for this call time."
+                context = {'form': form, 'call_time': call_time, 'message': message}
+                return render(request, 'callManager/add_labor_to_call.html', context)
             labor_requirement.save()
-            return redirect('event_detail', event_id=call_time.event.id)
+            return redirect('event_detail', slug=call_time.event.slug)
     else:
         form = LaborRequirementForm(company=manager.company)
     
-    context = {
-        'form': form,
-        'call_time': call_time,
-    }
+    context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/add_labor_to_call.html', context)
 
 
 @login_required
 def create_event(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
     manager = request.user.manager
     if request.method == "POST":
         form = EventForm(request.POST)
         if form.is_valid():
             event = form.save(commit=False)
             event.company = manager.company
-            event.created_by = manager
-            event.save()
-            return redirect('event_detail', event_id=event.id)
+            event.save()  # Slug generated via save()
+            return redirect('event_detail', slug=event.slug)  # Use slug instead of event_id
     else:
         form = EventForm()
-    return render(request, 'callManager/create_event.html', {'form': form})
+    context = {'form': form}
+    return render(request, 'callManager/create_event.html', context)
 
 
 @login_required
@@ -501,19 +505,68 @@ def fill_labor_call_list(request, labor_requirement_id):
 
 
 @login_required
-def add_call_time(request, event_id):
+def add_call_time(request, slug):
     manager = request.user.manager
-    event = get_object_or_404(Event, id=event_id, company=manager.company)
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
     if request.method == "POST":
         form = CallTimeForm(request.POST, event=event)
         if form.is_valid():
             call_time = form.save(commit=False)
             call_time.event = event
             call_time.save()
-            return redirect('event_detail', event_id=event.id)
+            return redirect('event_detail', slug=event.slug)
     else:
         form = CallTimeForm(event=event)
     return render(request, 'callManager/add_call_time.html', {'form': form, 'event': event})
+
+
+@login_required
+def edit_call_time(request, slug):
+    manager = request.user.manager
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    if request.method == "POST":
+        form = CallTimeForm(request.POST, instance=call_time, event=call_time.event)
+        if form.is_valid():
+            updated_call_time = form.save(commit=False)
+            if call_time.has_changed():  # Check before saving
+                confirmed_requests = LaborRequest.objects.filter(
+                    labor_requirement__call_time=call_time,
+                    response__in=['yes', None],
+                    sms_sent=True
+                ).select_related('worker')
+                if confirmed_requests:
+                    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+                    sms_errors = []
+                    for req in confirmed_requests:
+                        worker = req.worker
+                        if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                            message_body = (
+                                f"CallMan: Update to {call_time.name} for {call_time.event.event_name}. "
+                                f"Old: {call_time.original_date} at {call_time.original_time}. "
+                                f"New: {updated_call_time.date} at {updated_call_time.time}."
+                            )
+                            if settings.TWILIO_ENABLED == 'enabled' and client:
+                                try:
+                                    client.messages.create(
+                                        body=message_body,
+                                        from_=settings.TWILIO_PHONE_NUMBER,
+                                        to=str(worker.phone_number)
+                                    )
+                                    print(f"Sent change notification to {worker.phone_number}")
+                                except TwilioRestException as e:
+                                    sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                            else:
+                                print(message_body)
+                    if sms_errors:
+                        messages.warning(request, f"Some notifications failed: {', '.join(sms_errors)}")
+                    else:
+                        messages.success(request, "Call time updated and workers notified.")
+            updated_call_time.save()
+            return redirect('event_detail', slug=call_time.event.slug)
+    else:
+        form = CallTimeForm(instance=call_time, event=call_time.event)
+    context = {'form': form, 'call_time': call_time}
+    return render(request, 'callManager/edit_call_time.html', context)
 
 
 @csrf_exempt
@@ -717,9 +770,9 @@ def registration_success(request):
 
 
 @login_required
-def labor_request_list(request, labor_requirement_id):
+def labor_request_list(request, slug):
     manager = request.user.manager
-    labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
     message = None
     if request.method == "POST":
@@ -748,7 +801,6 @@ def labor_request_list(request, labor_requirement_id):
                     labor_request.requested = True
                     labor_request.save()
             message = f"{len(worker_ids)} workers queued for request."
-            # Return partial for HTMX "Queue Request"
             if request.headers.get('HX-Request'):
                 pending_requests = labor_requests.filter(response__isnull=True)
                 confirmed_requests = labor_requests.filter(response='yes')
@@ -762,7 +814,6 @@ def labor_request_list(request, labor_requirement_id):
                     'message': message,
                 }
                 return render(request, 'callManager/labor_request_content_partial.html', context)
-        # Full page for non-HTMX POSTs
         pending_requests = labor_requests.filter(response__isnull=True)
         confirmed_requests = labor_requests.filter(response='yes')
         declined_requests = labor_requests.filter(response='no')
@@ -775,7 +826,6 @@ def labor_request_list(request, labor_requirement_id):
             'message': message,
         }
         return render(request, 'callManager/labor_request_list.html', context)
-    # GET request
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
@@ -790,15 +840,12 @@ def labor_request_list(request, labor_requirement_id):
 
 
 @login_required
-def fill_labor_request_list(request, labor_requirement_id):
+def fill_labor_request_list(request, slug):
     manager = request.user.manager
-    labor_requirement = get_object_or_404(LaborRequirement, id=labor_requirement_id, call_time__event__company=manager.company)
-    
-    # Fetch distinct workers by ID, avoiding join duplication
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
     worker_ids = [w['id'] for w in worker_data]
     workers = Worker.objects.filter(id__in=worker_ids)
-    # Sort by labor type match and name in Python
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
     search_query = request.GET.get('search', '').strip()
@@ -853,9 +900,9 @@ def fill_labor_request_list(request, labor_requirement_id):
 
 
 @login_required
-def call_time_request_list(request, call_time_id):
+def call_time_request_list(request, slug):
     manager = request.user.manager
-    call_time = get_object_or_404(CallTime, id=call_time_id, event__company=manager.company)
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
         requested=True
@@ -878,7 +925,7 @@ def call_time_request_list(request, call_time_id):
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
                 labor_request.delete()
                 message = "Request deleted successfully."
-            return redirect('call_time_request_list', call_time_id=call_time_id)
+            return redirect('call_time_request_list', slug=slug)
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')

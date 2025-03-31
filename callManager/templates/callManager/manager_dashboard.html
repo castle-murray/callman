@@ -6,14 +6,10 @@
     <h1 class="text-3xl font-bold mb-6">{{ company.name }} Dashboard</h1>
 
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white p-4 rounded-lg shadow">
             <h2 class="text-lg font-semibold text-gray-700">Total Events</h2>
             <p class="text-2xl font-bold text-blue-600">{{ total_events }}</p>
-        </div>
-        <div class="bg-white p-4 rounded-lg shadow">
-            <h2 class="text-lg font-semibold text-gray-700">Workers Needed</h2> <!-- Updated "Labor" to "Workers" -->
-            <p class="text-2xl font-bold text-blue-600">{{ total_labor_needed }}</p>
         </div>
         <div class="bg-white p-4 rounded-lg shadow">
             <h2 class="text-lg font-semibold text-gray-700">Pending Requests</h2> <!-- Fixed from "Assignments" -->

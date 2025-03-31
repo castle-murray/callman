@@ -2,6 +2,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from phonenumber_field.modelfields import PhoneNumberField
 import uuid
+import random
+
+def generate_unique_slug(model_class, length=7):
+    while True:
+        slug = ''.join([str(random.randint(0, 9)) for _ in range(length)])
+        if not model_class.objects.filter(slug=slug).exists():
+            return slug
 
 # Company model (e.g., "ABC Production Co.")
 class Company(models.Model):
@@ -45,6 +52,13 @@ class Event(models.Model):
     event_description = models.TextField()
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='events')
     created_by = models.ForeignKey('Manager', on_delete=models.SET_NULL, null=True, blank=True)
+    slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(Event)
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.event_name
@@ -54,6 +68,31 @@ class CallTime(models.Model):
     date = models.DateField(null=True, blank=True)
     name = models.CharField(max_length=200)  # e.g., "Walk and Chalk", "Pre Rig"
     time = models.TimeField()  # e.g., 08:00, 09:00
+    slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+    # New fields for tracking changes
+    original_date = models.DateField(null=True, blank=True)
+    original_time = models.TimeField(null=True, blank=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # New instance
+            self.original_date = self.date
+            self.original_time = self.time
+        elif self.has_changed():  # Existing instance with changes
+            if not self.original_date:
+                self.original_date = CallTime.objects.get(pk=self.pk).date
+            if not self.original_time:
+                self.original_time = CallTime.objects.get(pk=self.pk).time
+        super().save(*args, **kwargs)
+        if not self.slug:
+            self.slug = generate_unique_slug(CallTime)
+            super().save(update_fields=['slug'])
+
+    def has_changed(self):
+        if not self.pk:
+            return False
+        original = CallTime.objects.get(pk=self.pk)
+        return self.date != original.date or self.time != original.time
 
     def __str__(self):
         return f"{self.name} at {self.time} ({self.event})"
@@ -63,6 +102,13 @@ class LaborRequirement(models.Model):
     call_time = models.ForeignKey(CallTime, on_delete=models.CASCADE, related_name='labor_requirements', null=True, blank=True)
     labor_type = models.ForeignKey(LaborType, on_delete=models.CASCADE)
     needed_labor = models.IntegerField()
+    slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(LaborRequirement)
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.labor_type.name} ({self.needed_labor}) for {self.call_time}"
