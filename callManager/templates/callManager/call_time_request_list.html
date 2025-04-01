@@ -105,6 +105,6 @@
             <p class="text-gray-600 mb-4">No declined requests.</p>
         {% endif %}
 
-        <a href="{% url 'event_detail' call_time.event.id %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
+        <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Event</a>
     </div>
 {% endblock %}
