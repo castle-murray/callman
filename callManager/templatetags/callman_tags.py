@@ -1,5 +1,6 @@
 # callManager/templatetags/callman_tags.py
 from django import template
+from datetime import datetime, timedelta
 
 register = template.Library()
 
@@ -13,3 +14,9 @@ def subtract(value, arg):
         return int(value) - int(arg)
     except (ValueError, TypeError):
         return value  # Return original value if subtraction fails
+
+@register.filter
+def add_hours(time, hours):
+    if time:
+        return (datetime.combine(datetime.today(), time) + timedelta(hours=int(hours))).time()
+    return time

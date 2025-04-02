@@ -71,13 +71,22 @@ def event_detail(request, slug):
             display_text = f"{needed} needed ({pending} pending, {confirmed} confirmed, {rejected} rejected)"
         labor_counts[lr_id] = {'pending': pending,'confirmed': confirmed,'rejected': rejected,'display_text': display_text,'labor_requirement': lr}
     if request.method == "POST" and 'send_messages' in request.POST:
-        queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event,requested=True,sms_sent=False).select_related('worker')
+        queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
             worker_tokens = {}
+            # Group requests by worker
+            workers_to_notify = {}
             for labor_request in queued_requests:
                 worker = labor_request.worker
+                if worker.id not in workers_to_notify:
+                    workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
+                workers_to_notify[worker.id]['requests'].append(labor_request)
+            # Send one message per worker
+            for worker_id, data in workers_to_notify.items():
+                worker = data['worker']
+                requests = data['requests']
                 if worker.phone_number:
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
@@ -85,7 +94,7 @@ def event_detail(request, slug):
                         consent_body = "Reply 'Yes.' to receive job request messages from CallMan. Reply 'No.' or 'STOP' to opt out."
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
-                                client.messages.create(body=consent_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
+                                client.messages.create(body=consent_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
                                 worker.sent_consent_msg = True
                                 worker.save()
                             except TwilioRestException as e:
@@ -94,34 +103,33 @@ def event_detail(request, slug):
                             worker.sent_consent_msg = True
                             worker.save()
                     elif worker.sms_consent:
-                        if worker.id not in worker_tokens:
-                            worker_tokens[worker.id] = str(uuid.uuid4())
-                        token = worker_tokens[worker.id]
+                        token = worker_tokens.get(worker.id, str(uuid.uuid4()))
+                        worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                         message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
-                                client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
-                                labor_request.sms_sent = True
-                                labor_request.event_token = token
-                                labor_request.save()
+                                client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                                print(f"Sent SMS to {worker.phone_number} with token {token}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
                         else:
+                            print(message_body)
+                        # Mark all requests as sent with the same token
+                        for labor_request in requests:
                             labor_request.sms_sent = True
                             labor_request.event_token = token
                             labor_request.save()
-                            print(message_body)
                     else:
                         sms_errors.append(f"{worker.name} (awaiting consent)")
                 else:
                     sms_errors.append(f"{worker.name} (no phone)")
-            message = f"Messages processed for {queued_requests.count()} workers."
+            message = f"Messages processed for {len(workers_to_notify)} workers."
             if sms_errors:
                 message += f" Errors: {', '.join(sms_errors)}."
         else:
             message = "No queued requests to send."
-        context = {'event': event,'call_times': call_times,'labor_counts': labor_counts,'message': message}
+        context = {'event': event, 'call_times': call_times, 'labor_counts': labor_counts, 'message': message}
         return render(request, 'callManager/event_detail.html', context)
     context = {'event': event,'call_times': call_times,'labor_counts': labor_counts}
     return render(request, 'callManager/event_detail.html', context)
@@ -704,7 +712,6 @@ def import_workers(request):
 
 def confirm_event_requests(request, slug, event_token):
     event = get_object_or_404(Event, slug=slug)
-    # Get worker phone from first request with this token
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         event_token=event_token,
@@ -713,7 +720,6 @@ def confirm_event_requests(request, slug, event_token):
     if not first_request:
         context = {'message': "No pending requests found for this link."}
         return render(request, 'callManager/confirm_error.html', context)
-    
     worker_phone = first_request.worker.phone_number
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
@@ -722,7 +728,6 @@ def confirm_event_requests(request, slug, event_token):
         response__isnull=True,
         worker__phone_number=worker_phone  # Filter by worker's phone
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
-    
     registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
     if not labor_requests.exists():
         context = {'message': "No pending requests found for this link.",'registration_url': registration_url}
@@ -735,7 +740,14 @@ def confirm_event_requests(request, slug, event_token):
                 labor_request.response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
-        context = {'event': event,'registration_url': registration_url}
+        confirmed_call_times = LaborRequest.objects.filter(
+            response='yes'
+            )
+        context = {
+            'event': event,
+            'registration_url': registration_url,
+            'confirmed_call_times': confirmed_call_times,
+        }
         return render(request, 'callManager/confirm_success.html', context)
     context = {'event': event,'labor_requests': labor_requests,'registration_url': registration_url}
     return render(request, 'callManager/confirm_event_requests.html', context)
