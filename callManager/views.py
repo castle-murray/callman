@@ -585,50 +585,56 @@ def sms_webhook(request):
         body = request.POST.get('Body', '').strip().lower()
         try:
             worker = Worker.objects.get(phone_number=from_number)
-            if body == 'yes.':
+            if 'yes' in body:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-                queued_requests = LaborRequest.objects.filter(worker=worker,requested=True,sms_sent=False).select_related('labor_requirement__call_time__event')
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                for req in queued_requests:
-                    event = req.labor_requirement.call_time.event
-                    confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{req.event_token}/")
-                    message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
-                    client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
-                    req.sms_sent = True
-                    req.save()
+                queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
+                if queued_requests.exists():
+                    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                    token = str(uuid.uuid4())  # Single token for all requests
+                    event_ids = queued_requests.values_list('labor_requirement__call_time__event__slug', flat=True).distinct()
+                    confirmation_url = request.build_absolute_uri(f"/event/{event_ids[0]}/confirm/{token}/")
+                    message_body = f"CallMan: Confirm your calls for {queued_requests.count()} request(s) across {len(event_ids)} event(s): {confirmation_url}"
+                    client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                    for req in queued_requests:
+                        req.sms_sent = True
+                        req.event_token = token
+                        req.save()
                 response = MessagingResponse()
                 response.message("Thank you! You’ll now receive job requests.")
-            elif body == 'no.':
+            elif 'no' in body:
                 worker.sms_consent = False
                 worker.save()
                 response = MessagingResponse()
                 response.message("You’ve opted out of job request messages.")
-            elif body == 'stop':
+            elif 'stop' in body:
                 worker.sms_consent = False
                 worker.stop_sms = True
                 worker.save()
                 response = MessagingResponse()
                 response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
-            elif body == 'start':
+            elif 'start' in body:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-                queued_requests = LaborRequest.objects.filter(worker=worker,requested=True,sms_sent=False).select_related('labor_requirement__call_time__event')
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                for req in queued_requests:
-                    event = req.labor_requirement.call_time.event
-                    confirmation_url = request.build_absolute_uri(f"/event/{event.id}/confirm/{req.event_token}/")
-                    message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
-                    client.messages.create(body=message_body,from_=settings.TWILIO_PHONE_NUMBER,to=str(worker.phone_number))
-                    req.sms_sent = True
-                    req.save()
+                queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
+                if queued_requests.exists():
+                    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                    token = str(uuid.uuid4())  # Single token for all requests
+                    event_ids = queued_requests.values_list('labor_requirement__call_time__event__slug', flat=True).distinct()
+                    confirmation_url = request.build_absolute_uri(f"/event/{event_ids[0]}/confirm/{token}/")
+                    message_body = f"CallMan: Confirm your calls for {queued_requests.count()} request(s) across {len(event_ids)} event(s): {confirmation_url}"
+                    client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                    for req in queued_requests:
+                        req.sms_sent = True
+                        req.event_token = token
+                        req.save()
                 response = MessagingResponse()
                 response.message("Welcome back! You’ll now receive job requests.")
             else:
                 response = MessagingResponse()
-                response.message("Please reply 'Yes.' to consent, 'No.' to opt out, or 'STOP' to unsubscribe.")
+                response.message("Please reply 'Yes' to consent, 'No' to opt out, or 'STOP' to unsubscribe.")
         except Worker.DoesNotExist:
             response = MessagingResponse()
             response.message("Number not recognized. Please contact support.")
