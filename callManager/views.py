@@ -592,15 +592,29 @@ def sms_webhook(request):
                 queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
                 if queued_requests.exists():
                     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                    token = str(uuid.uuid4())  # Single token for all requests
-                    event_ids = queued_requests.values_list('labor_requirement__call_time__event__slug', flat=True).distinct()
-                    confirmation_url = request.build_absolute_uri(f"/event/{event_ids[0]}/confirm/{token}/")
-                    message_body = f"CallMan: Confirm your calls for {queued_requests.count()} request(s) across {len(event_ids)} event(s): {confirmation_url}"
-                    client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                    # Group requests by event
+                    events_to_notify = {}
                     for req in queued_requests:
-                        req.sms_sent = True
-                        req.event_token = token
-                        req.save()
+                        event = req.labor_requirement.call_time.event
+                        if event.slug not in events_to_notify:
+                            events_to_notify[event.slug] = {'event': event, 'requests': []}
+                        events_to_notify[event.slug]['requests'].append(req)
+                    # Send one message per event
+                    for event_slug, data in events_to_notify.items():
+                        event = data['event']
+                        requests = data['requests']
+                        token = str(uuid.uuid4())  # Unique token per event
+                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                        message_body = (
+                                f"call confirmation: {event.event_name} "
+                            f"on {event.start_date}: {confirmation_url}"
+                        )
+                        client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                        # Update all requests for this event with the same token
+                        for req in requests:
+                            req.sms_sent = True
+                            req.event_token = token
+                            req.save()
                 response = MessagingResponse()
                 response.message("Thank you! You’ll now receive job requests.")
             elif 'no' in body:
@@ -621,15 +635,29 @@ def sms_webhook(request):
                 queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
                 if queued_requests.exists():
                     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                    token = str(uuid.uuid4())  # Single token for all requests
-                    event_ids = queued_requests.values_list('labor_requirement__call_time__event__slug', flat=True).distinct()
-                    confirmation_url = request.build_absolute_uri(f"/event/{event_ids[0]}/confirm/{token}/")
-                    message_body = f"CallMan: Confirm your calls for {queued_requests.count()} request(s) across {len(event_ids)} event(s): {confirmation_url}"
-                    client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                    # Group requests by event
+                    events_to_notify = {}
                     for req in queued_requests:
-                        req.sms_sent = True
-                        req.event_token = token
-                        req.save()
+                        event = req.labor_requirement.call_time.event
+                        if event.slug not in events_to_notify:
+                            events_to_notify[event.slug] = {'event': event, 'requests': []}
+                        events_to_notify[event.slug]['requests'].append(req)
+                    # Send one message per event
+                    for event_slug, data in events_to_notify.items():
+                        event = data['event']
+                        requests = data['requests']
+                        token = str(uuid.uuid4())  # Unique token per event
+                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                        message_body = (
+                            f"call confirmation:  {event.event_name} "
+                            f"on {event.start_date}: {confirmation_url}"
+                        )
+                        client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                        # Update all requests for this event with the same token
+                        for req in requests:
+                            req.sms_sent = True
+                            req.event_token = token
+                            req.save()
                 response = MessagingResponse()
                 response.message("Welcome back! You’ll now receive job requests.")
             else:
