@@ -1,7 +1,7 @@
 {% load callman_tags %}
-<div class="bg-gray-100 p-6 rounded-lg shadow">
-    <h3 class="text-lg font-semibold mb-4">Request Workers for {{ labor_requirement.labor_type.name }}</h3>
-    <p class="text-gray-600 mb-4">Needed: {{ labor_requirement.needed_labor }} ({{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time }} on {{ labor_requirement.call_time.date }})</p>
+<div class="bg-body-bg p-6 rounded-lg shadow dark:bg-dark-body-bg dark:shadow-dark-shadow">
+    <h3 class="text-lg font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Request Workers for {{ labor_requirement.labor_type.name }}</h3>
+    <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">Needed: {{ labor_requirement.needed_labor }} ({{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time }} on {{ labor_requirement.call_time.date }})</p>
     
     <!-- Search Bar -->
     <div class="mb-6">
@@ -12,7 +12,7 @@
                hx-target="#fill-list" 
                hx-trigger="keyup changed delay:300ms" 
                placeholder="Search by name or phone..." 
-               class="w-full max-w-md p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary">
     </div>
 
     <!-- Worker List Container -->
@@ -21,9 +21,9 @@
     </div>
 
     <form action="{% url 'event_detail' labor_requirement.call_time.event.id %}">
-        <button type="submit" class="mt-4 bg-red-500 text-white p-2 rounded hover:bg-red-600">Close</button>
+        <button type="submit" class="mt-4 bg-danger text-dark-text-primary p-2 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Close</button>
     </form>
     {% if message %}
-        <p class="text-green-600 mt-2">{{ message }}</p>
+        <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
     {% endif %}
 </div>
