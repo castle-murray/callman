@@ -46,7 +46,7 @@ def confirm_assignment(request, token):
 def event_detail(request, slug):
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
-    call_times = event.call_times.all()
+    call_times = event.call_times.all().order_by('date', 'time')
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
     labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event).values('labor_requirement_id').annotate(pending_count=Count('id', filter=Q(requested=True) & Q(response__isnull=True)),confirmed_count=Count('id', filter=Q(response='yes')),rejected_count=Count('id', filter=Q(response='no')))
     labor_counts = {}
@@ -576,6 +576,17 @@ def edit_call_time(request, slug):
         form = CallTimeForm(instance=call_time, event=call_time.event)
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/edit_call_time.html', context)
+
+
+@login_required
+def delete_call_time(request, slug):
+    manager = request.user.manager
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    if request.method == "POST":
+        call_time.delete()
+        return redirect('event_detail', slug=call_time.event.slug)
+    return redirect('event_detail', slug=call_time.event.slug)  # Fallback for GET
+
 
 @login_required
 def edit_labor_requirement(request, slug):

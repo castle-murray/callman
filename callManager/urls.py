@@ -9,6 +9,7 @@ urlpatterns = [
     path('event/<slug:slug>/add-call/', views.add_call_time, name='add_call_time'),
     path('call/<slug:slug>/add-labor/', views.add_labor_to_call, name='add_labor_to_call'),
     path('call/<slug:slug>/edit/', views.edit_call_time, name='edit_call_time'),
+    path('call/<slug:slug>/delete/', views.delete_call_time, name='delete_call_time'),
     path('', views.manager_dashboard, name='manager_dashboard'),
     path('skills/', views.view_skills, name='view_skills'),
     path('workers/', views.view_workers, name='view_workers'),
