@@ -3,10 +3,10 @@
 {% block title %}Error - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Error</h1>
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-        <p class="text-red-600">{{ message }}</p>
-        <p class="mt-4">New worker? <a href="{{ registration_url }}" class="text-blue-500 hover:underline">Register here</a>.</p>
-        <a href="/" class="mt-4 inline-block text-blue-500 hover:underline">Return to Home</a>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Error</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <p class="text-text-red dark:text-dark-text-red">{{ message }}</p>
+        <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">New worker? <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Register here</a>.</p>
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Return to Home</a>
     </div>
 {% endblock %}

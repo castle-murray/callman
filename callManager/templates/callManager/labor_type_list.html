@@ -3,23 +3,23 @@
 {% block title %}Labor Types - {{ company.name }} - Callman{% endblock %}
 
 {% block content %}
-    <h1 class="text-3xl font-bold mb-6">Labor Types for {{ company.name }}</h1>
+    <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Labor Types for {{ company.name }}</h1>
 
     <div class="mb-6">
-        <a href="{% url 'create_labor_type' %}" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add New Labor Type</a>
+        <a href="{% url 'create_labor_type' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add New Labor Type</a>
     </div>
 
-    <div class="bg-white p-6 rounded-lg shadow">
+    <div class="bg-card-bg p-6 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
         {% if labor_types %}
             <ul class="space-y-4">
                 {% for labor_type in labor_types %}
-                    <li class="border-b pb-2">
-                        <h2 class="text-lg font-semibold">{{ labor_type.name }}</h2>
+                    <li class="border-b pb-2 dark:border-dark-border-dark">
+                        <h2 class="text-lg font-semibold text-text-heading dark:text-dark-text-primary">{{ labor_type.name }}</h2>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="text-gray-600">No labor types defined yet. Add one to get started!</p>
+            <p class="text-text-secondary dark:text-dark-text-secondary">No labor types defined yet. Add one to get started!</p>
         {% endif %}
     </div>
 {% endblock %}

@@ -3,18 +3,18 @@
 {% block title %}Add Labor to Call - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Add Labor to {{ call_time.name }}</h1>
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Add Labor to {{ call_time.name }}</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form method="post">
             {% csrf_token %}
-            <div class="space-y-4">
+            <div class="space-y-4 text-text-tertiary dark:text-dark-text-tertiary">
                 {{ form.as_p }}
             </div>
-            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Add Labor</button>
-            <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+            <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Labor</button>
+            <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
         {% if message %}
-            <p class="mt-4 text-red-600">{{ message }}</p>
+            <p class="mt-4 text-text-red dark:text-dark-text-red">{{ message }}</p>
         {% endif %}
     </div>
 {% endblock %}

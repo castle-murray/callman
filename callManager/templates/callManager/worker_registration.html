@@ -3,14 +3,14 @@
 {% block title %}Register Worker - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Register Worker</h1>
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Register Worker</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form method="post">
             {% csrf_token %}
-            <div class="space-y-4">
+            <div class="space-y-4 text-text-tertiary dark:text-dark-text-tertiary">
                 {{ form.as_p }}
             </div>
-            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Register</button>
+            <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Register</button>
         </form>
     </div>
 {% endblock %}

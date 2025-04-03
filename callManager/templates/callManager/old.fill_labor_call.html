@@ -1,0 +1,10 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Fill Labor Call - CallMan{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Fill Labor Call for {{ labor_requirement.labor_type.name }}</h1>
+    <div id="worker-modal" class="mt-4">
+        {% include 'callManager/fill_labor_call_partial.html' %}
+    </div>
+{% endblock %}

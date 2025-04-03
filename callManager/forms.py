@@ -1,4 +1,3 @@
-# callManager/forms.py
 from django.contrib.auth.models import User
 from django import forms
 from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company
@@ -7,16 +6,21 @@ class LaborTypeForm(forms.ModelForm):
     class Meta:
         model = LaborType
         fields = ['name']
-
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+        }
 
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['event_name', 'start_date', 'end_date', 'is_single_day', 'event_location', 'event_description']
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
-            'event_description': forms.Textarea(attrs={'rows': 4}),
+            'event_name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'is_single_day': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:text-blue-400'}),
+            'event_location': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'event_description': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
         }
 
     def clean(self):
@@ -31,17 +35,17 @@ class EventForm(forms.ModelForm):
             raise forms.ValidationError("End date must be on or after start date.")
         return cleaned_data
 
-
 class CallTimeForm(forms.ModelForm):
     class Meta:
         model = CallTime
         fields = ['name', 'date', 'time', 'message']
         widgets = {
-            'name': forms.TextInput(attrs={'autofocus': 'autofocus'}),
-            'date': forms.DateInput(attrs={'type': 'date'}),
-            'time': forms.TimeInput(attrs={'type': 'time'}),
-            'message': forms.Textarea(attrs={'rows': 4}),
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'time': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'message': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
         }
+
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event', None)
         super().__init__(*args, **kwargs)
@@ -49,25 +53,25 @@ class CallTimeForm(forms.ModelForm):
             self.fields['date'].initial = event.start_date
             self.fields['date'].disabled = True
             self.fields['date'].widget.attrs['readonly'] = True
+
     def clean(self):
         cleaned_data = super().clean()
         date = cleaned_data.get('date')
         event = self.instance.event if self.instance and hasattr(self.instance, 'event') else None
-        if event and date:  # Ensure date is present
+        if event and date:
             if date < event.start_date:
                 raise forms.ValidationError("Call time date cannot be before the event's start date.")
-            if event.end_date and date > event.end_date:  # Only check end_date if it exists
+            if event.end_date and date > event.end_date:
                 raise forms.ValidationError("Call time date cannot be after the event's end date.")
         return cleaned_data
-    
 
 class LaborRequirementForm(forms.ModelForm):
     class Meta:
         model = LaborRequirement
         fields = ['labor_type', 'needed_labor']
         widgets = {
-            'labor_type': forms.Select(attrs={'autofocus': 'autofocus'}),
-            'needed_labor': forms.NumberInput(attrs={'min': 1}),
+            'labor_type': forms.Select(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'needed_labor': forms.NumberInput(attrs={'min': 1, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -81,7 +85,10 @@ class WorkerForm(forms.ModelForm):
         model = Worker
         fields = ['name', 'phone_number', 'labor_types', 'sms_consent']
         widgets = {
-            'labor_types': forms.CheckboxSelectMultiple,
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'phone_number': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-blue-600 dark:text-blue-400'}),
+            'sms_consent': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:text-blue-400'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -91,19 +98,20 @@ class WorkerForm(forms.ModelForm):
             self.fields['labor_types'].queryset = LaborType.objects.filter(company=company)
 
 class WorkerImportForm(forms.Form):
-    file = forms.FileField(label="Upload a CSV file with contacts")
+    file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
 
 class WorkerRegistrationForm(forms.ModelForm):
-    username = forms.CharField(max_length=150, required=True)
-    password = forms.CharField(widget=forms.PasswordInput, required=True)
-    email = forms.EmailField(required=True)
+    username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}), required=True)
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
 
     class Meta:
         model = Worker
         fields = ['name', 'phone_number', 'labor_types']
         widgets = {
-            'phone_number': forms.TextInput(attrs={'readonly': 'readonly'}),
-            'labor_types': forms.CheckboxSelectMultiple,
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'phone_number': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-blue-600 dark:text-blue-400'}),
         }
 
     def save(self, commit=True):
@@ -119,8 +127,10 @@ class WorkerRegistrationForm(forms.ModelForm):
             self.save_m2m()  # Save labor_types
         return worker
 
-
 class SkillForm(forms.ModelForm):
     class Meta:
         model = LaborType
         fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+        }

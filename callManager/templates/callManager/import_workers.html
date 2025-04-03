@@ -3,24 +3,24 @@
 {% block title %}Import Workers - Autorigger{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Import Workers from VCF</h1>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Import Workers from VCF</h1>
     
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-        <form class="mb-4"method="post" enctype="multipart/form-data">
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <form class="mb-4" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="space-y-4">
-                <label for="{{ form.file.id_for_label }}" class="block text-gray-700 font-semibold mb-1">Upload a .vcf file with contacts</label>
+                <label for="{{ form.file.id_for_label }}" class="block text-text-tertiary font-semibold mb-1 dark:text-dark-text-tertiary">Upload a .vcf file with contacts</label>
                 {{ form.file }}
             </div>
-            <button type="submit" class="mt-6 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Import Workers</button>
-            <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-blue-500 hover:underline">Cancel</a>
+            <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Import Workers</button>
+            <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
         {% if message %}
-            <p class="mt-4 {% if 'Errors' in message %}text-red-600{% else %}text-green-600{% endif %}">{{ message }}</p>
+            <p class="mt-4 {% if 'Errors' in message %}text-text-red dark:text-dark-text-red{% else %}text-text-green dark:text-dark-text-green{% endif %}">{{ message }}</p>
         {% endif %}
         <div class="mb-6">
-            <h2 class="text-xl font-semibold mb-2">How to Export a VCF File</h2>
-            <div class="text-gray-700">
+            <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">How to Export a VCF File</h2>
+            <div class="text-text-tertiary dark:text-dark-text-tertiary">
                 <p class="font-semibold">From iPhone:</p>
                 <ol class="list-decimal list-inside space-y-1 ml-4">
                     <li>Open the <strong>Contacts</strong> app.</li>
@@ -39,6 +39,5 @@
                 </ol>
             </div>
         </div>
-
     </div>
 {% endblock %}

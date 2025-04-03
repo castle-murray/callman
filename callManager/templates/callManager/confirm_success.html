@@ -5,32 +5,30 @@
 {% block title %}Confirmation Submitted - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Responses Submitted</h1>
-    <!-- Modified portion of callManager/confirm_success.html -->
-    <!-- Modified portion of callManager/confirm_success.html -->
-<div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-    <p class="text-green-600">Your responses for {{ event.event_name }} have been submitted successfully.</p>
-    {% if confirmed_call_times %}
-        <div class="mt-4">
-            <p class="text-gray-700 font-semibold">Add Confirmed Call Times to Google Calendar:</p>
-            <ul class="space-y-2 mt-2">
-                {% for call_time in confirmed_call_times %}
-                    {% with start_datetime=call_time.labor_requirement.call_time.date|date:'Ymd'|add:'T'|add:call_time.labor_requirement.call_time.time|time:'Hi'|add:'00' %}
-                        {% with end_time=call_time.labor_requirement.call_time.time|add:'4'|time:'Hi' %}
-                            <li>
-                                <a href="https://www.google.com/calendar/render?action=TEMPLATE&text={{ call_time.labor_requirement.call_time.name|urlencode }}&dates={{ start_datetime }}/{{ call_time.labor_requirement.call_time.date|date:'Ymd' }}T{{ end_time }}00&details=Event: {{ event.event_name|urlencode }}&location={{ event.event_location|urlencode }}" 
-                                   target="_blank" 
-                                   class="text-blue-500 hover:underline">
-                                    {{ call_time.labor_requirement.call_time.name }} at {{ call_time.labor_requirement.call_time.time }} on {{ call_time.labor_requirement.call_time.date }}
-                                </a>
-                            </li>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Responses Submitted</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <p class="text-text-green dark:text-dark-text-green">Your responses for {{ event.event_name }} have been submitted successfully.</p>
+        {% if confirmed_call_times %}
+            <div class="mt-4">
+                <p class="text-text-tertiary font-semibold dark:text-dark-text-tertiary">Add Confirmed Call Times to Google Calendar:</p>
+                <ul class="space-y-2 mt-2">
+                    {% for call_time in confirmed_call_times %}
+                        {% with start_datetime=call_time.labor_requirement.call_time.date|date:'Ymd'|add:'T'|add:call_time.labor_requirement.call_time.time|time:'Hi'|add:'00' %}
+                            {% with end_time=call_time.labor_requirement.call_time.time|add:'4'|time:'Hi' %}
+                                <li>
+                                    <a href="https://www.google.com/calendar/render?action=TEMPLATE&text={{ call_time.labor_requirement.call_time.name|urlencode }}&dates={{ start_datetime }}/{{ call_time.labor_requirement.call_time.date|date:'Ymd' }}T{{ end_time }}00&details=Event: {{ event.event_name|urlencode }}&location={{ event.event_location|urlencode }}" 
+                                       target="_blank" 
+                                       class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
+                                        {{ call_time.labor_requirement.call_time.name }} at {{ call_time.labor_requirement.call_time.time }} on {{ call_time.labor_requirement.call_time.date }}
+                                    </a>
+                                </li>
+                            {% endwith %}
                         {% endwith %}
-                    {% endwith %}
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
-    <p class="mt-4">New worker? <a href="{{ registration_url }}" class="text-blue-500 hover:underline">Register here</a>.</p>
-    <a href="/" class="mt-4 inline-block text-blue-500 hover:underline">Return to Home</a>
-</div>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">New worker? <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Register here</a>.</p>
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Return to Home</a>
+    </div>
 {% endblock %}

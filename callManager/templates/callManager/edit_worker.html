@@ -4,24 +4,24 @@
 {% block title %}Edit Worker - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6">Edit Worker: {{ worker.name|default:"Unnamed Worker" }}</h1>
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Edit Worker: {{ worker.name|default:"Unnamed Worker" }}</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form method="post" class="flex flex-col">
             {% csrf_token %}
-            <div class="flex items-center mb-2">
+            <div class="flex items-center mb-2 text-text-tertiary dark:text-dark-text-tertiary">
                 {{ form.name.label_tag }}
                 {{ form.name }}
             </div>
-            <div class="flex items-center mb-2">
+            <div class="flex items-center mb-2 text-text-tertiary dark:text-dark-text-tertiary">
                 {{ form.phone_number.label_tag }}
                 {{ form.phone_number }}
             </div>
-            <div class="mb-2">
+            <div class="mb-2 text-text-tertiary dark:text-dark-text-tertiary">
                 {{ form.labor_types.label_tag }} <!-- Displays as "Skills" -->
                 {{ form.labor_types }}
             </div>
-            <button type="submit" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Save</button>
+            <button type="submit" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save</button>
         </form>
-        <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-blue-500 hover:underline">Back to Workers</a>
+        <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Workers</a>
     </div>
 {% endblock %}

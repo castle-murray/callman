@@ -1,30 +1,43 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light" id="html-root">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}Callman{% endblock %}</title>
         {% tailwind_css %}
         <script src="https://unpkg.com/htmx.org@1.9.6" integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni" crossorigin="anonymous"></script>
+        <style>
+            body {
+                transition: background-color 0.5s ease, color 0.5s ease;
+            }
+        </style>
         {% block extra_head %}{% endblock %}
     </head>
-    <body class="bg-gray-100 min-h-screen flex flex-col">
-        <header class="bg-white shadow">
+    <body class="bg-body-bg min-h-screen flex flex-col text-text-primary dark:bg-dark-body-bg dark:text-dark-text-tertiary">
+        <header class="bg-card-bg shadow dark:bg-dark-header-bg dark:shadow-dark-shadow">
             <nav class="container mx-auto p-4">
                 <div class="flex justify-between items-center">
-                    <a href="{% url 'manager_dashboard' %}" class="text-xl font-bold text-gray-800">Callman</a>
-                    <div>
+                    <a href="{% url 'manager_dashboard' %}" class="text-xl font-bold text-text-primary dark:text-dark-text-primary">Callman</a>
+                    <div class="flex items-center space-x-4">
                         {% if user.is_authenticated %}
-                        <span class="mr-4">Hello, {{ user.get_full_name|default:user.username }}</span>
-                        <a href="{% url 'manager_dashboard' %}" class="text-blue-500 hover:underline mr-4">Dashboard</a>
+                        <span class="text-text-tertiary dark:text-dark-text-tertiary">Hello, {{ user.get_full_name|default:user.username }}</span>
+                        <a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a>
                         <form method="post" action="{% url 'logout' %}" style="display:inline;">
                             {% csrf_token %}
-                            <button type="submit" class="text-blue-500 hover:underline">Logout</button>
+                            <button type="submit" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Logout</button>
                         </form>
                         {% else %}
-                        <a href="{% url 'login' %}" class="text-blue-500 hover:underline">Login</a>
+                        <a href="{% url 'login' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Login</a>
                         {% endif %}
+                        <button id="dark-mode-toggle" class="p-1 text-text-tertiary dark:text-dark-text-tertiary hover:text-primary dark:hover:text-dark-text-blue focus:outline-none">
+                            <svg id="sun-icon" class="w-6 h-6 block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                            <svg id="moon-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </nav>
@@ -34,11 +47,42 @@
             {% block content %}{% endblock %}
         </main>
 
-        <footer class="hidden lg:block bg-gray-800 text-white p-4">
+        <footer class="hidden lg:block bg-dark-header-bg text-dark-text-primary p-4 dark:bg-dark-body-bg">
             <div class="lg:container mx-auto text-center">
                 <p>© {% now "Y" %} Callman. All rights reserved.</p>
             </div>
         </footer>
+
+        <script>
+            const htmlRoot = document.getElementById('html-root');
+            const toggleButton = document.getElementById('dark-mode-toggle');
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            const currentMode = localStorage.getItem('theme') || 'light';
+            htmlRoot.classList.remove('light', 'dark');
+            htmlRoot.classList.add(currentMode);
+            if (currentMode === 'dark') {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+
+            toggleButton.addEventListener('click', () => {
+                const newMode = htmlRoot.classList.contains('light') ? 'dark' : 'light';
+                htmlRoot.classList.remove('light', 'dark');
+                htmlRoot.classList.add(newMode);
+                localStorage.setItem('theme', newMode);
+                if (newMode === 'dark') {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                }
+            });
+        </script>
 
         {% block extra_scripts %}{% endblock %}
     </body>
