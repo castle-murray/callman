@@ -1,0 +1,17 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Edit Event - CallMan{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Edit Event: {{ event.event_name }}</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4 text-text-tertiary dark:text-dark-text-tertiary">
+                {{ form.as_p }}
+            </div>
+            <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save Changes</button>
+            <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
+        </form>
+    </div>
+{% endblock %}

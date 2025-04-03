@@ -136,6 +136,33 @@ def event_detail(request, slug):
 
 
 @login_required
+def edit_event(request, slug):
+    manager = request.user.manager
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    if request.method == "POST":
+        form = EventForm(request.POST, instance=event)
+        if form.is_valid():
+            form.save()
+            return redirect('manager_dashboard')
+    else:
+        form = EventForm(instance=event)
+    context = {
+        'form': form,
+        'event': event,
+    }
+    return render(request, 'callManager/edit_event.html', context)
+
+@login_required
+def delete_event(request, slug):
+    manager = request.user.manager
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    if request.method == "POST":
+        event.delete()
+        return redirect('manager_dashboard')
+    return redirect('manager_dashboard')  # Fallback for GET requests
+
+
+@login_required
 def manager_dashboard(request):
     # Ensure the user is a manager
     if not hasattr(request.user, 'manager'):

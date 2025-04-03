@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django import forms
-from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company
+from .models import Event, CallTime, LaborRequirement, LaborType, Worker
 
 class LaborTypeForm(forms.ModelForm):
     class Meta:
