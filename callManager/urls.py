@@ -24,4 +24,7 @@ urlpatterns = [
     path('calltime/<slug:slug>/requests/', views.call_time_request_list, name='call_time_request_list'),
     path('labor/<slug:slug>/fill-list/', views.fill_labor_request_list, name='fill_labor_request_list'),
     path('labor/requests/declined', views.declined_requests, name='declined_requests'),
+    path('labor/<slug:slug>/edit/', views.edit_labor_requirement, name='edit_labor_requirement'),
+    path('labor/<slug:slug>/delete/', views.delete_labor_requirement, name='delete_labor_requirement'),
+
 ]

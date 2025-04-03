@@ -577,6 +577,28 @@ def edit_call_time(request, slug):
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/edit_call_time.html', context)
 
+@login_required
+def edit_labor_requirement(request, slug):
+    manager = request.user.manager
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    if request.method == "POST":
+        form = LaborRequirementForm(request.POST, instance=labor_requirement, company=manager.company)
+        if form.is_valid():
+            form.save()
+            return redirect('event_detail', slug=labor_requirement.call_time.event.slug)
+    else:
+        form = LaborRequirementForm(instance=labor_requirement, company=manager.company)
+    context = {'form': form, 'labor_requirement': labor_requirement}
+    return render(request, 'callManager/edit_labor_requirement.html', context)
+
+@login_required
+def delete_labor_requirement(request, slug):
+    manager = request.user.manager
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    if request.method == "POST":
+        labor_requirement.delete()
+        return redirect('event_detail', slug=labor_requirement.call_time.event.slug)
+    return redirect('event_detail', slug=labor_requirement.call_time.event.slug)  # Fallback for GET
 
 @csrf_exempt
 def sms_webhook(request):
