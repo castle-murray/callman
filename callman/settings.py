@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-*xv&h_8$1p2+klqa+2sz#&dj3*(z3cs2i&y6)0k#9pg*bs3biu
 DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
-
+CSRF_TRUSTED_ORIGINS = ['https://callman.autorigger.com']
 
 # Application definition
 
