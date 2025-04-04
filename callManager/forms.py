@@ -15,12 +15,12 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = ['event_name', 'start_date', 'end_date', 'is_single_day', 'event_location', 'event_description']
         widgets = {
-            'event_name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'is_single_day': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:text-blue-400'}),
-            'event_location': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'event_description': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'event_name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'is_single_day': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue'}),
+            'event_location': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'event_description': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
     def clean(self):
