@@ -1,6 +1,6 @@
 {% load callman_tags %}
 <form method="post" 
-      hx-post="{% url 'fill_labor_call' labor_requirement.id %}" 
+      hx-post="{% url 'fill_labor_call' labor_requirement.slug %}" 
       hx-target="#worker-modal" 
       hx-swap="innerHTML">
     {% csrf_token %}
@@ -33,8 +33,8 @@
         <!-- Pagination -->
         <div class="mt-4 flex justify-between">
             {% if page_obj.has_previous %}
-                <a href="{% url 'fill_labor_call' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call' labor_requirement.id %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_call' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
             {% else %}
@@ -42,8 +42,8 @@
             {% endif %}
             <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a href="{% url 'fill_labor_call' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call' labor_requirement.id %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_call' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_call' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
             {% else %}

@@ -817,14 +817,16 @@ def fill_labor_request_list(request, slug):
             w for w in workers_list
             if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
         ]
-    paginator = Paginator(workers_list, 10)
+    paginator = Paginator(workers_list, 20)
     page_number = request.GET.get('page', 1)
+    print(f"Total workers: {len(workers_list)}, Pages: {paginator.num_pages}, Requested Page: {page_number}")
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
+    print(f"Current Page: {page_obj.number}, Has Next: {page_obj.has_next()}, Next Page: {page_obj.next_page_number() if page_obj.has_next() else 'N/A'}")
     current_call_time = labor_requirement.call_time
     event_date = current_call_time.event.start_date
     current_datetime = datetime.combine(event_date, current_call_time.time)

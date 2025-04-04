@@ -8,7 +8,7 @@
         <input type="text" 
                name="search" 
                value="{{ search_query }}" 
-               hx-get="{% url 'fill_labor_call_list' labor_requirement.id %}" 
+               hx-get="{% url 'fill_labor_call_list' labor_requirement.slug%}" 
                hx-target="#fill-list" 
                hx-trigger="keyup changed delay:300ms" 
                placeholder="Search by name or phone..." 
