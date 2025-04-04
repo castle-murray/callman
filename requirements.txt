@@ -10,14 +10,18 @@ django-dotenv==1.4.2
 django-htmx==1.23.0
 django-phonenumber-field==8.0.0
 django-tailwind==3.8.0
+dotenv==0.9.9
+gunicorn==23.0.0
 idna==3.10
 Jinja2==3.1.6
 mysqlclient==2.2.7
+packaging==24.2
 phonenumbers==9.0.1
 pycparser==2.22
 PyJWT==2.10.1
 python-dateutil==2.9.0.post0
 python-decouple==3.8
+python-dotenv==1.1.0
 pytz==2025.1
 regex==2024.11.6
 requests==2.32.3
@@ -27,3 +31,4 @@ tokenizers==0.21.1
 twilio==9.5.1
 urllib3==2.3.0
 vobject==0.9.9
+whitenoise==6.9.0
