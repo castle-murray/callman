@@ -739,6 +739,7 @@ def labor_request_list(request, slug):
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
     message = None
     if request.method == "POST":
+        message = None
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
@@ -757,26 +758,39 @@ def labor_request_list(request, slug):
             worker_ids = request.POST.getlist('worker_ids')
             for worker_id in worker_ids:
                 worker = Worker.objects.get(id=worker_id)
-                labor_request, created = LaborRequest.objects.get_or_create(worker=worker,labor_requirement=labor_requirement,defaults={'requested': True, 'sms_sent': False})
+                labor_request, created = LaborRequest.objects.get_or_create(
+                    worker=worker,
+                    labor_requirement=labor_requirement,
+                    defaults={'requested': True, 'sms_sent': False}
+                )
                 if labor_requirement.labor_type not in worker.labor_types.all():
                     worker.labor_types.add(labor_requirement.labor_type)
                 if not created and not labor_request.sms_sent:
                     labor_request.requested = True
                     labor_request.save()
             message = f"{len(worker_ids)} workers queued for request."
-            if request.headers.get('HX-Request'):
-                pending_requests = labor_requests.filter(response__isnull=True)
-                confirmed_requests = labor_requests.filter(response='yes')
-                declined_requests = labor_requests.filter(response='no')
-                context = {
-                    'labor_requirement': labor_requirement,
-                    'pending_requests': pending_requests,
-                    'confirmed_requests': confirmed_requests,
-                    'declined_requests': declined_requests,
-                    'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
-                    'message': message,
-                }
-                return render(request, 'callManager/labor_request_content_partial.html', context)
+        
+        # Redirect with message
+        if message and not request.headers.get('HX-Request'):
+            messages.success(request, message)
+            return redirect('labor_request_list', slug=slug)
+        
+        if request.headers.get('HX-Request'):
+            pending_requests = labor_requests.filter(response__isnull=True)
+            confirmed_requests = labor_requests.filter(response='yes')
+            declined_requests = labor_requests.filter(response='no')
+            context = {
+                'labor_requirement': labor_requirement,
+                'pending_requests': pending_requests,
+                'pending_count': pending_requests.count(),
+                'confirmed_requests': confirmed_requests,
+                'confirmed_count': confirmed_requests.count(),
+                'declined_requests': declined_requests,
+                'declined_count': declined_requests.count(),
+                'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
+                'message': message,
+            }
+            return render(request, 'callManager/labor_request_content_partial.html', context)
         pending_requests = labor_requests.filter(response__isnull=True)
         confirmed_requests = labor_requests.filter(response='yes')
         declined_requests = labor_requests.filter(response='no')
@@ -795,8 +809,11 @@ def labor_request_list(request, slug):
     context = {
         'labor_requirement': labor_requirement,
         'pending_requests': pending_requests,
+        'pending_count': pending_requests.count(),
         'confirmed_requests': confirmed_requests,
+        'confirmed_count': confirmed_requests.count(),
         'declined_requests': declined_requests,
+        'declined_count': declined_requests.count(),
         'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
     }
     return render(request, 'callManager/labor_request_list.html', context)
@@ -806,6 +823,7 @@ def labor_request_list(request, slug):
 def fill_labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
     worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
     worker_ids = [w['id'] for w in worker_data]
     workers = Worker.objects.filter(id__in=worker_ids)
@@ -817,7 +835,7 @@ def fill_labor_request_list(request, slug):
             w for w in workers_list
             if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
         ]
-    paginator = Paginator(workers_list, 20)
+    paginator = Paginator(workers_list, 10)
     page_number = request.GET.get('page', 1)
     print(f"Total workers: {len(workers_list)}, Pages: {paginator.num_pages}, Requested Page: {page_number}")
     try:
@@ -854,8 +872,14 @@ def fill_labor_request_list(request, slug):
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.response == 'yes':
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
+    pending_requests = labor_requests.filter(response__isnull=True)
+    confirmed_requests = labor_requests.filter(response='yes')
+    declined_requests = labor_requests.filter(response='no')
     context = {
         'labor_requirement': labor_requirement,
+        'pending_count': pending_requests.count(),
+        'confirmed_count': confirmed_requests.count(),
+        'declined_count': declined_requests.count(),
         'workers': page_obj,
         'worker_conflicts': worker_conflicts,
         'page_obj': page_obj,

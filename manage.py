@@ -2,12 +2,11 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-import dotenv
-
+from dotenv import load_dotenv
 
 def main():
     """Run administrative tasks."""
-    dotenv.read_dotenv()
+    load_dotenv()
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'callman.settings')
     
     try:
