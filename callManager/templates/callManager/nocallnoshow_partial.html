@@ -1,0 +1,13 @@
+<div id="nocallnoshow-container" class="flex items-center ml-2">
+    <button type="button" 
+            hx-post="{% url 'decrement_nocallnoshow' worker.id %}" 
+            hx-target="#nocallnoshow-container" 
+            hx-swap="outerHTML"
+            class="ml-2 bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">-1</button>
+    {{ form.nocallnoshow }}
+    <button type="button" 
+            hx-post="{% url 'increment_nocallnoshow' worker.id %}" 
+            hx-target="#nocallnoshow-container" 
+            hx-swap="outerHTML"
+            class="ml-2 bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">+1</button>
+</div>

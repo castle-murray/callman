@@ -13,8 +13,10 @@
     <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
     {% endfor %}
     {% endif %}
+
+
+    <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">Pending Requests {% if pending_requests %} - {{ pending_count }} {% endif %}</h2>
     {% if pending_requests %}
-    <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">Pending Requests {% if pending_requests %} - {{ pending_count }} {% endif %} </h2>
         <ul class="space-y-2 mb-4">
             {% for request in pending_requests %}
                 <li class="flex items-center justify-between text-text-yellow dark:text-dark-text-yellow">
@@ -62,6 +64,12 @@
                         <form method="post" class="inline ml-2">
                             {% csrf_token %}
                             <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="ncns">
+                            <button type="submit" class="bg-purple text-dark-text-primary px-2 py-1 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">NCNS</button>
+                        </form>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
                             <input type="hidden" name="action" value="delete">
                             <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
                         </form>
@@ -100,27 +108,58 @@
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No declined requests.</p>
     {% endif %}
 
+    <h2 class="text-xl font-semibold mb-2 text-purple dark:text-dark-purple">No Call No Show Requests {% if ncns_requests %} - {{ ncns_count }} {% endif %}</h2>
+    {% if ncns_requests %}
+        <ul class="space-y-2 mb-4">
+            {% for request in ncns_requests %}
+                <li class="flex items-center justify-between text-purple dark:text-dark-purple">
+                    {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }})
+                    <div>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="confirm">
+                            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Confirm</button>
+                        </form>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="decline">
+                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Decline</button>
+                        </form>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No no-call no-show requests.</p>
+    {% endif %}
+
     {% if not is_filled %}
         <div class="mt-6">
             <h3 class="text-lg font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Fill Call</h3>
             <div class="mb-4">
                 <input type="text" 
                        name="search" 
-                       value="" 
-                       hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}" 
+                       value="{{ search_query|default:'' }}" 
+                       hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1" 
                        hx-target="#fill-list" 
                        hx-trigger="keyup changed delay:300ms" 
+                       hx-swap="outerHTML"
                        placeholder="Search by name or phone..." 
                        class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary">
             </div>
-            <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}" hx-trigger="load">
+            <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1&search={{ search_query|urlencode }}" hx-trigger="load" hx-swap="outerHTML">
                 <!-- HTMX will load the partial here -->
             </div>
         </div>
     {% endif %}
 
-    {% if message %}
-        <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
-    {% endif %}
     <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
 </div>

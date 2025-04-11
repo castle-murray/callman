@@ -1,8 +1,9 @@
 {% load callman_tags %}
+<div id="fill-list">
 <form method="post" 
-      hx-post="{% url 'fill_labor_call' labor_requirement.slug %}" 
-      hx-target="#worker-modal" 
-      hx-swap="innerHTML">
+      hx-post="{% url 'labor_request_list' labor_requirement.slug %}" 
+      hx-target="#labor-request-content" 
+      hx-swap="outerHTML">
     {% csrf_token %}
     {% if workers %}
         <ul class="space-y-2">
@@ -16,20 +17,21 @@
                                    class="mr-2 text-text-blue dark:text-dark-text-blue" 
                                    {% if worker.id in worker_conflicts %}title="Worker has conflicting requests"{% endif %}>
                             <div>
-                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
+                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }}) {% if worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>{% endif %}
                                 {% if worker.id in worker_conflicts %}
                                     <ul class="ml-4 {% if worker_data.is_confirmed %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">
                                         {% for conflict in worker_data.conflicts %}
                                             <li>
                                                 - 
                                                 {% if conflict.status == 'Confirmed' %}
-                                                    {% if conflict.call_time_id == labor_requirement.call_time.slug and conflict.labor_type_id == labor_requirement.labor_type.id %}
+                                                    {% if conflict.call_time_id == labor_requirement.call_time.id and conflict.labor_type_id == labor_requirement.labor_type.id %}
                                                         <span class="text-text-green dark:text-dark-text-green">Confirmed</span>
                                                     {% else %}
                                                         <span class="text-text-red dark:text-dark-text-red">Confirmed (Other)</span>
                                                     {% endif %}
                                                 {% elif conflict.status == 'Declined' %}
                                                     <span class="text-text-red dark:text-dark-text-red">Declined</span>
+
                                                 {% else %}
                                                     <span class="text-text-yellow dark:text-dark-text-yellow">Pending</span>
                                                 {% endif %}: 
@@ -46,25 +48,28 @@
         </ul>
         <div class="mt-4 flex justify-between">
             {% if page_obj.has_previous %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
+                   hx-swap="outerHTML"
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
             {% else %}
                 <span class="text-text-secondary dark:text-dark-text-secondary">Previous</span>
             {% endif %}
             <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a href="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_call_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
                    hx-target="#fill-list" 
+                   hx-swap="outerHTML"
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
             {% else %}
                 <span class="text-text-secondary dark:text-dark-text-secondary">Next</span>
             {% endif %}
         </div>
-        <button type="submit" class="mt-4 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Workers</button>
+        <button type="submit" class="mt-4 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Queue Request</button>
     {% else %}
-        <p class="text-text-secondary dark:text-dark-text-secondary">No workers available.</p>
+        <p class="text-text-secondary dark:text-dark-text-secondary">No workers available matching your search.</p>
     {% endif %}
 </form>
+</div>

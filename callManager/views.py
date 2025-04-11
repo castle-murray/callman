@@ -395,6 +395,35 @@ def edit_worker(request, worker_id):
     return render(request, 'callManager/edit_worker.html', context)
 
 
+@login_required
+def increment_nocallnoshow(request, worker_id):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    worker = get_object_or_404(Worker, id=worker_id)
+    worker.nocallnoshow += 1
+    worker.save()
+    form = WorkerForm(instance=worker, company=request.user.manager.company)
+    context = {
+        'form': form,
+        'worker': worker,
+    }
+    return render(request, 'callManager/nocallnoshow_partial.html', context)
+
+@login_required
+def decrement_nocallnoshow(request, worker_id):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    worker = get_object_or_404(Worker, id=worker_id)
+    if worker.nocallnoshow > 0:  # Prevent negative values
+        worker.nocallnoshow -= 1
+        worker.save()
+    form = WorkerForm(instance=worker, company=request.user.manager.company)
+    context = {
+        'form': form,
+        'worker': worker,
+    }
+    return render(request, 'callManager/nocallnoshow_partial.html', context)
+
 
 @login_required
 def add_call_time(request, slug):
@@ -736,49 +765,48 @@ def registration_success(request):
 def labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
-    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
-    message = None
+    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     if request.method == "POST":
-        message = None
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
-            if request_id and action in ['confirm', 'decline']:
+            if request_id and action in ['confirm', 'decline', 'ncns', 'delete']:
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement=labor_requirement)
-                labor_request.response = 'yes' if action == 'confirm' else 'no'
-                labor_request.responded_at = timezone.now()
-                labor_request.sms_sent = True
-                labor_request.save()
-                message = f"Request {action}d successfully."
-            elif request_id and action == 'delete':
-                labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement=labor_requirement)
-                labor_request.delete()
-                message = "Request deleted successfully."
+                worker = labor_request.worker
+                was_ncns = labor_request.response == 'ncns'
+                if action == 'ncns':
+                    worker.nocallnoshow += 1
+                    worker.save()
+                elif was_ncns and action in ['confirm', 'decline', 'delete'] and worker.nocallnoshow > 0:
+                    worker.nocallnoshow -= 1
+                    worker.save()
+                if action == 'delete':
+                    labor_request.delete()
+                    messages.success(request, "Request deleted successfully.")
+                else:
+                    labor_request.response = 'yes' if action == 'confirm' else 'no' if action == 'decline' else 'ncns'
+                    labor_request.responded_at = timezone.now()
+                    labor_request.sms_sent = True
+                    labor_request.save()
+                    messages.success(request, f"Request marked as {action.capitalize()} successfully.")
         elif 'worker_ids' in request.POST:
             worker_ids = request.POST.getlist('worker_ids')
             for worker_id in worker_ids:
                 worker = Worker.objects.get(id=worker_id)
-                labor_request, created = LaborRequest.objects.get_or_create(
-                    worker=worker,
-                    labor_requirement=labor_requirement,
-                    defaults={'requested': True, 'sms_sent': False}
-                )
+                labor_request, created = LaborRequest.objects.get_or_create(worker=worker, labor_requirement=labor_requirement, defaults={'requested': True, 'sms_sent': False})
                 if labor_requirement.labor_type not in worker.labor_types.all():
                     worker.labor_types.add(labor_requirement.labor_type)
                 if not created and not labor_request.sms_sent:
                     labor_request.requested = True
                     labor_request.save()
-            message = f"{len(worker_ids)} workers queued for request."
-        
-        # Redirect with message
-        if message and not request.headers.get('HX-Request'):
-            messages.success(request, message)
+            messages.success(request, f"{len(worker_ids)} workers queued for request.")
+        if not request.headers.get('HX-Request'):
             return redirect('labor_request_list', slug=slug)
-        
         if request.headers.get('HX-Request'):
             pending_requests = labor_requests.filter(response__isnull=True)
             confirmed_requests = labor_requests.filter(response='yes')
             declined_requests = labor_requests.filter(response='no')
+            ncns_requests = labor_requests.filter(response='ncns')
             context = {
                 'labor_requirement': labor_requirement,
                 'pending_requests': pending_requests,
@@ -787,25 +815,15 @@ def labor_request_list(request, slug):
                 'confirmed_count': confirmed_requests.count(),
                 'declined_requests': declined_requests,
                 'declined_count': declined_requests.count(),
-                'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
-                'message': message,
+                'ncns_requests': ncns_requests,
+                'ncns_count': ncns_requests.count(),
+                'is_filled': labor_requirement.needed_labor <= confirmed_requests.count()
             }
             return render(request, 'callManager/labor_request_content_partial.html', context)
-        pending_requests = labor_requests.filter(response__isnull=True)
-        confirmed_requests = labor_requests.filter(response='yes')
-        declined_requests = labor_requests.filter(response='no')
-        context = {
-            'labor_requirement': labor_requirement,
-            'pending_requests': pending_requests,
-            'confirmed_requests': confirmed_requests,
-            'declined_requests': declined_requests,
-            'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
-            'message': message,
-        }
-        return render(request, 'callManager/labor_request_list.html', context)
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
+    ncns_requests = labor_requests.filter(response='ncns')
     context = {
         'labor_requirement': labor_requirement,
         'pending_requests': pending_requests,
@@ -814,7 +832,9 @@ def labor_request_list(request, slug):
         'confirmed_count': confirmed_requests.count(),
         'declined_requests': declined_requests,
         'declined_count': declined_requests.count(),
-        'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
+        'ncns_requests': ncns_requests,
+        'ncns_count': ncns_requests.count(),
+        'is_filled': labor_requirement.needed_labor <= confirmed_requests.count()
     }
     return render(request, 'callManager/labor_request_list.html', context)
 
@@ -823,21 +843,22 @@ def labor_request_list(request, slug):
 def fill_labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
-    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement,requested=True).select_related('worker')
-    worker_data = Worker.objects.values('id', 'name', 'phone_number').distinct()
-    worker_ids = [w['id'] for w in worker_data]
-    workers = Worker.objects.filter(id__in=worker_ids)
+    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
+    workers = Worker.objects.all().distinct()
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
     search_query = request.GET.get('search', '').strip()
     if search_query:
-        workers_list = [
-            w for w in workers_list
-            if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')
-        ]
-    paginator = Paginator(workers_list, 10)
+        workers_list = [w for w in workers_list if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')]
+    if request.GET.get('per_page'):
+        per_page = int(request.GET.get('per_page'))
+        manager.per_page_preference = per_page
+        manager.save()
+    else:
+        per_page = manager.per_page_preference
+    paginator = Paginator(workers_list, per_page)
     page_number = request.GET.get('page', 1)
-    print(f"Total workers: {len(workers_list)}, Pages: {paginator.num_pages}, Requested Page: {page_number}")
+    print(f"Total workers: {len(workers_list)}, Per Page: {per_page}, Pages: {paginator.num_pages}, Requested Page: {page_number}")
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
@@ -846,16 +867,20 @@ def fill_labor_request_list(request, slug):
         page_obj = paginator.page(paginator.num_pages)
     print(f"Current Page: {page_obj.number}, Has Next: {page_obj.has_next()}, Next Page: {page_obj.next_page_number() if page_obj.has_next() else 'N/A'}")
     current_call_time = labor_requirement.call_time
-    event_date = current_call_time.event.start_date
-    current_datetime = datetime.combine(event_date, current_call_time.time)
-    window_start = current_datetime - timedelta(hours=5)
-    window_end = current_datetime + timedelta(hours=5)
+    event_start_date = current_call_time.event.start_date
+    event_end_date = current_call_time.event.end_date or event_start_date
+    call_datetime = datetime.combine(event_start_date, current_call_time.time)
+    window_start = call_datetime - timedelta(hours=5)
+    window_end = call_datetime + timedelta(hours=5)
     conflicting_requests = LaborRequest.objects.filter(
         worker__in=page_obj.object_list,
-        labor_requirement__call_time__event__start_date=event_date,
-        labor_requirement__call_time__time__gte=window_start.time(),
-        labor_requirement__call_time__time__lte=window_end.time(),
-        requested=True,
+        requested=True
+    ).filter(
+        labor_requirement__call_time__date__gte=window_start.date(),
+        labor_requirement__call_time__date__lte=window_end.date()
+    ).filter(
+        labor_requirement__call_time__time__gte=window_start.time() if window_start.date() == labor_requirement.call_time.date else '00:00:00',
+        labor_requirement__call_time__time__lte=window_end.time() if window_end.date() == labor_requirement.call_time.date else '23:59:59'
     ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
     worker_conflicts = {}
     for labor_request in conflicting_requests:
@@ -884,6 +909,7 @@ def fill_labor_request_list(request, slug):
         'worker_conflicts': worker_conflicts,
         'page_obj': page_obj,
         'search_query': search_query,
+        'per_page': per_page
     }
     return render(request, 'callManager/fill_labor_request_list_partial.html', context)
 
@@ -903,28 +929,40 @@ def call_time_request_list(request, slug):
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
-            if request_id and action in ['confirm', 'decline']:
+            if request_id and action in ['confirm', 'decline', 'ncns', 'delete']:
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
-                labor_request.response = 'yes' if action == 'confirm' else 'no'
-                labor_request.responded_at = timezone.now()
-                labor_request.sms_sent = True
-                labor_request.save()
-                message = f"Request {action}d successfully."
-            elif request_id and action == 'delete':
-                labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
-                labor_request.delete()
-                message = "Request deleted successfully."
-            return redirect('call_time_request_list', slug=slug)
+                worker = labor_request.worker
+                was_ncns = labor_request.response == 'ncns'
+                if action == 'ncns':
+                    worker.nocallnoshow += 1
+                    worker.save()
+                elif was_ncns and action in ['confirm', 'decline', 'delete'] and worker.nocallnoshow > 0:
+                    worker.nocallnoshow -= 1
+                    worker.save()
+                if action == 'delete':
+                    labor_request.delete()
+                    messages.success(request, "Request deleted successfully.")
+                else:
+                    labor_request.response = 'yes' if action == 'confirm' else 'no' if action == 'decline' else 'ncns'
+                    labor_request.responded_at = timezone.now()
+                    labor_request.sms_sent = True
+                    labor_request.save()
+                    messages.success(request, f"Request marked as {action.capitalize()} successfully.")
+        return redirect('call_time_request_list', slug=slug)
     pending_requests = labor_requests.filter(response__isnull=True)
     confirmed_requests = labor_requests.filter(response='yes')
     declined_requests = labor_requests.filter(response='no')
+    ncns_requests = labor_requests.filter(response='ncns')
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
+    message = request.GET.get('message', '')
     context = {
         'call_time': call_time,
         'pending_requests': pending_requests,
         'confirmed_requests': confirmed_requests,
         'declined_requests': declined_requests,
+        'ncns_requests': ncns_requests,
         'labor_types': labor_types,
         'selected_labor_type': labor_type_filter,
+        'message': message,
     }
     return render(request, 'callManager/call_time_request_list.html', context)

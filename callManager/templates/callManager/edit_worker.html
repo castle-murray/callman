@@ -20,6 +20,22 @@
                 {{ form.labor_types.label_tag }} <!-- Displays as "Skills" -->
                 {{ form.labor_types }}
             </div>
+            <div class="mb-2 text-text-tertiary dark:text-dark-text-tertiary flex items-center">
+                <span>Times worker has no-call no-showed:</span>
+                <div id="nocallnoshow-container" class="flex items-center ml-2">
+                    <button type="button" 
+                            hx-post="{% url 'decrement_nocallnoshow' worker.id %}" 
+                            hx-target="#nocallnoshow-container" 
+                            hx-swap="outerHTML"
+                            class="ml-2 bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-success dark:hover:bg-dark-danger-hover">-1</button>
+                    {{ form.nocallnoshow }}
+                    <button type="button" 
+                            hx-post="{% url 'increment_nocallnoshow' worker.id %}" 
+                            hx-target="#nocallnoshow-container" 
+                            hx-swap="outerHTML"
+                            class="ml-2 bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-danger dark:hover:bg-dark-success-hover">+1</button>
+                </div>
+            </div>
             <button type="submit" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save</button>
         </form>
         <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Workers</a>

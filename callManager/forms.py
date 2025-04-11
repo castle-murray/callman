@@ -7,7 +7,7 @@ class LaborTypeForm(forms.ModelForm):
         model = LaborType
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
 class EventForm(forms.ModelForm):
@@ -40,10 +40,10 @@ class CallTimeForm(forms.ModelForm):
         model = CallTime
         fields = ['name', 'date', 'time', 'message']
         widgets = {
-            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'time': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'message': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'time': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'message': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -70,8 +70,8 @@ class LaborRequirementForm(forms.ModelForm):
         model = LaborRequirement
         fields = ['labor_type', 'needed_labor']
         widgets = {
-            'labor_type': forms.Select(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'needed_labor': forms.NumberInput(attrs={'min': 1, 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'labor_type': forms.Select(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'needed_labor': forms.NumberInput(attrs={'min': 1, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -83,12 +83,13 @@ class LaborRequirementForm(forms.ModelForm):
 class WorkerForm(forms.ModelForm):
     class Meta:
         model = Worker
-        fields = ['name', 'phone_number', 'labor_types', 'sms_consent']
+        fields = ['name', 'phone_number', 'labor_types', 'sms_consent', 'nocallnoshow']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'phone_number': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-blue-600 dark:text-blue-400'}),
-            'sms_consent': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:text-blue-400'}),
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'phone_number': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-text-blue dark:text-dark-text-blue'}),
+            'sms_consent': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue'}),
+            'nocallnoshow': forms.NumberInput(attrs={'readonly': 'readonly', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -98,20 +99,20 @@ class WorkerForm(forms.ModelForm):
             self.fields['labor_types'].queryset = LaborType.objects.filter(company=company)
 
 class WorkerImportForm(forms.Form):
-    file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
+    file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
 class WorkerRegistrationForm(forms.ModelForm):
-    username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}), required=True)
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}))
+    username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}), required=True)
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
     class Meta:
         model = Worker
         fields = ['name', 'phone_number', 'labor_types']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'phone_number': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
-            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-blue-600 dark:text-blue-400'}),
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'phone_number': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-text-blue dark:text-dark-text-blue'}),
         }
 
     def save(self, commit=True):
@@ -132,5 +133,5 @@ class SkillForm(forms.ModelForm):
         model = LaborType
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}),
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }

@@ -27,6 +27,7 @@ class Company(models.Model):
 class Manager(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='managers')
+    per_page_preference = models.PositiveIntegerField(default=10, choices=[(10, '10'), (25, '25'), (50, '50'), (100, '100')])
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.company.name})"
@@ -127,22 +128,27 @@ class Worker(models.Model):
     sms_consent = models.BooleanField(default=False)
     sent_consent_msg = models.BooleanField(default=False)
     stop_sms = models.BooleanField(default=False)
+    nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
 
     def __str__(self):
         return self.name or "Unnamed Worker"
 
 
-# Tracks worker assignments and responses
 class LaborRequest(models.Model):
+    RESPONSE_CHOICES = [
+        ('yes', 'Yes'),
+        ('no', 'No'),
+        ('ncns', 'No Call No Show'),
+    ]
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
     labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    response = models.CharField(max_length=20, choices=[('yes', 'Yes'), ('no', 'No')], null=True, blank=True)
+    response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)  # Pending is null
     requested_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     requested = models.BooleanField(default=False)
     sms_sent = models.BooleanField(default=False)
-    event_token = models.CharField(max_length=36, null=True, blank=True)  # Add this if missing
+    event_token = models.CharField(max_length=36, null=True, blank=True)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"

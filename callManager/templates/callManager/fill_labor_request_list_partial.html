@@ -6,6 +6,20 @@
       hx-swap="outerHTML">
     {% csrf_token %}
     {% if workers %}
+        <div class="mb-4 flex items-center">
+            <label for="per_page" class="mr-2 text-text-tertiary dark:text-dark-text-tertiary">Items per page:</label>
+            <select name="per_page" id="per_page" 
+                    hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1&search={{ search_query|urlencode }}" 
+                    hx-target="#fill-list" 
+                    hx-swap="outerHTML" 
+                    hx-include="[name='search']" 
+                    class="p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+        </div>
         <ul class="space-y-2">
             {% for worker in workers %}
                 {% with worker_data=worker_conflicts|get_item:worker.id %}
@@ -17,7 +31,7 @@
                                    class="mr-2 text-text-blue dark:text-dark-text-blue" 
                                    {% if worker.id in worker_conflicts %}title="Worker has conflicting requests"{% endif %}>
                             <div>
-                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
+                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }}) {% if worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>{% endif %}
                                 {% if worker.id in worker_conflicts %}
                                     <ul class="ml-4 {% if worker_data.is_confirmed %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">
                                         {% for conflict in worker_data.conflicts %}
@@ -47,9 +61,9 @@
         </ul>
         <div class="mt-4 flex justify-between">
             {% if page_obj.has_previous %}
-                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-target="#fill-list" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&per_page={{ per_page }}"
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&per_page={{ per_page }}"
+                   hx-target="#fill-list"
                    hx-swap="outerHTML"
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
             {% else %}
@@ -57,9 +71,9 @@
             {% endif %}
             <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" 
-                   hx-target="#fill-list" 
+                <a href="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&per_page={{ per_page }}"
+                   hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&per_page={{ per_page }}"
+                   hx-target="#fill-list"
                    hx-swap="outerHTML"
                    class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
             {% else %}
