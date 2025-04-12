@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from phonenumber_field.modelfields import PhoneNumberField
 import uuid
 import random
+import pytz
 
 def generate_unique_slug(model_class, length=7):
     while True:
@@ -28,6 +29,7 @@ class Manager(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='managers')
     per_page_preference = models.PositiveIntegerField(default=10, choices=[(10, '10'), (25, '25'), (50, '50'), (100, '100')])
+    timezone = models.CharField(max_length=100, default='America/New_York', choices=[(tz, tz) for tz in pytz.common_timezones])
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.company.name})"
@@ -153,3 +155,43 @@ class LaborRequest(models.Model):
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
         return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
+    
+
+class TimeEntry(models.Model):
+    labor_request = models.ForeignKey('LaborRequest', on_delete=models.CASCADE, related_name='time_entries')
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
+    call_time = models.ForeignKey('CallTime', on_delete=models.CASCADE)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('labor_request', 'worker', 'call_time')
+
+    def __str__(self):
+        return f"{self.worker.name} - {self.call_time.name} ({self.start_time} to {self.end_time})"
+
+    @property
+    def hours_worked(self):
+        if self.start_time and self.end_time:
+            delta = self.end_time - self.start_time
+            total_hours = delta.total_seconds() / 3600
+            # Deduct 1 hour for each unpaid meal break
+            unpaid_breaks = self.meal_breaks.filter(break_type='unpaid').count()
+            total_hours -= unpaid_breaks  # 1 hour per unpaid break
+            return max(0, total_hours)
+        return 0
+
+class MealBreak(models.Model):
+    BREAK_TYPES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid 1-Hour Walk-Away'),
+    ]
+    time_entry = models.ForeignKey('TimeEntry', on_delete=models.CASCADE, related_name='meal_breaks')
+    break_time = models.DateTimeField()
+    break_type = models.CharField(max_length=10, choices=BREAK_TYPES, default='paid')
+    duration = models.DurationField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.break_type.capitalize()} Break for {self.time_entry.worker.name} at {self.break_time}"

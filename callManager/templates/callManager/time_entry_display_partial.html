@@ -1,0 +1,36 @@
+{% load timezone_tags %}
+{% with time_entry=labor_request.time_entries.first %}
+<div class="p-2 text-text-primary dark:text-dark-text-primary">
+    {% if field == "start_time" %}
+        {% if time_entry.start_time %}
+            <span class="cursor-pointer" 
+                  hx-get="{% url 'call_time_tracking_edit' call_time.slug %}?request_id={{ labor_request.id }}&field=start_time" 
+                  hx-target="#time-entry-{{ time_entry.id }}-start_time">
+                {{ time_entry.start_time|in_manager_timezone:request.user.manager|date:"H:i" }}
+            </span>
+        {% else %}
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="request_id" value="{{ labor_request.id }}">
+                <input type="hidden" name="action" value="sign_in">
+                <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Sign In</button>
+            </form>
+        {% endif %}
+    {% else %}
+        {% if time_entry.end_time %}
+            <span class="cursor-pointer" 
+                  hx-get="{% url 'call_time_tracking_edit' call_time.slug %}?request_id={{ labor_request.id }}&field=end_time" 
+                  hx-target="#time-entry-{{ time_entry.id }}-end_time">
+                {{ time_entry.end_time|in_manager_timezone:request.user.manager|date:"H:i" }}
+            </span>
+        {% else %}
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="request_id" value="{{ labor_request.id }}">
+                <input type="hidden" name="action" value="sign_out">
+                <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover" {% if not time_entry.start_time %}disabled{% endif %}>Sign Out</button>
+            </form>
+        {% endif %}
+    {% endif %}
+</div>
+{% endwith %}

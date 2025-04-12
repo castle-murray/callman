@@ -174,3 +174,6 @@ TWILIO_ENABLED = os.environ.get('TWILIO_ENABLED')
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'  # Already set, but confirm
 LOGOUT_REDIRECT_URL = '/login/'
+
+USE_TZ = False
+TIME_ZONE = 'America/New_York'  # Fallback, though Manager.timezone will override

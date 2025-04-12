@@ -1,0 +1,10 @@
+<div class="p-2 text-text-primary dark:text-dark-text-primary">
+    {% if error_message %}
+        <span class="text-text-red dark:text-dark-text-red">{{ error_message }}</span>
+    {% endif %}
+        <span class="cursor-pointer" 
+              hx-get="{% url 'call_time_tracking_meal_edit' call_time.slug %}?meal_break_id={{ meal_break.id }}" 
+              hx-target="#meal-break-{{ meal_break.id }}">
+            {{ meal_break.break_time|date:"H:i" }} ({{ meal_break.break_type|capfirst }})
+        </span>
+</div>

@@ -43,6 +43,7 @@
             <a href="{% url 'call_time_request_list' call_time.slug %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
                 {{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}
             </a>
+            <a href="{% url 'call_time_tracking' call_time.slug %}" class="ml-2 inline-block bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Time Sheet</a>
             <a href="{% url 'edit_call_time' call_time.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Edit Call Time</a>
             <form method="post" action="{% url 'delete_call_time' call_time.slug %}" class="inline ml-2">
                 {% csrf_token %}

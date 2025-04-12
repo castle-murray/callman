@@ -1,6 +1,6 @@
 # callManager/admin.py
 from django.contrib import admin
-from .models import Company, Manager, Event, CallTime, LaborType, LaborRequirement, Worker, LaborRequest
+from .models import Company, Manager, Event, CallTime, LaborType, LaborRequirement, Worker, LaborRequest, TimeEntry, MealBreak
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
@@ -55,3 +55,35 @@ class LaborRequestAdmin(admin.ModelAdmin):
     search_fields = ('worker__name', 'labor_requirement__labor_type__name', 'labor_requirement__call_time__name')
     list_filter = ('response', 'labor_requirement__call_time__event__company')
     date_hierarchy = 'requested_at'
+
+@admin.register(TimeEntry)
+class TimeEntryAdmin(admin.ModelAdmin):
+    list_display = ('worker', 'call_time', 'start_time', 'end_time', 'hours_worked')
+    list_filter = ('call_time',)
+    search_fields = ('worker__name',)
+    readonly_fields = ('hours_worked', 'created_at', 'updated_at')
+    ordering = ('-start_time',)
+
+    def hours_worked(self, obj):
+        return f"{obj.hours_worked:.2f}" if obj.hours_worked else "-"
+    hours_worked.short_description = "Hours Worked"
+
+@admin.register(MealBreak)
+class MealBreakAdmin(admin.ModelAdmin):
+    list_display = ('worker_name', 'call_time_name', 'break_time', 'break_type', 'duration')
+    list_filter = ('break_type', 'time_entry__call_time')
+    search_fields = ('time_entry__worker__name', 'time_entry__call_time__name')
+    readonly_fields = ('duration',)
+    ordering = ('-break_time',)
+
+    def worker_name(self, obj):
+        return obj.time_entry.worker.name or "Unnamed Worker"
+    worker_name.short_description = "Worker"
+
+    def call_time_name(self, obj):
+        return obj.time_entry.call_time.name
+    call_time_name.short_description = "Call Time"
+
+    def duration(self, obj):
+        return obj.duration if obj.duration else "-"
+    duration.short_description = "Duration"
