@@ -969,7 +969,6 @@ def call_time_request_list(request, slug):
     return render(request, 'callManager/call_time_request_list.html', context)
 
 
-from datetime import datetime, timedelta
 
 @login_required
 def call_time_tracking(request, slug):
@@ -1009,9 +1008,9 @@ def call_time_tracking(request, slug):
                     end_time = end_time.replace(minute=30, second=0, microsecond=0)
                 else:
                     end_time = end_time.replace(minute=0, second=0, microsecond=0)
-                print(f"Sign Out Time: {end_time}, Original: {datetime.now()}, Worker: {worker.name}")
                 time_entry.end_time = end_time
                 time_entry.save()
+                print(f"Sign Out Time: {end_time}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                 messages.success(request, f"Signed out {worker.name}")
             elif action == 'ncns' and not was_ncns:
                 labor_request.response = 'ncns'
@@ -1052,31 +1051,28 @@ def call_time_tracking(request, slug):
                 meal_break_id = request.POST.get('meal_break_id')
                 meal_break = get_object_or_404(MealBreak, id=meal_break_id, time_entry=time_entry)
                 time_str = request.POST.get('time')
+                date_str = request.POST.get('date')
                 error_message = None
                 try:
                     hour, minute = map(int, time_str.split(':'))
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    new_time = datetime.combine(date_obj, time(hour, minute))
                     start_date = time_entry.start_time.date()
                     end_date = time_entry.end_time.date() if time_entry.end_time else datetime.now().date()
-                    new_time = None
-                    for date in [start_date, end_date]:
-                        try:
-                            candidate_time = datetime.combine(date, time(hour, minute))
-                            if time_entry.start_time <= candidate_time and (not time_entry.end_time or candidate_time <= time_entry.end_time):
-                                new_time = candidate_time
-                                break
-                        except ValueError:
-                            continue
-                    if new_time:
+                    if start_date <= date_obj <= end_date and time_entry.start_time <= new_time and (not time_entry.end_time or new_time <= time_entry.end_time):
                         meal_break.break_time = new_time
                         meal_break.save()
-                        print(f"Updated Meal Break: {new_time}, Type: {meal_break.break_type}, Worker: {worker.name}")
+                        print(f"Updated Meal Break: {new_time}, Type: {meal_break.break_type}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
+                        if request.headers.get('HX-Request'):
+                            context = {'call_time': call_time, 'meal_break': meal_break}
+                            return render(request, 'callManager/meal_break_display_partial.html', context)
                         messages.success(request, f"Updated meal break for {worker.name}")
                     else:
                         error_message = "Meal break time must be within the shift duration"
-                        print(f"Meal Break Validation Failed: {time_str}, Start: {time_entry.start_time}, End: {time_entry.end_time or datetime.now()}, Worker: {worker.name}")
+                        print(f"Meal Break Validation Failed: {time_str}, Date: {date_str}, Start: {time_entry.start_time}, End: {time_entry.end_time or datetime.now()}, Worker: {worker.name}")
                 except (ValueError, TypeError) as e:
-                    error_message = "Invalid time format for meal break"
-                    print(f"Meal Break Update Error: {str(e)}, Time: {time_str}, Worker: {worker.name}")
+                    error_message = "Invalid date or time format for meal break"
+                    print(f"Meal Break Update Error: {str(e)}, Time: {time_str}, Date: {date_str}, Worker: {worker.name}")
                 if request.headers.get('HX-Request'):
                     context = {
                         'call_time': call_time,
@@ -1092,10 +1088,11 @@ def call_time_tracking(request, slug):
                 time_entry_id = request.POST.get('time_entry_id')
                 time_entry = get_object_or_404(TimeEntry, id=time_entry_id, labor_request=labor_request)
                 time_str = request.POST.get('time')
+                date_str = request.POST.get('date')
                 try:
                     hour, minute = map(int, time_str.split(':'))
-                    date = call_time.date
-                    new_time = datetime.combine(date, time(hour, minute))
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    new_time = datetime.combine(date_obj, time(hour, minute))
                     if action == 'update_start_time':
                         time_entry.start_time = new_time
                     else:
@@ -1104,14 +1101,14 @@ def call_time_tracking(request, slug):
                         else:
                             new_time = new_time.replace(minute=0)
                         time_entry.end_time = new_time
-                    print(f"Updated Time: {new_time}, Action: {action}, Worker: {worker.name}")
                     time_entry.save()
+                    print(f"Updated Time: {new_time}, Action: {action}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                     if request.headers.get('HX-Request'):
                         context = {'call_time': call_time, 'labor_request': labor_request, 'field': action.replace('update_', '')}
                         return render(request, 'callManager/time_entry_display_partial.html', context)
                     messages.success(request, f"Updated {action.replace('update_', '')} for {worker.name}")
                 except (ValueError, TypeError):
-                    messages.error(request, f"Invalid time format")
+                    messages.error(request, f"Invalid date or time format")
         if not request.headers.get('HX-Request'):
             return redirect('call_time_tracking', slug=slug)
     confirmed_requests = labor_requests.filter(response='yes')
@@ -1129,7 +1126,6 @@ def call_time_tracking(request, slug):
         'minutes': minutes
     }
     return render(request, 'callManager/call_time_tracking.html', context)
-
 
 @login_required
 def call_time_tracking_edit(request, slug):
@@ -1189,3 +1185,28 @@ def call_time_tracking_meal_display(request, slug):
         'meal_break': meal_break
     }
     return render(request, 'callManager/meal_break_display_partial.html', context)
+
+
+
+@login_required
+def call_time_report(request, slug):
+    manager = request.user.manager
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        response='yes'  # Only confirmed workers
+    ).select_related('worker', 'labor_requirement__labor_type')
+    labor_type_filter = request.GET.get('labor_type', 'All')
+    if labor_type_filter != 'All':
+        labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
+    confirmed_requests = labor_requests
+    labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
+    context = {
+        'call_time': call_time,
+        'confirmed_requests': confirmed_requests,
+        'labor_types': labor_types,
+        'selected_labor_type': labor_type_filter,
+    }
+    return render(request, 'callManager/call_time_report.html', context)
+
+# Existing views (call_time_tracking, call_time_tracking_edit, etc.) remain unchanged

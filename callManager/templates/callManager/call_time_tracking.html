@@ -1,9 +1,9 @@
 {% extends 'callManager/base.html' %}
 
-{% block title %}Time Tracking - CallMan{% endblock %}
+{% block title %}Time Sheet - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Time Tracking for {{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h1>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Time Sheet -{{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <!-- Filter Dropdown -->
         <div class="mb-6">
@@ -94,10 +94,10 @@
                                         <input type="hidden" name="request_id" value="{{ labor_request.id }}">
                                         <input type="hidden" name="action" value="add_meal_break">
                                         <select name="break_type" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
-                                            <option value="paid">Paid</option>
-                                            <option value="unpaid">Unpaid 1-Hour Walk-Away</option>
+                                            <option value="paid">Paid 30</option>
+                                            <option value="unpaid">Unpaid 1hr</option>
                                         </select>
-                                        <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Meal Break</button>
+                                        <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Meal</button>
                                     </form>
                                 {% endif %}
                             </td>
@@ -189,6 +189,10 @@
             <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No no-call no-show workers for this call time.</p>
         {% endif %}
 
-        <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+        <div class="mt-4">
+            <a href="{% url 'event_detail' call_time.event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+            <a href="{% url 'call_time_report' call_time.slug %}" class="ml-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">View Report</a>
+        </div>
+
     </div>
 {% endblock %}

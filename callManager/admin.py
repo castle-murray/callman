@@ -1,72 +1,76 @@
-# callManager/admin.py
 from django.contrib import admin
-from .models import Company, Manager, Event, CallTime, LaborType, LaborRequirement, Worker, LaborRequest, TimeEntry, MealBreak
+from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Manager, LaborRequest, TimeEntry, MealBreak
 
-@admin.register(Company)
-class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'city', 'state', 'phone_number', 'email')
-    search_fields = ('name', 'email')
-    list_filter = ('state',)
-
-@admin.register(Manager)
-class ManagerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'company', 'user_email')
-    search_fields = ('user__username', 'user__email', 'company__name')
-    list_filter = ('company',)
-    
-    def user_email(self, obj):
-        return obj.user.email
-    user_email.short_description = 'Email'
+# Inline for MealBreak in TimeEntryAdmin
+class MealBreakInline(admin.TabularInline):
+    model = MealBreak
+    extra = 0
+    fields = ('break_time', 'break_type', 'duration')
+    readonly_fields = ('duration',)
+    ordering = ('break_time',)
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('event_name', 'company', 'created_by')
-    search_fields = ('event_name', 'event_location', 'company__name')
-    list_filter = ('company',) 
+    list_display = ('event_name', 'start_date', 'end_date', 'is_single_day', 'event_location')
+    list_filter = ('is_single_day', 'start_date')
+    search_fields = ('event_name', 'event_location')
 
 @admin.register(CallTime)
 class CallTimeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'date', 'time', 'event')
-    search_fields = ('name', 'event__event_name')
-    list_filter = ('event__company', 'time', 'date')
-    date_hierarchy = 'date'
-
-@admin.register(LaborType)
-class LaborTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'company')
-    search_fields = ('name', 'company__name')
-    list_filter = ('company',)
+    list_display = ('name', 'event', 'date', 'time')
+    list_filter = ('event', 'date')
+    search_fields = ('name',)
 
 @admin.register(LaborRequirement)
 class LaborRequirementAdmin(admin.ModelAdmin):
     list_display = ('labor_type', 'call_time', 'needed_labor')
-    search_fields = ('labor_type__name', 'call_time__name', 'call_time__event__event_name')
-    list_filter = ('call_time__event__company', 'labor_type')
+    list_filter = ('labor_type', 'call_time')
+    search_fields = ('labor_type__name',)
+
+@admin.register(LaborType)
+class LaborTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'company')
+    list_filter = ('company',)
+    search_fields = ('name',)
 
 @admin.register(Worker)
 class WorkerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number')
+    list_display = ('name', 'phone_number', 'nocallnoshow')
+    list_filter = ('companies',)
     search_fields = ('name', 'phone_number')
-    list_filter = ('labor_types',)
+
+@admin.register(Manager)
+class ManagerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company', 'timezone')
+    list_filter = ('company',)
+    search_fields = ('user__username',)
 
 @admin.register(LaborRequest)
 class LaborRequestAdmin(admin.ModelAdmin):
-    list_display = ('worker', 'labor_requirement', 'response', 'requested_at', 'responded_at')
-    search_fields = ('worker__name', 'labor_requirement__labor_type__name', 'labor_requirement__call_time__name')
-    list_filter = ('response', 'labor_requirement__call_time__event__company')
-    date_hierarchy = 'requested_at'
+    list_display = ('worker', 'labor_requirement', 'response', 'requested')
+    list_filter = ('response', 'requested')
+    search_fields = ('worker__name', 'labor_requirement__labor_type__name')
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(admin.ModelAdmin):
-    list_display = ('worker', 'call_time', 'start_time', 'end_time', 'hours_worked')
+    list_display = ('worker', 'call_time', 'start_time', 'end_time', 'normal_hours', 'meal_penalty_hours', 'total_hours_worked')
     list_filter = ('call_time',)
     search_fields = ('worker__name',)
-    readonly_fields = ('hours_worked', 'created_at', 'updated_at')
+    readonly_fields = ('normal_hours', 'meal_penalty_hours', 'total_hours_worked', 'created_at', 'updated_at')
+    inlines = [MealBreakInline]
     ordering = ('-start_time',)
 
-    def hours_worked(self, obj):
-        return f"{obj.hours_worked:.2f}" if obj.hours_worked else "-"
-    hours_worked.short_description = "Hours Worked"
+    def normal_hours(self, obj):
+        return f"{obj.normal_hours:.2f}" if obj.normal_hours else "-"
+    normal_hours.short_description = "Normal Hours"
+
+    def meal_penalty_hours(self, obj):
+        return f"{obj.meal_penalty_hours:.2f}" if obj.meal_penalty_hours else "-"
+    meal_penalty_hours.short_description = "Meal Penalty Hours"
+
+    def total_hours_worked(self, obj):
+        return f"{obj.total_hours_worked:.2f}" if obj.total_hours_worked else "-"
+    total_hours_worked.short_description = "Total Hours Worked"
 
 @admin.register(MealBreak)
 class MealBreakAdmin(admin.ModelAdmin):

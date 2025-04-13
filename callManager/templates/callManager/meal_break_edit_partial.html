@@ -6,6 +6,7 @@
     <input type="hidden" name="request_id" value="{{ time_entry.labor_request.id }}">
     <input type="hidden" name="action" value="update_meal_break">
     <input type="hidden" name="meal_break_id" value="{{ meal_break.id }}">
+    <input type="date" name="date" value="{{ call_time.date|date:'Y-m-d' }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
     <select name="time" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
         {% for hour in hours %}
             {% for minute in minutes %}

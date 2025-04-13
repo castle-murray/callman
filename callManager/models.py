@@ -4,6 +4,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 import uuid
 import random
 import pytz
+from datetime import datetime, timedelta
 
 def generate_unique_slug(model_class, length=7):
     while True:
@@ -14,6 +15,7 @@ def generate_unique_slug(model_class, length=7):
 # Company model (e.g., "ABC Production Co.")
 class Company(models.Model):
     name = models.CharField(max_length=200)
+    meal_penalty_trigger_time = models.PositiveIntegerField(default=5, help_text="Hours after start time to trigger meal penalty")
     address = models.CharField(max_length=200)
     city = models.CharField(max_length=200)
     state = models.CharField(max_length=200)
@@ -173,20 +175,95 @@ class TimeEntry(models.Model):
         return f"{self.worker.name} - {self.call_time.name} ({self.start_time} to {self.end_time})"
 
     @property
-    def hours_worked(self):
-        if self.start_time and self.end_time:
-            delta = self.end_time - self.start_time
-            total_hours = delta.total_seconds() / 3600
-            # Deduct 1 hour for each unpaid meal break
-            unpaid_breaks = self.meal_breaks.filter(break_type='unpaid').count()
-            total_hours -= unpaid_breaks  # 1 hour per unpaid break
-            return max(0, total_hours)
-        return 0
+    def normal_hours(self):
+        if not (self.start_time and self.end_time):
+            return 0
+        normal_hours = 0
+        current_time = self.start_time
+        trigger_duration = self.labor_request.labor_requirement.call_time.event.company.meal_penalty_trigger_time
+        breaks = list(self.meal_breaks.order_by('break_time'))
+        unpaid_breaks = self.meal_breaks.filter(break_type='unpaid').count()
+
+        for i, meal_break in enumerate(breaks):
+            break_start = meal_break.break_time
+            break_end = break_start + timedelta(minutes=30) if meal_break.break_type == 'paid' else break_start + timedelta(hours=1)
+            trigger_time = current_time + timedelta(hours=trigger_duration)
+
+            # Normal hours before break or trigger
+            if break_start > trigger_time:
+                normal_hours += (trigger_time - current_time).total_seconds() / 3600
+                current_time = trigger_time
+            else:
+                normal_hours += (break_start - current_time).total_seconds() / 3600
+                current_time = break_start
+
+            # Add paid break duration to normal hours
+            if meal_break.break_type == 'paid':
+                paid_duration = (break_end - break_start).total_seconds() / 3600
+                normal_hours += paid_duration
+
+            # Resume after break
+            current_time = break_end
+            if current_time >= self.end_time:
+                break
+
+        # Normal hours after last break (or from start if no breaks)
+        if current_time < self.end_time:
+            trigger_time = current_time + timedelta(hours=trigger_duration)
+            end_normal = min(trigger_time, self.end_time)
+            normal_hours += (end_normal - current_time).total_seconds() / 3600
+
+        normal_hours -= unpaid_breaks  # Deduct unpaid breaks
+        return max(0, normal_hours)
+
+    @property
+    def meal_penalty_hours(self):
+        if not (self.start_time and self.end_time):
+            return 0
+        penalty_hours = 0
+        current_time = self.start_time
+        trigger_duration = self.labor_request.labor_requirement.call_time.event.company.meal_penalty_trigger_time
+        breaks = list(self.meal_breaks.order_by('break_time'))
+
+        for i, meal_break in enumerate(breaks):
+            break_start = meal_break.break_time
+            break_end = break_start + timedelta(minutes=30) if meal_break.break_type == 'paid' else break_start + timedelta(hours=1)
+            trigger_time = current_time + timedelta(hours=trigger_duration)
+
+            # Penalty from trigger to break or end_time
+            if trigger_time < break_start:
+                penalty_end = min(break_start, self.end_time)
+                if penalty_end > trigger_time:
+                    penalty_hours += (penalty_end - trigger_time).total_seconds() / 3600
+            current_time = break_end
+
+            # Stop if break_end exceeds end_time
+            if current_time >= self.end_time:
+                break
+
+        # Penalty after last break
+        if current_time < self.end_time:
+            trigger_time = current_time + timedelta(hours=trigger_duration)
+            if self.end_time > trigger_time:
+                penalty_hours += (self.end_time - trigger_time).total_seconds() / 3600
+
+        return max(0, penalty_hours)
+
+    @property
+    def total_hours_worked(self):
+        if not (self.start_time and self.end_time):
+            return 0
+        delta = self.end_time - self.start_time
+        total_hours = delta.total_seconds() / 3600
+        unpaid_breaks = self.meal_breaks.filter(break_type='unpaid').count()
+        total_hours -= unpaid_breaks
+        return max(0, total_hours)
+
 
 class MealBreak(models.Model):
     BREAK_TYPES = [
-        ('paid', 'Paid'),
-        ('unpaid', 'Unpaid 1-Hour Walk-Away'),
+        ('paid', 'Paid 30min'),
+        ('unpaid', 'Unpaid 1hr'),
     ]
     time_entry = models.ForeignKey('TimeEntry', on_delete=models.CASCADE, related_name='meal_breaks')
     break_time = models.DateTimeField()

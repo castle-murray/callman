@@ -29,6 +29,7 @@ urlpatterns = [
     path('call/<slug:slug>/track/edit/', views.call_time_tracking_edit, name='call_time_tracking_edit'),
     path('call/<slug:slug>/track/meal_edit/', views.call_time_tracking_meal_edit, name='call_time_tracking_meal_edit'),
     path('call/<slug:slug>/track/meal_display/', views.call_time_tracking_meal_display, name='call_time_tracking_meal_display'),
+    path('call/<slug:slug>/report/', views.call_time_report, name='call_time_report'),
     path('call/<slug:slug>/track/display/', views.call_time_tracking_display, name='call_time_tracking_display'),
     path('labor/<slug:slug>/fill-list/', views.fill_labor_request_list, name='fill_labor_request_list'),
     path('labor/requests/declined', views.declined_requests, name='declined_requests'),

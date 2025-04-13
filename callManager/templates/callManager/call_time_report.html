@@ -1,0 +1,94 @@
+{% extends 'callManager/base.html' %}
+
+{% block title %}Time Report - CallMan{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Time Report for {{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <!-- Filter Dropdown -->
+        <div class="mb-6">
+            <form method="get">
+                <label for="labor_type" class="text-lg font-semibold mr-2 text-text-heading dark:text-dark-text-primary">Filter by Labor Type:</label>
+                <select name="labor_type" id="labor_type" class="p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border" onchange="this.form.submit()">
+                    <option value="All" {% if selected_labor_type == 'All' %}selected{% endif %}>All</option>
+                    {% for labor_type in labor_types %}
+                        <option value="{{ labor_type.id }}" {% if selected_labor_type == labor_type.id|stringformat:"s" %}selected{% endif %}>{{ labor_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <p class="text-text-primary mt-2 dark:text-dark-text-primary">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Workers</h2>
+        {% if confirmed_requests %}
+            <table class="w-full mb-4 border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Name</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Labor Type</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Sign In</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Sign Out</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Meal Breaks</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Normal Hours</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Meal Penalty Hours</th>
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Total Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for labor_request in confirmed_requests %}
+                        {% with time_entry=labor_request.time_entries.first %}
+                        <tr class="border-b dark:border-dark-border">
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.worker.name|default:"Unnamed Worker" }}</td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.labor_requirement.labor_type.name }}</td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {% if time_entry.start_time %}
+                                    {{ time_entry.start_time|date:"H:i, Y-m-d" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {% if time_entry.end_time %}
+                                    {{ time_entry.end_time|date:"H:i, Y-m-d" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {% if time_entry.meal_breaks.all %}
+                                    {% for meal_break in time_entry.meal_breaks.all %}
+                                        <div>{{ meal_break.break_time|date:"H:i, Y-m-d" }} ({{ meal_break.break_type|capfirst }})</div>
+                                    {% endfor %}
+                                {% else %}
+                                    None
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {{ time_entry.normal_hours|floatformat:2 }}
+                            </td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {{ time_entry.meal_penalty_hours|floatformat:2 }}
+                            </td>
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                {{ time_entry.total_hours_worked|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No confirmed workers for this call time.</p>
+        {% endif %}
+
+        <div class="mt-4">
+            <a href="{% url 'event_detail' call_time.event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+            <a href="{% url 'call_time_tracking' call_time.slug %}" class="ml-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Time Tracking</a>
+        </div>
+    </div>
+{% endblock %}
