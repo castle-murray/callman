@@ -1,33 +1,69 @@
 {% extends 'callManager/base.html' %}
 
-{% block title %}Confirm Requests - CallMan{% endblock %}
+{% block title %}Confirm Event Requests - CallMan{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Confirm Requests for {{ event.event_name }}</h1>
-<div class="bg-cream-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
-    <form method="post">
-        {% csrf_token %}
-        <div class="space-y-4">
-            {% for request in labor_requests %}
-            <div class="space-y-2"> 
-                <div class="flex items-center space-x-4">
-                    <label class="block text-text-tertiary font-semibold dark:text-dark-text-tertiary">
-                        {{ request.labor_requirement.labor_type.name }} ({{ request.labor_requirement.call_time.name }} at {{ request.labor_requirement.call_time.time }} on {{ request.labor_requirement.call_time.date }})
-                    </label>
-                    <select name="response_{{ request.id }}" class="p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
-                        <option value="">Select</option>
-                        <option value="yes">Confirm</option>
-                        <option value="no">Reject</option>
-                    </select>
-                </div>
-                <div class="border border-light rounded p-2 dark:border-dark-border-dark"> 
-                    <p class="text-text-tertiary dark:text-dark-text-tertiary">{{ request.labor_requirement.call_time.message }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Submit Responses</button>
-    </form>
-    <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">New worker? <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Register here</a>.</p>
-</div>
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Your Availability for {{ event.event_name }}</h1>
+        {% if labor_requests %}
+            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm your availability for the following call times:</p>
+            <form method="post">
+                {% csrf_token %}
+                <table class="w-full mb-4 border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 dark:bg-gray-700">
+                            <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Call Time</th>
+                            <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Position</th>
+                            <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for labor_request in labor_requests %}
+                            <tr class="border-b dark:border-dark-border">
+                                <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                    {{ labor_request.labor_requirement.call_time.name }} on {{ labor_request.labor_requirement.call_time.date|date:"F j, Y" }} at {{ labor_request.labor_requirement.call_time.time|time:"h:i A" }}
+                                    {% if labor_request.labor_requirement.call_time.message %}
+                                        <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ labor_request.labor_requirement.call_time.message }}</p>
+                                    {% endif %}
+                                </td>
+                                <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.labor_requirement.labor_type.name }}</td>
+                                <td class="p-2 text-text-primary dark:text-dark-text-primary">
+                                    <select name="response_{{ labor_request.id }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                                        <option value="">Select</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button type="submit" class="bg-primary text-dark-text-primary px-4 py-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Submit</button>
+            </form>
+        {% else %}
+            <p class="text-text-primary mb-4 dark:text-dark-text-primary">No pending requests to confirm.</p>
+        {% endif %}
+        {% if confirmed_call_times %}
+            <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Call Times</h2>
+            <ul class="list-disc pl-5 mb-4">
+                {% for item in confirmed_call_times %}
+                    <li class="text-text-primary dark:text-dark-text-primary">
+                        {{ item.call_time.name }} on {{ item.call_time.date|date:"F j, Y" }} at {{ item.call_time.time|time:"h:i A" }} (Position: {{ item.position }})
+                        <a href="{{ item.gcal_url }}" target="_blank" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Add to Google Calendar</a>
+                        {% if item.message %}
+                            <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ item.message }}</p>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">
+            {% if registration_url %}
+                You can register or update your profile <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
+            {% else %}
+                No further action is required.
+            {% endif %}
+        </p>
+        <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+    </div>
 {% endblock %}

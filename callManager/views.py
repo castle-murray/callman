@@ -22,7 +22,7 @@ from io import TextIOWrapper
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import uuid
 from django.urls import reverse
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from django.contrib import messages
 import pytz
 
@@ -695,23 +695,53 @@ def confirm_event_requests(request, slug, event_token):
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         event_token=event_token,
-        requested=True
+        worker__phone_number__isnull=False
     ).select_related('worker').first()
     if not first_request:
-        context = {'message': "No pending requests found for this link."}
+        context = {
+            'message': 'No requests found for this link.'
+        }
         return render(request, 'callManager/confirm_error.html', context)
     worker_phone = first_request.worker.phone_number
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
-        event_token=event_token,
         requested=True,
         response__isnull=True,
-        worker__phone_number=worker_phone  # Filter by worker's phone
-    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
+        worker__phone_number=worker_phone
+    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type').order_by(
+        'labor_requirement__call_time__date',
+        'labor_requirement__call_time__time'
+    )
+    confirmed_call_times = LaborRequest.objects.filter(
+        labor_requirement__call_time__event=event,
+        response='yes',
+        worker__phone_number=worker_phone
+    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type').order_by(
+        'labor_requirement__call_time__date',
+        'labor_requirement__call_time__time'
+    )
     registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
-    if not labor_requests.exists():
-        context = {'message': "No pending requests found for this link.",'registration_url': registration_url}
-        return render(request, 'callManager/confirm_error.html', context)
+    calendar_links = []
+    for req in confirmed_call_times:
+        call_time = req.labor_requirement.call_time
+        start_dt = datetime.combine(call_time.date, call_time.time)
+        end_dt = start_dt + timedelta(hours=4)
+        event_name = quote(f"{event.event_name} - {call_time.name}")
+        location = quote(event.event_location or "TBD")
+        details = quote(f"Position: {req.labor_requirement.labor_type.name}\nConfirmed for {first_request.worker.name}")
+        gcal_url = (
+            f"https://calendar.google.com/calendar/r/eventedit?"
+            f"text={event_name}&"
+            f"dates={start_dt.strftime('%Y%m%dT%H%M%S')}/{end_dt.strftime('%Y%m%dT%H%M%S')}&"
+            f"details={details}&"
+            f"location={location}"
+        )
+        calendar_links.append({
+            'call_time': call_time,
+            'position': req.labor_requirement.labor_type.name,
+            'message': call_time.message if call_time.message else '',
+            'gcal_url': gcal_url
+        })
     if request.method == "POST":
         for labor_request in labor_requests:
             response_key = f"response_{labor_request.id}"
@@ -720,16 +750,21 @@ def confirm_event_requests(request, slug, event_token):
                 labor_request.response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
-        confirmed_call_times = LaborRequest.objects.filter(
-            response='yes'
-            )
         context = {
             'event': event,
             'registration_url': registration_url,
-            'confirmed_call_times': confirmed_call_times,
+            'confirmed_call_times': calendar_links
         }
         return render(request, 'callManager/confirm_success.html', context)
-    context = {'event': event,'labor_requests': labor_requests,'registration_url': registration_url}
+    context = {
+        'event': event,
+        'labor_requests': labor_requests,
+        'registration_url': registration_url,
+        'confirmed_call_times': calendar_links
+    }
+    if not labor_requests.exists() and not calendar_links:
+        context['message'] = "No requests found for this link."
+        return render(request, 'callManager/confirm_error.html', context)
     return render(request, 'callManager/confirm_event_requests.html', context)
 
 

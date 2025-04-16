@@ -1,34 +1,34 @@
 {% extends 'callManager/base.html' %}
 
-{% load callman_tags %}
-
-{% block title %}Confirmation Submitted - CallMan{% endblock %}
+{% block title %}Confirmation Success - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Responses Submitted</h1>
-    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <p class="text-text-green dark:text-dark-text-green">Your responses for {{ event.event_name }} have been submitted successfully.</p>
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirmation Submitted</h1>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Thank you for responding to the request for <strong>{{ event.event_name }}</strong>.</p>
         {% if confirmed_call_times %}
-            <div class="mt-4">
-                <p class="text-text-tertiary font-semibold dark:text-dark-text-tertiary">Add Confirmed Call Times to Google Calendar:</p>
-                <ul class="space-y-2 mt-2">
-                    {% for call_time in confirmed_call_times %}
-                        {% with start_datetime=call_time.labor_requirement.call_time.date|date:'Ymd'|add:'T'|add:call_time.labor_requirement.call_time.time|time:'Hi'|add:'00' %}
-                            {% with end_time=call_time.labor_requirement.call_time.time|add:'4'|time:'Hi' %}
-                                <li>
-                                    <a href="https://www.google.com/calendar/render?action=TEMPLATE&text={{ call_time.labor_requirement.call_time.name|urlencode }}&dates={{ start_datetime }}/{{ call_time.labor_requirement.call_time.date|date:'Ymd' }}T{{ end_time }}00&details=Event: {{ event.event_name|urlencode }}&location={{ event.event_location|urlencode }}" 
-                                       target="_blank" 
-                                       class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
-                                        {{ call_time.labor_requirement.call_time.name }} at {{ call_time.labor_requirement.call_time.time }} on {{ call_time.labor_requirement.call_time.date }}
-                                    </a>
-                                </li>
-                            {% endwith %}
-                        {% endwith %}
-                    {% endfor %}
-                </ul>
-            </div>
+            <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Call Times</h2>
+            <ul class="list-disc pl-5 mb-4">
+                {% for item in confirmed_call_times %}
+                    <li class="text-text-primary dark:text-dark-text-primary">
+                        {{ item.call_time.name }} on {{ item.call_time.date|date:"F j, Y" }} at {{ item.call_time.time|time:"h:i A" }} (Position: {{ item.position }})
+                        <a href="{{ item.gcal_url }}" target="_blank" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Add to Google Calendar</a>
+                        {% if item.message %}
+                            <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ item.message }}</p>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No call times confirmed.</p>
         {% endif %}
-        <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">New worker? <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Register here</a>.</p>
-        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Return to Home</a>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">
+            {% if registration_url %}
+                You can register or update your profile <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
+            {% else %}
+                No further action is required.
+            {% endif %}
+        </p>
+        <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
 {% endblock %}
