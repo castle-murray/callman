@@ -85,4 +85,31 @@
     {% else %}
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No confirmed requests.</p>
     {% endif %}
+    <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Declined Requests {% if declined_count %} - {{ declined_count }} {% endif %}</h2>
+    {% if declined_requests %}
+        <ul class="space-y-2 mb-4">
+            {% for request in declined_requests %}
+                <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
+                    {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number|default:"No phone" }})
+                    {% if request.is_reserved %}<span class="ml-2 text-text-secondary dark:text-dark-text-secondary">(Reserved)</span>{% endif %}
+                    <div>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="confirm">
+                            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Confirm</button>
+                        </form>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No declined requests.</p>
+    {% endif %}
 </div>
