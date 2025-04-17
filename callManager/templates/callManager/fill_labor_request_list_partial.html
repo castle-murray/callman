@@ -18,63 +18,7 @@
         <ul class="space-y-2 mb-4">
             {% for worker in workers %}
                 {% with worker_data=worker_conflicts|get_item:worker.id %}
-                    <li class="flex justify-between items-center {% if worker_data.is_confirmed %}bg-conflict-green dark:bg-dark-conflict-green{% elif worker.id in worker_conflicts %}bg-conflict-yellow dark:bg-dark-conflict-yellow{% endif %} text-text-tertiary dark:text-dark-text-tertiary">
-                        <div>
-                            {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
-                            {% if worker.nocallnoshow >= 2 %}
-                                <span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>
-                            {% endif %}
-                            {% if worker.id in worker_conflicts %}
-                                <ul class="ml-4 {% if worker_data.is_confirmed %}text-text-green dark:text-dark-text-green{% else %}text-text-yellow dark:text-dark-text-yellow{% endif %}">
-                                    {% for conflict in worker_data.conflicts %}
-                                        <li>
-                                            - 
-                                            {% if conflict.status == 'Confirmed' %}
-                                                {% if conflict.call_time_id == labor_requirement.call_time.id and conflict.labor_type_id == labor_requirement.labor_type.id %}
-                                                    <span class="text-text-green dark:text-dark-text-green">Confirmed</span>
-                                                {% else %}
-                                                    <span class="text-text-red dark:text-dark-text-red">Confirmed (Other)</span>
-                                                {% endif %}
-                                            {% elif conflict.status == 'Available' %}
-                                                <span class="text-available dark:text-dark-text-available">Available</span>
-                                            {% elif conflict.status == 'Declined' %}
-                                                <span class="text-text-red dark:text-dark-text-red">Declined</span>
-                                            {% else %}
-                                                <span class="text-text-yellow dark:text-dark-text-yellow">Pending</span>
-                                            {% endif %}: 
-                                            {{ conflict.event }} ({{ conflict.call_time }}, {{ conflict.labor_type }})
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if worker.id not in requested_worker_ids %}
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="worker_id" value="{{ worker.id }}">
-                                    <input type="hidden" name="action" value="request">
-                                    <button type="submit" 
-                                            hx-post="{% url 'labor_request_list' labor_requirement.slug %}" 
-                                            hx-target="#labor-request-content" 
-                                            hx-swap="outerHTML"
-                                            class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Request</button>
-                                </form>
-                                <form method="post" class="inline ml-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="worker_id" value="{{ worker.id }}">
-                                    <input type="hidden" name="action" value="reserve">
-                                    <button type="submit" 
-                                            hx-post="{% url 'labor_request_list' labor_requirement.slug %}" 
-                                            hx-target="#labor-request-content" 
-                                            hx-swap="outerHTML"
-                                            class="bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Reserve</button>
-                                </form>
-                            {% else %}
-                                <span class="text-text-secondary dark:text-dark-text-secondary">Requested</span>
-                            {% endif %}
-                        </div>
-                    </li>
+                    {% include 'callManager/worker_fill_partial.html' %}
                 {% endwith %}
             {% endfor %}
         </ul>

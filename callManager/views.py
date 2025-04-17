@@ -1142,6 +1142,56 @@ def fill_labor_request_list(request, slug):
     }
     return render(request, 'callManager/fill_labor_request_list_partial.html', context)
 
+@login_required
+def worker_fill_partial(request, slug, worker_id):
+    manager = request.user.manager
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    worker = get_object_or_404(Worker, id=worker_id)
+    labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
+    requested_worker_ids = list(labor_requests.values_list('worker__id', flat=True))
+    
+    # Conflict data (copied from fill_labor_request_list)
+    current_call_time = labor_requirement.call_time
+    event_start_date = current_call_time.event.start_date
+    event_end_date = current_call_time.event.end_date or event_start_date
+    call_datetime = datetime.combine(event_start_date, current_call_time.time)
+    window_start = call_datetime - timedelta(hours=5)
+    window_end = call_datetime + timedelta(hours=5)
+    conflicting_requests = LaborRequest.objects.filter(
+        worker=worker,
+        requested=True
+    ).filter(
+        labor_requirement__call_time__date__gte=window_start.date(),
+        labor_requirement__call_time__date__lte=window_end.date()
+    ).filter(
+        labor_requirement__call_time__time__gte=window_start.time() if window_start.date() == labor_requirement.call_time.date else '00:00:00',
+        labor_requirement__call_time__time__lte=window_end.time() if window_end.date() == labor_requirement.call_time.date else '23:59:59'
+    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type')
+    worker_conflicts = {}
+    worker_data = {'conflicts': [], 'is_confirmed': False}
+    for labor_request in conflicting_requests:
+        conflict_info = {
+            'event': labor_request.labor_requirement.call_time.event.event_name,
+            'call_time': f"{labor_request.labor_requirement.call_time.name} at {labor_request.labor_requirement.call_time.time}",
+            'labor_type': labor_request.labor_requirement.labor_type.name,
+            'status': 'Confirmed' if labor_request.confirmed else 'Available' if labor_request.availability_response == 'yes' else 'Declined' if labor_request.availability_response == 'no' else 'Pending',
+            'call_time_id': labor_request.labor_requirement.call_time.id,
+            'labor_type_id': labor_request.labor_requirement.labor_type.id
+        }
+        worker_data['conflicts'].append(conflict_info)
+        if labor_request.confirmed:
+            worker_data['is_confirmed'] = True
+    worker_conflicts[worker.id] = worker_data
+
+    context = {
+        'labor_requirement': labor_requirement,
+        'worker': worker,
+        'worker_data': worker_data,
+        'worker_conflicts': worker_conflicts,
+        'requested_worker_ids': requested_worker_ids
+    }
+    return render(request, 'callManager/worker_fill_partial.html', context)
+
 
 @login_required
 def call_time_request_list(request, slug):
