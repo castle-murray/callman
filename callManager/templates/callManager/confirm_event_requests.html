@@ -1,7 +1,5 @@
 {% extends 'callManager/base.html' %}
-
 {% block title %}Confirm Event Requests - CallMan{% endblock %}
-
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Your Availability for {{ event.event_name }}</h1>
@@ -35,17 +33,15 @@
                                             Awaiting confirmation
                                         {% endif %}
                                     {% elif labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved %}
-                                        {% with confirmed_count=labor_request.labor_requirement.laborrequest_set.filter(confirmed=True).count %}
-                                            {% if confirmed_count >= labor_request.labor_requirement.fcfs_positions %}
-                                                No longer available
-                                            {% else %}
-                                                <select name="response_{{ labor_request.id }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
-                                                    <option value="">Select</option>
-                                                    <option value="yes">Yes</option>
-                                                    <option value="no">No</option>
-                                                </select>
-                                            {% endif %}
-                                        {% endwith %}
+                                        {% if labor_request.confirmed_count >= labor_request.labor_requirement.fcfs_positions %}
+                                            No longer available
+                                        {% else %}
+                                            <select name="response_{{ labor_request.id }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                                                <option value="">Select</option>
+                                                <option value="yes">Yes</option>
+                                                <option value="no">No</option>
+                                            </select>
+                                        {% endif %}
                                     {% else %}
                                         <select name="response_{{ labor_request.id }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
                                             <option value="">Select</option>

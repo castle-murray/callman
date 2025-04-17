@@ -738,6 +738,7 @@ def import_workers(request):
     return render(request, 'callManager/import_workers.html', {'form': form})
 
 
+@login_required
 def confirm_event_requests(request, slug, event_token):
     event = get_object_or_404(Event, slug=slug)
     first_request = LaborRequest.objects.filter(
@@ -746,9 +747,7 @@ def confirm_event_requests(request, slug, event_token):
         worker__phone_number__isnull=False
     ).select_related('worker').first()
     if not first_request:
-        context = {
-            'message': 'No requests found for this link.'
-        }
+        context = {'message': 'No requests found for this link.'}
         return render(request, 'callManager/confirm_error.html', context)
     worker_phone = first_request.worker.phone_number
     labor_requests = LaborRequest.objects.filter(
@@ -756,18 +755,24 @@ def confirm_event_requests(request, slug, event_token):
         requested=True,
         availability_response__isnull=True,
         worker__phone_number=worker_phone
-    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type').order_by(
+    ).select_related(
+        'labor_requirement__call_time',
+        'labor_requirement__labor_type'
+    ).annotate(
+        confirmed_count=Count('labor_requirement__laborrequest', filter=Q(labor_requirement__laborrequest__confirmed=True))
+    ).order_by(
         'labor_requirement__call_time__date',
-        'labor_requirement__call_time__time'
-    )
+        'labor_requirement__call_time__time')
     confirmed_call_times = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         confirmed=True,
         worker__phone_number=worker_phone
-    ).select_related('labor_requirement__call_time', 'labor_requirement__labor_type').order_by(
+    ).select_related(
+        'labor_requirement__call_time',
+        'labor_requirement__labor_type'
+    ).order_by(
         'labor_requirement__call_time__date',
-        'labor_requirement__call_time__time'
-    )
+        'labor_requirement__call_time__time')
     registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
     calendar_links = []
     for req in confirmed_call_times:
@@ -782,14 +787,12 @@ def confirm_event_requests(request, slug, event_token):
             f"text={event_name}&"
             f"dates={start_dt.strftime('%Y%m%dT%H%M%S')}/{end_dt.strftime('%Y%m%dT%H%M%S')}&"
             f"details={details}&"
-            f"location={location}"
-        )
+            f"location={location}")
         calendar_links.append({
             'call_time': call_time,
             'position': req.labor_requirement.labor_type.name,
             'message': call_time.message if call_time.message else '',
-            'gcal_url': gcal_url
-        })
+            'gcal_url': gcal_url})
     if request.method == "POST":
         for labor_request in labor_requests:
             response_key = f"response_{labor_request.id}"
@@ -801,8 +804,7 @@ def confirm_event_requests(request, slug, event_token):
                 if response == 'yes' and labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     confirmed_count = LaborRequest.objects.filter(
                         labor_requirement=labor_request.labor_requirement,
-                        confirmed=True
-                    ).count()
+                        confirmed=True).count()
                     if confirmed_count < labor_request.labor_requirement.fcfs_positions:
                         labor_request.confirmed = True
                         labor_request.save()
@@ -811,8 +813,7 @@ def confirm_event_requests(request, slug, event_token):
                     labor_request.save()
                     confirmed_count = LaborRequest.objects.filter(
                         labor_requirement=labor_request.labor_requirement,
-                        confirmed=True
-                    ).count()
+                        confirmed=True).count()
                     if confirmed_count < labor_request.labor_requirement.fcfs_positions:
                         available_fcfs = LaborRequest.objects.filter(
                             labor_requirement=labor_request.labor_requirement,
@@ -826,15 +827,13 @@ def confirm_event_requests(request, slug, event_token):
         context = {
             'event': event,
             'registration_url': registration_url,
-            'confirmed_call_times': calendar_links
-        }
+            'confirmed_call_times': calendar_links}
         return render(request, 'callManager/confirm_success.html', context)
     context = {
         'event': event,
         'labor_requests': labor_requests,
         'registration_url': registration_url,
-        'confirmed_call_times': calendar_links
-    }
+        'confirmed_call_times': calendar_links}
     if not labor_requests.exists() and not calendar_links:
         context['message'] = "No requests found for this link."
         return render(request, 'callManager/confirm_error.html', context)
