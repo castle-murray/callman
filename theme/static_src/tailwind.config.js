@@ -111,6 +111,10 @@ module.exports = {
             'dark-shadow': '#374151',     // gray-700
             'dark-text-available': '#06b6d4', // Cyan for available requests
           },
+        backgroundImage: {
+            'filled-event-gradient': 'linear-gradient(to right, #f7fafc, #d1fae5)',
+            'dark-filled-event-gradient': 'linear-gradient(to right, #1a202c, #185235)',
+          },
         },
     },
     plugins: [

@@ -89,6 +89,7 @@
         <div class="mt-4">
             <a href="{% url 'event_detail' call_time.event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
             <a href="{% url 'call_time_tracking' call_time.slug %}" class="ml-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Time Tracking</a>
+            <a href="{% url 'call_time_report' call_time.slug %}?format=pdf{% if selected_labor_type != 'All' %}&labor_type={{ selected_labor_type }}{% endif %}" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover">Download PDF</a>
         </div>
     </div>
 {% endblock %}

@@ -25,6 +25,14 @@ from django.urls import reverse
 from urllib.parse import urlencode, quote
 from django.contrib import messages
 import pytz
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import Table, TableStyle, Paragraph, SimpleDocTemplate
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+from django.http import FileResponse
 
 
 def confirm_assignment(request, token):
@@ -187,37 +195,54 @@ def delete_event(request, slug):
 
 @login_required
 def manager_dashboard(request):
-    # Ensure the user is a manager
     if not hasattr(request.user, 'manager'):
-        return redirect('login')  # Or a custom "access denied" page
-    
+        return redirect('login')
     manager = request.user.manager
     company = manager.company
     events = Event.objects.filter(company=company).order_by('-start_date')
     total_events = events.count()
-    labor_agg = LaborRequirement.objects.filter(call_time__event__company=company).aggregate(total=Sum('needed_labor'))
-    total_labor_needed = labor_agg['total'] if labor_agg['total'] is not None else 0
     total_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
-        availability_response__isnull=True
-    ).count()
+        availability_response__isnull=True).count()
     confirmed_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
-        confirmed=True
-    ).count()
+        confirmed=True).count()
     declined_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
-        availability_response='no'
-    ).count()
+        availability_response='no').count()
+    labor_requirements = LaborRequirement.objects.filter(
+        call_time__event__company=company).select_related(
+        'labor_type', 'call_time__event').annotate(
+        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+    unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
+    event_labor_needs = {}
+    for event in events:
+        event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
+        unfilled_requirements = [
+            lr for lr in event_requirements if lr.confirmed_count < lr.needed_labor]
+        unfilled_count = len(unfilled_requirements)
+        total_unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in unfilled_requirements)
+        if unfilled_count > 3:
+            labor_needs_text = f"{unfilled_count} unfilled, {total_unfilled_spots} total labor needed"
+        elif unfilled_count > 0:
+            labor_needs_text = ", ".join(
+                f"{lr.labor_type.name}: {max(0, lr.needed_labor - lr.confirmed_count)} needed"
+                for lr in unfilled_requirements)
+        else:
+            labor_needs_text = "All calls filled"
+        event_labor_needs[event.id] = {
+            'unfilled_count': unfilled_count,
+            'total_unfilled_spots': total_unfilled_spots,
+            'labor_needs_text': labor_needs_text}
     context = {
         'company': company,
         'events': events,
         'total_events': total_events,
-        'total_labor_needed': total_labor_needed,
         'total_requests': total_requests,
         'confirmed_requests': confirmed_requests,
         'declined_requests': declined_requests,
-    }
+        'unfilled_spots': unfilled_spots,
+        'event_labor_needs': event_labor_needs}
     return render(request, 'callManager/manager_dashboard.html', context)
 
 
@@ -1188,7 +1213,6 @@ def worker_fill_partial(request, slug, worker_id):
         if labor_request.confirmed:
             worker_data['is_confirmed'] = True
     worker_conflicts[worker.id] = worker_data
-
     context = {
         'labor_requirement': labor_requirement,
         'worker': worker,
@@ -1253,15 +1277,13 @@ def call_time_request_list(request, slug):
     return render(request, 'callManager/call_time_request_list.html', context)
 
 
-
 @login_required
 def call_time_tracking(request, slug):
     manager = request.user.manager
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
-        response__in=['yes', 'ncns']
-    ).select_related('worker', 'labor_requirement__labor_type')
+        confirmed=True).select_related('worker', 'labor_requirement__labor_type')
     labor_type_filter = request.GET.get('labor_type', 'All')
     if labor_type_filter != 'All':
         labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
@@ -1275,9 +1297,8 @@ def call_time_tracking(request, slug):
                 labor_request=labor_request,
                 worker=worker,
                 call_time=call_time,
-                defaults={'start_time': datetime.combine(call_time.date, call_time.time)}
-            )
-            was_ncns = labor_request.response == 'ncns'
+                defaults={'start_time': datetime.combine(call_time.date, call_time.time)})
+            was_ncns = worker.nocallnoshow > 0 and labor_request.availability_response == 'no'
             if action == 'sign_in' and not time_entry.start_time:
                 now = datetime.now()
                 time_entry.start_time = now
@@ -1297,7 +1318,8 @@ def call_time_tracking(request, slug):
                 print(f"Sign Out Time: {end_time}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                 messages.success(request, f"Signed out {worker.name}")
             elif action == 'ncns' and not was_ncns:
-                labor_request.response = 'ncns'
+                labor_request.confirmed = False
+                labor_request.availability_response = 'no'
                 labor_request.responded_at = datetime.now()
                 labor_request.sms_sent = True
                 labor_request.save()
@@ -1325,8 +1347,7 @@ def call_time_tracking(request, slug):
                     time_entry=time_entry,
                     break_time=break_time,
                     break_type=break_type,
-                    duration=duration
-                )
+                    duration=duration)
                 if request.headers.get('HX-Request'):
                     context = {'call_time': call_time, 'meal_break': meal_break}
                     return render(request, 'callManager/meal_break_display_partial.html', context)
@@ -1361,8 +1382,7 @@ def call_time_tracking(request, slug):
                     context = {
                         'call_time': call_time,
                         'meal_break': meal_break,
-                        'error_message': error_message
-                    }
+                        'error_message': error_message}
                     return render(request, 'callManager/meal_break_display_partial.html', context)
                 if error_message:
                     messages.error(request, error_message)
@@ -1395,8 +1415,14 @@ def call_time_tracking(request, slug):
                     messages.error(request, f"Invalid date or time format")
         if not request.headers.get('HX-Request'):
             return redirect('call_time_tracking', slug=slug)
-    confirmed_requests = labor_requests.filter(response='yes')
-    ncns_requests = labor_requests.filter(response='ncns')
+    confirmed_requests = labor_requests
+    ncns_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=False,
+        availability_response='no',
+        worker__nocallnoshow__gt=0).select_related('worker', 'labor_requirement__labor_type')
+    if labor_type_filter != 'All':
+        ncns_requests = ncns_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
     hours = range(24)
     minutes = ['00', '30']
@@ -1407,9 +1433,9 @@ def call_time_tracking(request, slug):
         'labor_types': labor_types,
         'selected_labor_type': labor_type_filter,
         'hours': hours,
-        'minutes': minutes
-    }
+        'minutes': minutes}
     return render(request, 'callManager/call_time_tracking.html', context)
+
 
 @login_required
 def call_time_tracking_edit(request, slug):
@@ -1471,26 +1497,65 @@ def call_time_tracking_meal_display(request, slug):
     return render(request, 'callManager/meal_break_display_partial.html', context)
 
 
-
 @login_required
 def call_time_report(request, slug):
     manager = request.user.manager
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
-        response='yes'  # Only confirmed workers
-    ).select_related('worker', 'labor_requirement__labor_type')
+        confirmed=True).select_related('worker', 'labor_requirement__labor_type')
     labor_type_filter = request.GET.get('labor_type', 'All')
     if labor_type_filter != 'All':
         labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
     confirmed_requests = labor_requests
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
+    format_type = request.GET.get('format', 'html')
+    if format_type == 'pdf':
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+        elements.append(Paragraph(f"Event: {call_time.event.event_name}", styles['Heading1']))
+        elements.append(Paragraph(f"Call Time: {call_time.name} at {call_time.time} on {call_time.date}", styles['Heading2']))
+        data = [['Name', 'Labor Type', 'Sign In', 'Sign Out', 'Meal Breaks', 'Normal Hours', 'Meal Penalty Hours', 'Total Hours']]
+        for req in confirmed_requests:
+            time_entry = req.time_entries.first()
+            if time_entry and time_entry.meal_breaks.exists():
+                paid_count = time_entry.meal_breaks.filter(break_type='paid').count()
+                unpaid_count = time_entry.meal_breaks.filter(break_type='unpaid').count()
+                meal_breaks = f"{paid_count} Paid, {unpaid_count} Unpaid"
+                if paid_count == 0 and unpaid_count == 0:
+                    meal_breaks = "None"
+            else:
+                meal_breaks = "None"
+            row = [
+                req.worker.name or "Unnamed Worker",
+                req.labor_requirement.labor_type.name,
+                time_entry.start_time.strftime('%I:%M %p') if time_entry and time_entry.start_time else "-",
+                time_entry.end_time.strftime('%I:%M %p') if time_entry and time_entry.end_time else "-",
+                meal_breaks,
+                f"{time_entry.normal_hours:.2f}" if time_entry else "0.00",
+                f"{time_entry.meal_penalty_hours:.2f}" if time_entry else "0.00",
+                f"{time_entry.total_hours_worked:.2f}" if time_entry else "0.00"]
+            data.append(row)
+        table = Table(data, colWidths=[100, 80, 80, 80, 120, 60, 80, 60])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
+        elements.append(table)
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=30, bottomMargin=30)
+        doc.build(elements)
+        buffer.seek(0)
+        return FileResponse(buffer, as_attachment=True, filename=f"call_time_report_{slug}.pdf")
     context = {
         'call_time': call_time,
         'confirmed_requests': confirmed_requests,
         'labor_types': labor_types,
-        'selected_labor_type': labor_type_filter,
-    }
+        'selected_labor_type': labor_type_filter}
     return render(request, 'callManager/call_time_report.html', context)
-
-# Existing views (call_time_tracking, call_time_tracking_edit, etc.) remain unchanged

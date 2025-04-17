@@ -4,7 +4,7 @@
             <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
         {% endfor %}
     {% endif %}
-    <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">Pending Requests {% if pending_count %} - {{ pending_count }} {% endif %}</h2>
+    <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">Pending  {% if pending_count %}  {{ pending_count }} {% endif %}</h2>
     {% if pending_requests %}
         <ul class="space-y-2 mb-4">
             {% for request in pending_requests %}
@@ -37,7 +37,7 @@
     {% else %}
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No pending requests.</p>
     {% endif %}
-    <h2 class="text-xl font-semibold mb-2 text-available dark:text-dark-text-available">Available Requests {% if available_count %} - {{ available_count }} {% endif %}</h2>
+    <h2 class="text-xl font-semibold mb-2 text-available dark:text-dark-text-available">Available {% if available_count %}  {{ available_count }} {% endif %}</h2>
     {% if available_requests %}
         <ul class="space-y-2 mb-4">
             {% for request in available_requests %}
@@ -64,7 +64,7 @@
     {% else %}
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No available requests.</p>
     {% endif %}
-    <h2 class="text-xl font-semibold mb-2 text-text-green dark:text-dark-text-green">Confirmed Requests {% if confirmed_count %} - {{ confirmed_count }} {% endif %}</h2>
+    <h2 class="text-xl font-semibold mb-2 text-text-green dark:text-dark-text-green">Confirmed  {% if confirmed_count %}  {{ confirmed_count }} {% endif %}</h2>
     {% if confirmed_requests %}
         <ul class="space-y-2 mb-4">
             {% for request in confirmed_requests %}
@@ -85,7 +85,7 @@
     {% else %}
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No confirmed requests.</p>
     {% endif %}
-    <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Declined Requests {% if declined_count %} - {{ declined_count }} {% endif %}</h2>
+    <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Declined  {% if declined_count %}  {{ declined_count }} {% endif %}</h2>
     {% if declined_requests %}
         <ul class="space-y-2 mb-4">
             {% for request in declined_requests %}

@@ -6,6 +6,14 @@
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">View Skills</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Skill</h2>
+        <form method="post" class="flex items-center">
+            {% csrf_token %}
+            <input type="hidden" name="add_skill" value="true">
+            {{ add_form.name }}
+            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ml-2">Add</button>
+        </form>
         <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Current Skills</h2>
         {% if skills %}
             <ul class="space-y-4">
@@ -28,14 +36,6 @@
         {% else %}
             <p class="text-text-secondary dark:text-dark-text-secondary">No skills defined yet.</p>
         {% endif %}
-
-        <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Skill</h2>
-        <form method="post" class="flex items-center">
-            {% csrf_token %}
-            <input type="hidden" name="add_skill" value="true">
-            {{ add_form.name }}
-            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ml-2">Add</button>
-        </form>
     </div>
 {% endblock %}
 
