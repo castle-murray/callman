@@ -78,6 +78,8 @@ module.exports = {
             'indigo': '#6366f1',      // indigo-500
             'indigo-hover': '#4f46e5', // indigo-600
             'border-light': '#d1d5db', // gray-300
+            'text-available': '#1e40af', // Deep blue for available requests
+
 
             // Dark Mode
             'dark-body-bg': '#1f2937', // gray-900
@@ -107,6 +109,7 @@ module.exports = {
             'dark-border': '#4b5563',     // gray-600
             'dark-border-dark': '#374151', // gray-700
             'dark-shadow': '#374151',     // gray-700
+            'dark-text-available': '#06b6d4', // Cyan for available requests
           },
         },
     },

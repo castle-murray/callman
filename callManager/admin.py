@@ -23,9 +23,10 @@ class CallTimeAdmin(admin.ModelAdmin):
 
 @admin.register(LaborRequirement)
 class LaborRequirementAdmin(admin.ModelAdmin):
-    list_display = ('labor_type', 'call_time', 'needed_labor')
+    list_display = ('labor_type', 'call_time', 'needed_labor', 'fcfs_positions')
     list_filter = ('labor_type', 'call_time')
     search_fields = ('labor_type__name',)
+
 
 @admin.register(LaborType)
 class LaborTypeAdmin(admin.ModelAdmin):
@@ -47,9 +48,22 @@ class ManagerAdmin(admin.ModelAdmin):
 
 @admin.register(LaborRequest)
 class LaborRequestAdmin(admin.ModelAdmin):
-    list_display = ('worker', 'labor_requirement', 'response', 'requested')
-    list_filter = ('response', 'requested')
+    list_display = ('worker', 'labor_requirement', 'availability_response', 'confirmed', 'is_reserved', 'requested')
+    list_filter = ('availability_response', 'confirmed', 'is_reserved', 'requested')
     search_fields = ('worker__name', 'labor_requirement__labor_type__name')
+    actions = ['confirm_workers']
+
+    def confirm_workers(self, request, queryset):
+        for labor_request in queryset.filter(availability_response='yes', confirmed=False):
+            confirmed_count = LaborRequest.objects.filter(
+                labor_requirement=labor_request.labor_requirement,
+                confirmed=True
+            ).count()
+            if confirmed_count < labor_request.labor_requirement.needed_labor:
+                labor_request.confirmed = True
+                labor_request.save()
+        self.message_user(request, "Selected workers confirmed where labor requirements allowed.")
+    confirm_workers.short_description = "Confirm selected workers for call times"
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(admin.ModelAdmin):

@@ -25,6 +25,11 @@
                                     {% if labor_request.labor_requirement.call_time.message %}
                                         <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ labor_request.labor_requirement.call_time.message }}</p>
                                     {% endif %}
+                                    {% if labor_request.is_reserved %}
+                                        <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">(Reserved for you)</p>
+                                    {% elif labor_request.labor_requirement.fcfs_positions > 0 %}
+                                        <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">(First Come First Served)</p>
+                                    {% endif %}
                                 </td>
                                 <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.labor_requirement.labor_type.name }}</td>
                                 <td class="p-2 text-text-primary dark:text-dark-text-primary">

@@ -103,18 +103,19 @@ class CallTime(models.Model):
     def __str__(self):
         return f"{self.name} at {self.time} ({self.event})"
 
-# Specific labor requirements for an event
 class LaborRequirement(models.Model):
     call_time = models.ForeignKey(CallTime, on_delete=models.CASCADE, related_name='labor_requirements', null=True, blank=True)
     labor_type = models.ForeignKey(LaborType, on_delete=models.CASCADE)
     needed_labor = models.IntegerField()
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+    fcfs_positions = models.PositiveIntegerField(default=0, help_text="Number of positions filled by First Come First Served")
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = generate_unique_slug(LaborRequirement)
+        if self.fcfs_positions > self.needed_labor:
+            self.fcfs_positions = self.needed_labor
         super().save(*args, **kwargs)
-
 
     def __str__(self):
         return f"{self.labor_type.name} ({self.needed_labor}) for {self.call_time}"
@@ -122,6 +123,29 @@ class LaborRequirement(models.Model):
     class Meta:
         unique_together = ('call_time', 'labor_type')
 
+
+class LaborRequest(models.Model):
+    RESPONSE_CHOICES = [
+        ('yes', 'Yes'),
+        ('no', 'No'),
+        ('ncns', 'No Call No Show'),
+    ]
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
+    labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    availability_response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)
+    confirmed = models.BooleanField(default=False)
+    is_reserved = models.BooleanField(default=False, help_text="Reserve this position for the worker")
+    requested_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    requested = models.BooleanField(default=False)
+    sms_sent = models.BooleanField(default=False)
+    event_token = models.CharField(max_length=36, null=True, blank=True)
+
+    def __str__(self):
+        worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
+        return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
+    
 
 class Worker(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -137,27 +161,6 @@ class Worker(models.Model):
     def __str__(self):
         return self.name or "Unnamed Worker"
 
-
-class LaborRequest(models.Model):
-    RESPONSE_CHOICES = [
-        ('yes', 'Yes'),
-        ('no', 'No'),
-        ('ncns', 'No Call No Show'),
-    ]
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
-    labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE)
-    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)  # Pending is null
-    requested_at = models.DateTimeField(auto_now_add=True)
-    responded_at = models.DateTimeField(null=True, blank=True)
-    requested = models.BooleanField(default=False)
-    sms_sent = models.BooleanField(default=False)
-    event_token = models.CharField(max_length=36, null=True, blank=True)
-
-    def __str__(self):
-        worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
-        return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
-    
 
 class TimeEntry(models.Model):
     labor_request = models.ForeignKey('LaborRequest', on_delete=models.CASCADE, related_name='time_entries')
