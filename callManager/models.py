@@ -26,6 +26,13 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
+class SentSMS(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='sent_sms')
+    datetime_sent = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"SMS Messages - {self.company.name} on {self.datetime_sent}"
+
 # Manager profile (tied to a company)
 class Manager(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

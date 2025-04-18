@@ -1,0 +1,41 @@
+{% extends 'callManager/base.html' %}
+{% load callman_tags %}
+
+{% block title %}Declined Requests - CallMan{% endblock %}
+
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Pending Requests</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        {% if requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in requests %}
+                    <li class="flex items-center justify-between text-text-slate dark:text-dark-text-tertiary border-b py-2 dark:border-dark-border-dark">
+                        <span>{{ request.worker.name|default:"Unnamed Worker" }} - 
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </span>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="confirm_request" value="true">
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success dark:bg-dark-success dark:hover:bg-dark-success">confirm Request</button>
+                        </form>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="delete_request" value="true">
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete Request</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No pending requests found.</p>
+        {% endif %}
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Dashboard</a>
+    </div>
+{% endblock %}
+

@@ -30,8 +30,7 @@
     {% endif %}
     </p>
     <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Location:</strong> {{ event.event_location }}</p>
-    <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Description:</strong> {{ event.event_description|default:"No description provided" }}</p>
-    <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Created By:</strong> {{ event.created_by.user.get_full_name|default:"Unknown" }}</p>
+    <p class="text-text-tertiary dark:text-dark-text-tertiary">{{ event.event_description|default:"No description provided" }}</p>
 </div>
 
 <div class="bg-card-bg p-2 w-full rounded-lg shadow mb-6 dark:bg-dark-card-bg dark:shadow-dark-shadow">

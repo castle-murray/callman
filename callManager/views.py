@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker, TimeEntry, MealBreak
+from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker, TimeEntry, MealBreak, SentSMS 
 from django.contrib.auth.decorators import login_required
 from .forms import (
         CallTimeForm,
@@ -33,7 +33,11 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 from django.http import FileResponse
+from django.db.models.functions import TruncDate, TruncMonth
 
+def log_sms(company):
+    sms = SentSMS.objects.create(company=company)
+    sms.save()
 
 def confirm_assignment(request, token):
     assignment = get_object_or_404(LaborRequest, token=token)
@@ -90,6 +94,7 @@ def event_detail(request, slug):
             'labor_requirement': lr
         }
     if request.method == "POST" and 'send_messages' in request.POST:
+        company = request.user.manager.company
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
@@ -122,7 +127,10 @@ def event_detail(request, slug):
                                 worker.save()
                             except TwilioRestException as e:
                                 sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
                         else:
+                            log_sms(company)
                             worker.sent_consent_msg = True
                             worker.save()
                     elif worker.sms_consent:
@@ -140,7 +148,10 @@ def event_detail(request, slug):
                                 print(f"Sent SMS to {worker.phone_number} with token {token}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
                         else:
+                            log_sms(company)
                             print(message_body)
                         # Mark all requests as sent with the same token
                         for labor_request in requests:
@@ -193,6 +204,8 @@ def delete_event(request, slug):
     return redirect('manager_dashboard')  # Fallback for GET requests
 
 
+from django.utils import timezone
+from datetime import datetime
 @login_required
 def manager_dashboard(request):
     if not hasattr(request.user, 'manager'):
@@ -201,12 +214,9 @@ def manager_dashboard(request):
     company = manager.company
     events = Event.objects.filter(company=company).order_by('-start_date')
     total_events = events.count()
-    total_requests = LaborRequest.objects.filter(
+    pending_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
         availability_response__isnull=True).count()
-    confirmed_requests = LaborRequest.objects.filter(
-        labor_requirement__call_time__event__company=company,
-        confirmed=True).count()
     declined_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
         availability_response='no').count()
@@ -215,6 +225,13 @@ def manager_dashboard(request):
         'labor_type', 'call_time__event').annotate(
         confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
     unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
+    current_date = timezone.now()
+    start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (start_of_month + timedelta(days=32)).replace(day=1)
+    sent_messages = SentSMS.objects.filter(
+        company=company,
+        datetime_sent__gte=start_of_month,
+        datetime_sent__lt=next_month).count()
     event_labor_needs = {}
     for event in events:
         event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
@@ -238,9 +255,9 @@ def manager_dashboard(request):
         'company': company,
         'events': events,
         'total_events': total_events,
-        'total_requests': total_requests,
-        'confirmed_requests': confirmed_requests,
-        'declined_requests': declined_requests,
+        'pending_requests': pending_requests,
+        'sent_messages': sent_messages,
+        'declined': declined_requests,
         'unfilled_spots': unfilled_spots,
         'event_labor_needs': event_labor_needs}
     return render(request, 'callManager/manager_dashboard.html', context)
@@ -259,12 +276,40 @@ def declined_requests(request):
     company = manager.company
     declined_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
-        response='no',
+        availability_response='no',
     ).select_related('worker', 'labor_requirement__call_time__event')
     context = {
         'requests': declined_requests,
     }
     return render(request, 'callManager/declined_requests.html', context)
+
+
+@login_required
+def pending_requests(request):
+    if request.method == "POST":
+        #delete request button
+        if 'delete_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            request = get_object_or_404(LaborRequest, id=request_id)
+            request.delete()
+            return redirect('pending_requests')
+        elif 'confirm_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            labor_request = get_object_or_404(LaborRequest, id=request_id)
+            labor_request.availability_response = 'yes'
+            labor_request.confirmed = True
+            labor_request.save()
+            return redirect('pending_requests')
+    manager = request.user.manager
+    company = manager.company
+    pending_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event__company=company,
+        availability_response__isnull=True,
+    ).select_related('worker', 'labor_requirement__call_time__event')
+    context = {
+        'requests': pending_requests,
+    }
+    return render(request, 'callManager/pending_requests.html', context)
 
 
 @login_required
@@ -493,15 +538,16 @@ def add_call_time(request, slug):
 @login_required
 def edit_call_time(request, slug):
     manager = request.user.manager
+    company = manager.company
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     if request.method == "POST":
         form = CallTimeForm(request.POST, instance=call_time, event=call_time.event)
         if form.is_valid():
             updated_call_time = form.save(commit=False)
-            if call_time.has_changed():  # Check before saving
+            if call_time.has_changed():
                 confirmed_requests = LaborRequest.objects.filter(
                     labor_requirement__call_time=call_time,
-                    response__in=['yes', None],
+                    confirmed=True,
                     sms_sent=True
                 ).select_related('worker')
                 if confirmed_requests:
@@ -511,21 +557,22 @@ def edit_call_time(request, slug):
                         worker = req.worker
                         if worker.sms_consent and not worker.stop_sms and worker.phone_number:
                             message_body = (
-                                f"CallMan: Update to {call_time.name} for {call_time.event.event_name}. "
-                                f"Old: {call_time.original_date} at {call_time.original_time}. "
-                                f"New: {updated_call_time.date} at {updated_call_time.time}."
+                                f"{company.name}: {call_time.event.event_name} {call_time.name} time changed. "
+                                f"Now: {updated_call_time.date.strftime('%B %d')} at {updated_call_time.time.strftime('%I:%M %p')}."
                             )
                             if settings.TWILIO_ENABLED == 'enabled' and client:
                                 try:
                                     client.messages.create(
                                         body=message_body,
                                         from_=settings.TWILIO_PHONE_NUMBER,
-                                        to=str(worker.phone_number)
-                                    )
+                                        to=str(worker.phone_number))
                                     print(f"Sent change notification to {worker.phone_number}")
                                 except TwilioRestException as e:
                                     sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                                finally:
+                                    log_sms(company)
                             else:
+                                log_sms(company)
                                 print(message_body)
                     if sms_errors:
                         messages.warning(request, f"Some notifications failed: {', '.join(sms_errors)}")
@@ -579,6 +626,7 @@ def sms_webhook(request):
         body = request.POST.get('Body', '').strip().lower()
         try:
             worker = Worker.objects.get(phone_number=from_number)
+            log_sms(worker.companies.first())
             if 'yes' in body:
                 worker.sms_consent = True
                 worker.stop_sms = False
@@ -596,6 +644,8 @@ def sms_webhook(request):
                     # Send one message per event
                     for event_slug, data in events_to_notify.items():
                         event = data['event']
+                        company = event.company
+                        log_sms(company)
                         requests = data['requests']
                         token = str(uuid.uuid4())  # Unique token per event
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
@@ -619,6 +669,7 @@ def sms_webhook(request):
             elif 'stop' in body:
                 worker.sms_consent = False
                 worker.stop_sms = True
+                company = worker.companies.first()
                 worker.save()
                 response = MessagingResponse()
                 response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
@@ -1257,10 +1308,10 @@ def call_time_request_list(request, slug):
                     labor_request.save()
                     messages.success(request, f"Request marked as {action.capitalize()} successfully.")
         return redirect('call_time_request_list', slug=slug)
-    pending_requests = labor_requests.filter(response__isnull=True)
-    confirmed_requests = labor_requests.filter(response='yes')
-    declined_requests = labor_requests.filter(response='no')
-    ncns_requests = labor_requests.filter(response='ncns')
+    pending_requests = labor_requests.filter(availability_response__isnull=True)
+    confirmed_requests = labor_requests.filter(confirmed=True)
+    declined_requests = labor_requests.filter(availability_response='no')
+    ncns_requests = labor_requests.filter(availability_response='ncns')
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
     message = request.GET.get('message', '')
     context = {
@@ -1558,3 +1609,51 @@ def call_time_report(request, slug):
         'labor_types': labor_types,
         'selected_labor_type': labor_type_filter}
     return render(request, 'callManager/call_time_report.html', context)
+
+@login_required
+def sms_usage_report(request):
+    manager = request.user.manager
+    daily_counts = SentSMS.objects.filter(
+        company=manager.company
+    ).annotate(
+        date=TruncDate('datetime_sent')
+    ).values(
+        'company__name', 'date'
+    ).annotate(
+        count=Count('id')
+    ).order_by(
+        'company__name', '-date')
+    monthly_counts = SentSMS.objects.filter(
+        company=manager.company
+    ).annotate(
+        month=TruncMonth('datetime_sent')
+    ).values(
+        'company__name', 'month'
+    ).annotate(
+        count=Count('id')
+    ).order_by(
+        'company__name', '-month')
+    monthly_daily_data = {}
+    for month_entry in monthly_counts:
+        month = month_entry['month']
+        daily_data = SentSMS.objects.filter(
+            company=manager.company,
+            datetime_sent__year=month.year,
+            datetime_sent__month=month.month
+        ).annotate(
+            date=TruncDate('datetime_sent')
+        ).values(
+            'date'
+        ).annotate(
+            count=Count('id')
+        ).order_by(
+            'date')
+        monthly_daily_data[month.strftime('%Y-%m')] = [
+            {'date': entry['date'].strftime('%Y-%m-%d'), 'count': entry['count']}
+            for entry in daily_data]
+    context = {
+        'daily_counts': daily_counts,
+        'monthly_counts': monthly_counts,
+        'monthly_daily_data': monthly_daily_data,
+        'company': manager.company}
+    return render(request, 'callManager/sms_usage_report.html', context)

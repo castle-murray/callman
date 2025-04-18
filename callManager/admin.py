@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Manager, LaborRequest, TimeEntry, MealBreak
+from .models import Event, CallTime, LaborRequirement, LaborType, SentSMS, Worker, Manager, LaborRequest, TimeEntry, MealBreak
 
 # Inline for MealBreak in TimeEntryAdmin
 class MealBreakInline(admin.TabularInline):
@@ -105,3 +105,9 @@ class MealBreakAdmin(admin.ModelAdmin):
     def duration(self, obj):
         return obj.duration if obj.duration else "-"
     duration.short_description = "Duration"
+
+@admin.register(SentSMS)
+class SentSMSAdmin(admin.ModelAdmin):
+    list_display = ('company', 'datetime_sent')
+    list_filter = ('datetime_sent',)
+    ordering = ('datetime_sent',)
