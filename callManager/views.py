@@ -137,7 +137,7 @@ def event_detail(request, slug):
                         token = worker_tokens.get(worker.id, str(uuid.uuid4()))
                         worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        message_body = f"CallMan: Confirm your calls for {event.event_name}: {confirmation_url}"
+                        message_body = f"{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
