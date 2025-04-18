@@ -17,6 +17,7 @@
                             {{ request.labor_requirement.call_time.date }} - 
                             {{ request.labor_requirement.call_time.time }}
                         </span>
+                        <div>
                         <form method="post" class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="confirm_request" value="true">
@@ -29,6 +30,7 @@
                             <input type="hidden" name="request_id" value="{{ request.id }}">
                             <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
                         </form>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>
