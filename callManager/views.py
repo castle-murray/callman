@@ -788,7 +788,6 @@ def import_workers(request):
     return render(request, 'callManager/import_workers.html', {'form': form})
 
 
-@login_required
 def confirm_event_requests(request, slug, event_token):
     event = get_object_or_404(Event, slug=slug)
     first_request = LaborRequest.objects.filter(
