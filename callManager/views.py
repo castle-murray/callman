@@ -626,7 +626,6 @@ def sms_webhook(request):
         body = request.POST.get('Body', '').strip().lower()
         try:
             worker = Worker.objects.get(phone_number=from_number)
-            log_sms(worker.companies.first())
             if 'yes' in body:
                 worker.sms_consent = True
                 worker.stop_sms = False
