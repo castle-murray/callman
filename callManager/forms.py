@@ -97,6 +97,14 @@ class WorkerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if company:
             self.fields['labor_types'].queryset = LaborType.objects.filter(company=company)
+        self.fields['nocallnoshow'].required = False
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if phone_number and len(phone_number) > 15:
+            raise forms.ValidationError("Phone number must be 15 characters or less.")
+        return phone_number
+
 
 class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))

@@ -204,8 +204,6 @@ def delete_event(request, slug):
     return redirect('manager_dashboard')  # Fallback for GET requests
 
 
-from django.utils import timezone
-from datetime import datetime
 @login_required
 def manager_dashboard(request):
     if not hasattr(request.user, 'manager'):
@@ -331,7 +329,6 @@ def create_labor_type(request):
 def add_labor_to_call(request, slug):
     manager = request.user.manager
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
-    
     if request.method == "POST":
         form = LaborRequirementForm(request.POST, company=manager.company)
         if form.is_valid():
@@ -418,8 +415,7 @@ def view_workers(request):
     if search_query:
         workers = workers.filter(
             Q(name__icontains=search_query) |
-            Q(phone_number__icontains=search_query)
-        )
+            Q(phone_number__icontains=search_query))
     paginator = Paginator(workers, 10)
     page_number = request.GET.get('page', 1)
     try:
@@ -433,23 +429,22 @@ def view_workers(request):
             worker_id = request.POST.get('delete_id')
             worker = get_object_or_404(Worker, id=worker_id)
             worker.delete()
-            # Preserve page and search in redirect
             query_params = {}
-            if page_number != '1':  # Only include page if not 1
+            if page_number != '1':
                 query_params['page'] = page_number
             if search_query:
                 query_params['search'] = search_query
-            redirect_url = reverse('view_workers')  # Base URL
+            redirect_url = reverse('view_workers')
             if query_params:
-                redirect_url += '?' + urlencode(query_params)  # Append query string
+                redirect_url += '?' + urlencode(query_params)
             return redirect(redirect_url)
         elif 'add_worker' in request.POST:
             form = WorkerForm(request.POST, company=manager.company)
             if form.is_valid():
                 worker = form.save(commit=False)
                 worker.save()
-                worker.companies.add(manager.company)
-                # Preserve page and search on add
+                worker.add_company(manager.company)
+                messages.success(request, f"Worker {worker.name} added successfully.")
                 query_params = {}
                 if page_number != '1':
                     query_params['page'] = page_number
@@ -459,13 +454,15 @@ def view_workers(request):
                 if query_params:
                     redirect_url += '?' + urlencode(query_params)
                 return redirect(redirect_url)
-    add_form = WorkerForm(company=manager.company)
+            else:
+                messages.error(request, "Failed to add worker. Please check the form errors.")
+    else:
+        form = WorkerForm(company=manager.company)
     context = {
         'workers': page_obj,
         'page_obj': page_obj,
         'search_query': search_query,
-        'add_form': add_form,
-    }
+        'add_form': form}
     return render(request, 'callManager/view_workers.html', context)
 
 
@@ -610,6 +607,7 @@ def edit_labor_requirement(request, slug):
     context = {'form': form, 'labor_requirement': labor_requirement}
     return render(request, 'callManager/edit_labor_requirement.html', context)
 
+
 @login_required
 def delete_labor_requirement(request, slug):
     manager = request.user.manager
@@ -618,6 +616,7 @@ def delete_labor_requirement(request, slug):
         labor_requirement.delete()
         return redirect('event_detail', slug=labor_requirement.call_time.event.slug)
     return redirect('event_detail', slug=labor_requirement.call_time.event.slug)  # Fallback for GET
+
 
 @csrf_exempt
 def sms_webhook(request):
@@ -790,6 +789,7 @@ def import_workers(request):
 
 def confirm_event_requests(request, slug, event_token):
     event = get_object_or_404(Event, slug=slug)
+    company = event.company
     first_request = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         event_token=event_token,
@@ -844,12 +844,14 @@ def confirm_event_requests(request, slug, event_token):
             'gcal_url': gcal_url})
     if request.method == "POST":
         for labor_request in labor_requests:
+            worker = labor_request.worker
             response_key = f"response_{labor_request.id}"
             response = request.POST.get(response_key)
             if response in ['yes', 'no']:
                 labor_request.availability_response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
                 if response == 'yes' and labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     confirmed_count = LaborRequest.objects.filter(
                         labor_requirement=labor_request.labor_requirement,
@@ -857,6 +859,50 @@ def confirm_event_requests(request, slug, event_token):
                     if confirmed_count < labor_request.labor_requirement.fcfs_positions:
                         labor_request.confirmed = True
                         labor_request.save()
+                        call_time = labor_request.labor_requirement.call_time
+                        if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                            message_body = (
+                                    f" confirmed {labor_request.labor_requirement.labor_type}"
+                                    f" for {event.event_name} - {call_time.name} at {call_time.time} on {call_time.date}"
+                            )
+                            if settings.TWILIO_ENABLED == 'enabled' and client:
+                                try:
+                                    client.messages.create(
+                                        body=message_body,
+                                        from_=settings.TWILIO_PHONE_NUMBER,
+                                        to=str(worker.phone_number))
+                                    print(f"Sent change notification to {worker.phone_number}")
+                                except TwilioRestException as e:
+                                    sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                                finally:
+                                    log_sms(company)
+                            else:
+                                log_sms(company)
+                                print(message_body)
+
+                elif response == 'yes' and labor_request.is_reserved:
+                    labor_request.confirmed = True
+                    labor_request.save()
+                    call_time = labor_request.labor_requirement.call_time
+                    if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                        message_body = (
+                                f"confirmed {labor_request.labor_requirement.labor_type}"
+                                f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                        )
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=message_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number))
+                                print(f"Sent change notification to {worker.phone_number}")
+                            except TwilioRestException as e:
+                                sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
+                        else:
+                            log_sms(company)
+                            print(message_body)
                 elif response == 'no' and labor_request.is_reserved:
                     labor_request.is_reserved = False
                     labor_request.save()
@@ -923,7 +969,10 @@ def labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
+    event = labor_requirement.call_time.event
+    company = event.company
     if request.method == "POST":
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
@@ -931,6 +980,26 @@ def labor_request_list(request, slug):
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement=labor_requirement)
                 worker = labor_request.worker
                 if action == 'confirm':
+                    call_time = labor_request.labor_requirement.call_time
+                    if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                        message_body = (
+                                f"confirmed {labor_request.labor_requirement.labor_type}"
+                                f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                        )
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=message_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number))
+                                print(f"Sent change notification to {worker.phone_number}")
+                            except TwilioRestException as e:
+                                sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
+                        else:
+                            log_sms(company)
+                            print(message_body)
                     if labor_request.availability_response in [None, 'no']:  # Allow confirm from pending or declined
                         labor_request.availability_response = 'yes'
                         labor_request.responded_at = timezone.now()
@@ -1283,6 +1352,7 @@ def call_time_request_list(request, slug):
     if labor_type_filter != 'All':
         labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
     if request.method == "POST":
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
@@ -1290,6 +1360,27 @@ def call_time_request_list(request, slug):
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
                 worker = labor_request.worker
                 was_ncns = labor_request.response == 'ncns'
+                if action == 'confirm':
+                    call_time = labor_request.labor_requirement.call_time
+                    if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                        message_body = (
+                                f"confirmed {labor_request.labor_requirement.labor_type}"
+                                f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                        )
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=message_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number))
+                                print(f"Sent change notification to {worker.phone_number}")
+                            except TwilioRestException as e:
+                                sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
+                        else:
+                            log_sms(company)
+                            print(message_body)
                 if action == 'ncns':
                     worker.nocallnoshow += 1
                     worker.save()

@@ -165,6 +165,18 @@ class Worker(models.Model):
     stop_sms = models.BooleanField(default=False)
     nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
 
+    def add_company(self, company):
+        print("yep")
+        if not self.companies.filter(id=company.id).exists():
+            self.companies.add(company)
+            self.save()
+
+    def formatted_phone_number(self):
+        phone = self.phone_number.replace('-', '').replace('(', '').replace(')', '').replace(' ', '')
+        if len(phone) == 10 and phone.isdigit():
+            return f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
+        return self.phone_number
+
     def __str__(self):
         return self.name or "Unnamed Worker"
 

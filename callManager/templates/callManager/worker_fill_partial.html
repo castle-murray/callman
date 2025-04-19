@@ -1,6 +1,6 @@
 <li id="worker-{{ worker.id }}" class="flex justify-between items-center {% if worker_data.is_confirmed %}bg-conflict-green dark:bg-dark-conflict-green{% elif worker.id in worker_conflicts %}bg-conflict-yellow dark:bg-dark-conflict-yellow{% endif %} text-text-tertiary dark:text-dark-text-tertiary">
     <div>
-        {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }})
+        {{ worker.name|default:"Unnamed Worker" }} - {{ worker.formatted_phone_number|default:"No phone" }}
         {% if worker.nocallnoshow >= 2 %}
             <span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>
         {% endif %}
