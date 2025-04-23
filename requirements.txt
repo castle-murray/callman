@@ -37,6 +37,7 @@ python-decouple==3.8
 python-dotenv==1.1.0
 pytz==2025.1
 PyYAML==6.0.2
+qrcode==8.1
 regex==2024.11.6
 reportlab==4.3.1
 requests==2.32.3

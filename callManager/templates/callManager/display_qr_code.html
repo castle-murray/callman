@@ -1,0 +1,11 @@
+{% extends 'callManager/base.html' %}
+{% block title %}QR Code for {{ worker.name }} - {{ event.event_name }}{% endblock %}
+{% block content %}
+    <div class="max-w-2xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">QR Code for {{ worker.name }} - {{ event.event_name }}</h1>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">This QR code is for {{ worker.name }} to clock in/out.</p>
+        <img src="data:image/png;base64,{{ qr_code_data }}" alt="QR Code" class="mx-auto mb-4">
+        <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">Link: <a href="{{ clock_in_url }}" class="text-primary hover:underline dark:text-dark-text-blue">{{ clock_in_url }}</a></p>
+        <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+    </div>
+{% endblock %}

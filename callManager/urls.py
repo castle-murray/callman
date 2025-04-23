@@ -39,4 +39,9 @@ urlpatterns = [
     path('labor/<slug:slug>/edit/', views.edit_labor_requirement, name='edit_labor_requirement'),
     path('labor/<slug:slug>/delete/', views.delete_labor_requirement, name='delete_labor_requirement'),
     path('sms-usage/', views.sms_usage_report, name='sms_usage_report'),
+    path('event/<slug:slug>/send-clock-in/', views.send_clock_in_link, name='send_clock_in_link'),
+    path('event/<slug:slug>/qr-code/<int:worker_id>/', views.display_qr_code, name='display_qr_code'),
+    path('event/<slug:slug>/manager-qr-code/<int:worker_id>/', views.manager_display_qr_code, name='manager_display_qr_code'),
+    path('event/<slug:slug>/scan-qr/', views.scan_qr_code, name='scan_qr_code'),
+    path('clock-in/<uuid:token>/', views.worker_clock_in_out, name='worker_clock_in_out'),
 ]

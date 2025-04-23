@@ -1,0 +1,25 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Clock In/Out - {{ event.event_name }}{% endblock %}
+{% block content %}
+    <div class="max-w-2xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Clock In/Out for {{ worker.name }} - {{ event.event_name }}</h1>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="text-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %} mb-4 dark:text-dark-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <label for="call_time_id" class="block text-text-primary dark:text-dark-text-primary">Select Call Time:</label>
+            <select name="call_time_id" id="call_time_id" class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                {% for call_time in call_times %}
+                    <option value="{{ call_time.id }}">{{ call_time.name }} ({{ call_time.date }} at {{ call_time.time|time:"h:i A" }})</option>
+                {% endfor %}
+            </select>
+            <div class="flex space-x-4">
+                <button type="submit" name="action" value="clock_in" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Clock In</button>
+                <button type="submit" name="action" value="clock_out" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Clock Out</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

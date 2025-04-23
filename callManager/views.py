@@ -1,5 +1,17 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import CallTime, LaborRequest, Event, LaborRequirement, LaborType, Worker, TimeEntry, MealBreak, SentSMS 
+from django.utils.http import base64
+from .models import (
+        CallTime,
+        LaborRequest,
+        Event,
+        LaborRequirement,
+        LaborType,
+        Worker,
+        TimeEntry,
+        MealBreak,
+        SentSMS,
+        ClockInToken,
+        )
 from django.contrib.auth.decorators import login_required
 from .forms import (
         CallTimeForm,
@@ -31,6 +43,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Table, TableStyle, Paragraph, SimpleDocTemplate
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+import qrcode
 from io import BytesIO
 from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
@@ -1862,3 +1875,142 @@ def sms_usage_report(request):
         'monthly_daily_data': monthly_daily_data,
         'company': manager.company}
     return render(request, 'callManager/sms_usage_report.html', context)
+
+@login_required
+def send_clock_in_link(request, slug):
+    manager = request.user.manager
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    confirmed_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event=event,
+        confirmed=True).select_related('worker').distinct()
+    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+    sms_errors = []
+    for req in confirmed_requests:
+        worker = req.worker
+        token, created = ClockInToken.objects.get_or_create(
+            event=event,
+            worker=worker,
+            defaults={'expires_at': timezone.now() + timedelta(days=1)})
+        qr_code_url = request.build_absolute_uri(reverse('display_qr_code', args=[event.slug, worker.id]))
+        if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+            message_body = (
+                f"{manager.company.name}: Your clock-in QR code for {event.event_name}. "
+                f"View: {qr_code_url}")
+            if settings.TWILIO_ENABLED == 'enabled' and client:
+                try:
+                    client.messages.create(
+                        body=message_body,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=str(worker.phone_number))
+                    log_sms(manager.company)
+                except TwilioRestException as e:
+                    sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+            else:
+                log_sms(manager.company)
+                print(message_body)
+    if sms_errors:
+        messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
+    else:
+        messages.success(request, "Clock-in QR code links sent to workers.")
+    return redirect('event_detail', slug=event.slug)
+
+def display_qr_code(request, slug, worker_id):
+    event = get_object_or_404(Event, slug=slug)
+    worker = get_object_or_404(Worker, id=worker_id)
+    token, created = ClockInToken.objects.get_or_create(
+        event=event,
+        worker=worker,
+        defaults={'expires_at': timezone.now() + timedelta(days=1)})
+    clock_in_url = request.build_absolute_uri(reverse('worker_clock_in_out', args=[str(token.token)]))
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(clock_in_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    context = {
+        'event': event,
+        'worker': worker,
+        'clock_in_url': clock_in_url,
+        'qr_code_data': base64.b64encode(buffer.getvalue()).decode('utf-8')}
+    return render(request, 'callManager/display_qr_code.html', context)
+
+
+@login_required
+def scan_qr_code(request, slug):
+    manager = request.user.manager
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    context = {'event': event}
+    return render(request, 'callManager/scan_qr_code.html', context)
+
+@login_required
+def manager_display_qr_code(request, slug, worker_id):
+    manager = request.user.manager
+    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    worker = get_object_or_404(Worker, id=worker_id)
+    token, created = ClockInToken.objects.get_or_create(
+        event=event,
+        worker=worker,
+        defaults={'expires_at': timezone.now() + timedelta(days=1)})
+    clock_in_url = request.build_absolute_uri(reverse('worker_clock_in_out', args=[str(token.token)]))
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(clock_in_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    context = {
+        'event': event,
+        'worker': worker,
+        'clock_in_url': clock_in_url,
+        'qr_code_data': base64.b64encode(buffer.getvalue()).decode('utf-8')}
+    return render(request, 'callManager/display_qr_code.html', context)
+
+@login_required
+def worker_clock_in_out(request, token):
+    token_obj = get_object_or_404(ClockInToken, token=token)
+    if token_obj.expires_at < timezone.now():
+        return render(request, 'callManager/clock_in_error.html', {'message': 'This clock-in link has expired.'})
+    event = token_obj.event
+    worker = token_obj.worker
+    if request.method == "POST":
+        call_time_id = request.POST.get('call_time_id')
+        action = request.POST.get('action')
+        call_time = get_object_or_404(CallTime, id=call_time_id, event=event)
+        labor_request = get_object_or_404(LaborRequest, worker=worker, labor_requirement__call_time=call_time, confirmed=True)
+        time_entry, created = TimeEntry.objects.get_or_create(
+            labor_request=labor_request,
+            worker=worker,
+            call_time=call_time,
+            defaults={'start_time': None, 'end_time': None})
+        if action == 'clock_in' and not time_entry.start_time:
+            time_entry.start_time = datetime.combine(call_time.date, call_time.time)
+            time_entry.save()
+            messages.success(request, f"Clocked in at {time_entry.start_time.strftime('%I:%M %p')}.")
+        elif action == 'clock_out' and time_entry.start_time and not time_entry.end_time:
+            end_time = timezone.now()
+            minutes = end_time.minute
+            if minutes > 35:
+                end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            elif minutes > 5:
+                end_time = end_time.replace(minute=30, second=0, microsecond=0)
+            else:
+                end_time = end_time.replace(minute=0, second=0, microsecond=0)
+            time_entry.end_time = end_time
+            time_entry.save()
+            messages.success(request, f"Clocked out at {time_entry.end_time.strftime('%I:%M %p')}.")
+        else:
+            messages.error(request, "Invalid action or time entry state.")
+        return redirect('scan_qr_code', slug=event.slug)
+    call_times = CallTime.objects.filter(
+        event=event,
+        labor_requirements__laborrequest__worker=worker,
+        labor_requirements__laborrequest__confirmed=True).distinct()
+    context = {
+        'event': event,
+        'worker': worker,
+        'call_times': call_times,
+        'token': token}
+    return render(request, 'callManager/worker_clock_in_out.html', context)

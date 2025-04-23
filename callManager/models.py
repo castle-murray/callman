@@ -23,6 +23,7 @@ class Company(models.Model):
     email = models.EmailField()
     website = models.URLField(max_length=200)
 
+
     def __str__(self):
         return self.name
 
@@ -181,6 +182,24 @@ class Worker(models.Model):
         return self.name or "Unnamed Worker"
 
 
+class ClockInToken(models.Model):
+    event = models.ForeignKey('Event', on_delete=models.CASCADE, related_name='clock_in_tokens')
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='clock_in_tokens',null=True, blank=True)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=1)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Token for {self.worker.name} at {self.event.event_name} ({self.token})"
+
+    class Meta:
+        unique_together = ('event', 'worker')
+
 class TimeEntry(models.Model):
     labor_request = models.ForeignKey('LaborRequest', on_delete=models.CASCADE, related_name='time_entries')
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
@@ -211,7 +230,6 @@ class TimeEntry(models.Model):
             break_end = break_start + timedelta(minutes=30) if meal_break.break_type == 'paid' else break_start + timedelta(hours=1)
             trigger_time = current_time + timedelta(hours=trigger_duration)
 
-            # Normal hours before break or trigger
             if break_start > trigger_time:
                 normal_hours += (trigger_time - current_time).total_seconds() / 3600
                 current_time = trigger_time
@@ -219,23 +237,20 @@ class TimeEntry(models.Model):
                 normal_hours += (break_start - current_time).total_seconds() / 3600
                 current_time = break_start
 
-            # Add paid break duration to normal hours
             if meal_break.break_type == 'paid':
                 paid_duration = (break_end - break_start).total_seconds() / 3600
                 normal_hours += paid_duration
 
-            # Resume after break
             current_time = break_end
             if current_time >= self.end_time:
                 break
 
-        # Normal hours after last break (or from start if no breaks)
         if current_time < self.end_time:
             trigger_time = current_time + timedelta(hours=trigger_duration)
             end_normal = min(trigger_time, self.end_time)
             normal_hours += (end_normal - current_time).total_seconds() / 3600
 
-        normal_hours -= unpaid_breaks  # Deduct unpaid breaks
+        normal_hours -= unpaid_breaks
         return max(0, normal_hours)
 
     @property
@@ -252,18 +267,15 @@ class TimeEntry(models.Model):
             break_end = break_start + timedelta(minutes=30) if meal_break.break_type == 'paid' else break_start + timedelta(hours=1)
             trigger_time = current_time + timedelta(hours=trigger_duration)
 
-            # Penalty from trigger to break or end_time
             if trigger_time < break_start:
                 penalty_end = min(break_start, self.end_time)
                 if penalty_end > trigger_time:
                     penalty_hours += (penalty_end - trigger_time).total_seconds() / 3600
             current_time = break_end
 
-            # Stop if break_end exceeds end_time
             if current_time >= self.end_time:
                 break
 
-        # Penalty after last break
         if current_time < self.end_time:
             trigger_time = current_time + timedelta(hours=trigger_duration)
             if self.end_time > trigger_time:
@@ -280,7 +292,6 @@ class TimeEntry(models.Model):
         unpaid_breaks = self.meal_breaks.filter(break_type='unpaid').count()
         total_hours -= unpaid_breaks
         return max(0, total_hours)
-
 
 class MealBreak(models.Model):
     BREAK_TYPES = [
