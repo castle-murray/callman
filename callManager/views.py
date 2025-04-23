@@ -230,7 +230,7 @@ def manager_dashboard(request):
     include_past = request.GET.get('include_past', '') == 'on'
     events = Event.objects.filter(company=company)
     if not include_past:
-        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=today))
+        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
     if search_query:
         terms = search_query.split()
         month_map = {
@@ -314,7 +314,7 @@ def search_events(request):
     include_past = request.GET.get('include_past', '') == 'on'
     events = Event.objects.filter(company=company)
     if not include_past:
-        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=today))
+        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
     if search_query:
         month_map = {
             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
