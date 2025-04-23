@@ -10,6 +10,12 @@ class LaborTypeForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError("Labor type name cannot be empty.")
+        return name
+
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event

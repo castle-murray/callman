@@ -1,0 +1,38 @@
+{% load callman_tags %}
+<div id="events-list">
+    {% if events %}
+        <div class="space-y-4">
+            {% for event in events %}
+                <div class="border-b p-2 rounded-md pb-4 dark:border-dark-border-dark {% if event_labor_needs|get_item:event.id|get_item:'unfilled_count' == 0 %}bg-filled-event-gradient dark:bg-dark-filled-event-gradient{% endif %}">
+                    <a href="{% url 'event_detail' event.slug %}" class="block cursor-pointer">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">{{ event.event_name }}</h3>
+                        </div>
+                        <p class="text-text-secondary dark:text-dark-text-secondary">
+                            {% if event.is_single_day %}
+                                {{ event.start_date }}
+                            {% else %}
+                                {{ event.start_date }} - {{ event.end_date }}
+                            {% endif %}
+                            @ {{ event.event_location|default:"Not specified" }}
+                        </p>
+                        <p class="text-text-secondary dark:text-dark-text-secondary">{{ event.event_description|default:"No description provided" }}</p>
+                        <p class="text-text-tertiary dark:text-dark-text-tertiary">
+                            <strong>{{ event_labor_needs|get_item:event.id|get_item:'labor_needs_text' }}</strong>
+                        </p>
+                    </a>
+                    <div class="space-x-2 text-right">
+                        <a href="{% url 'edit_event' event.slug %}" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover data-no-nav" hx-disinherit="*">Edit</a>
+                        <form method="post" action="{% url 'delete_event' event.slug %}" class="inline" hx-disinherit="*">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover data-no-nav" 
+                                    onclick="return confirm('Are you sure you want to delete this event? This will also delete associated call times and labor requirements.');">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-text-secondary dark:text-dark-text-secondary">No events found.</p>
+    {% endif %}
+</div>

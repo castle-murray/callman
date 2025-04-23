@@ -34,6 +34,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
+import re
+
 
 def log_sms(company):
     sms = SentSMS.objects.create(company=company)
@@ -210,7 +212,35 @@ def manager_dashboard(request):
         return redirect('login')
     manager = request.user.manager
     company = manager.company
-    events = Event.objects.filter(company=company).order_by('-start_date')
+    yesterday = timezone.now().date() - timedelta(days=1)
+    search_query = request.GET.get('search', '').strip().lower()
+    include_past = request.GET.get('include_past', '') == 'on'
+    events = Event.objects.filter(company=company)
+    if not include_past:
+        events = events.filter(start_date__gte=yesterday)
+    if search_query:
+        terms = search_query.split()
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12}
+        for term in terms:
+            term_filter = Q()
+            if term in month_map:
+                term_filter = Q(start_date__month=month_map[term])
+            elif term.isdigit() and len(term) == 4:
+                term_filter = Q(start_date__year=int(term))
+            elif re.match(r'\d{4}-\d{2}-\d{2}', term):
+                try:
+                    search_date = datetime.strptime(term, '%Y-%m-%d').date()
+                    term_filter = Q(start_date__exact=search_date) | Q(end_date__exact=search_date)
+                except ValueError:
+                    pass
+            else:
+                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+            events = events.filter(term_filter)
+    events = events.order_by('start_date').distinct()
     total_events = events.count()
     pending_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event__company=company,
@@ -257,8 +287,73 @@ def manager_dashboard(request):
         'sent_messages': sent_messages,
         'declined': declined_requests,
         'unfilled_spots': unfilled_spots,
-        'event_labor_needs': event_labor_needs}
+        'event_labor_needs': event_labor_needs,
+        'search_query': search_query,
+        'include_past': include_past}
     return render(request, 'callManager/manager_dashboard.html', context)
+
+@login_required
+def search_events(request):
+    manager = request.user.manager
+    company = manager.company
+    yesterday = timezone.now().date() - timedelta(days=1)
+    search_query = request.GET.get('search', '').strip().lower()
+    include_past = request.GET.get('include_past', '') == 'on'
+    events = Event.objects.filter(company=company)
+    if not include_past:
+        events = events.filter(start_date__gte=yesterday)
+    if search_query:
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12}
+        terms = search_query.split()
+        for term in terms:
+            term_filter = Q()
+            if term in month_map:
+                term_filter = Q(start_date__month=month_map[term])
+            elif term.isdigit() and len(term) == 4:
+                term_filter = Q(start_date__year=int(term))
+            elif re.match(r'\d{4}-\d{2}-\d{2}', term):
+                try:
+                    search_date = datetime.strptime(term, '%Y-%m-%d').date()
+                    term_filter = Q(start_date__exact=search_date) | Q(end_date__exact=search_date)
+                except ValueError:
+                    pass
+            else:
+                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+            events = events.filter(term_filter)
+    events = events.order_by('start_date').distinct()
+    labor_requirements = LaborRequirement.objects.filter(
+        call_time__event__company=company).select_related(
+        'labor_type', 'call_time__event').annotate(
+        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+    event_labor_needs = {}
+    for event in events:
+        event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
+        unfilled_requirements = [
+            lr for lr in event_requirements if lr.confirmed_count < lr.needed_labor]
+        unfilled_count = len(unfilled_requirements)
+        total_unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in unfilled_requirements)
+        if unfilled_count > 3:
+            labor_needs_text = f"{unfilled_count} unfilled, {total_unfilled_spots} total labor needed"
+        elif unfilled_count > 0:
+            labor_needs_text = ", ".join(
+                f"{lr.labor_type.name}: {max(0, lr.needed_labor - lr.confirmed_count)} needed"
+                for lr in unfilled_requirements)
+        else:
+            labor_needs_text = "All calls filled"
+        event_labor_needs[event.id] = {
+            'unfilled_count': unfilled_count,
+            'total_unfilled_spots': total_unfilled_spots,
+            'labor_needs_text': labor_needs_text}
+    context = {
+        'events': events,
+        'event_labor_needs': event_labor_needs,
+        'search_query': search_query,
+        'include_past': include_past}
+    return render(request, 'callManager/events_list_partial.html', context)
 
 
 @login_required
@@ -351,6 +446,21 @@ def add_labor_to_call(request, slug):
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/add_labor_to_call.html', context)
 
+@login_required
+def labor_type_partial(request, slug):
+    manager = request.user.manager
+    labor_type = get_object_or_404(LaborType, slug=slug, company=manager.company)
+    if request.method == "POST":
+        form = LaborTypeForm(request.POST, instance=labor_type)
+        if form.is_valid():
+            form.save()
+            return redirect('view_skills')
+    else:
+        form = LaborTypeForm(instance=labor_type)
+    context = {'form': form, 'labor_type': labor_type}
+    return render(request, 'callManager/labor_type_partial.html', context)
+
+@login_required
 
 @login_required
 def create_event(request):
@@ -391,9 +501,15 @@ def view_skills(request):
             form = SkillForm(request.POST)
             if form.is_valid():
                 skill = form.save(commit=False)
-                skill.company = manager.company
-                skill.save()
-                return redirect('view_skills')
+
+                if skill.name not in skills.values_list('name', flat=True):
+                    skill.company = manager.company
+                    skill.save()
+                    return redirect('view_skills')
+                else:
+                    messages.error(request, "Skill already exists.")
+                    return redirect('view_skills')
+
     # GET request: show all skills and forms
     edit_forms = {skill.id: SkillForm(instance=skill) for skill in skills}
     add_form = SkillForm()
