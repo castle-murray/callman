@@ -16,6 +16,7 @@ def generate_unique_slug(model_class, length=7):
 class Company(models.Model):
     name = models.CharField(max_length=200)
     meal_penalty_trigger_time = models.PositiveIntegerField(default=5, help_text="Hours after start time to trigger meal penalty")
+    hour_round_up = models.PositiveIntegerField(default=15, help_text="Minutes to round up hours worked")
     address = models.CharField(max_length=200)
     city = models.CharField(max_length=200)
     state = models.CharField(max_length=200)
@@ -165,6 +166,16 @@ class Worker(models.Model):
     sent_consent_msg = models.BooleanField(default=False)
     stop_sms = models.BooleanField(default=False)
     nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
+    slug = models.CharField(max_length=10, unique=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            while True:
+                slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+                if not Worker.objects.filter(slug=slug).exists():
+                    self.slug = slug
+                    break
+        super().save(*args, **kwargs)
 
     def add_company(self, company):
         print("yep")
@@ -186,6 +197,7 @@ class ClockInToken(models.Model):
     event = models.ForeignKey('Event', on_delete=models.CASCADE, related_name='clock_in_tokens')
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='clock_in_tokens',null=True, blank=True)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    qr_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
 

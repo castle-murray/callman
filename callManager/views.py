@@ -1880,18 +1880,19 @@ def sms_usage_report(request):
 def send_clock_in_link(request, slug):
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
-    confirmed_requests = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event,
-        confirmed=True).select_related('worker').distinct()
+    confirmed_workers = Worker.objects.filter(
+        laborrequest__labor_requirement__call_time__event=event,
+        laborrequest__confirmed=True).distinct()
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
     sms_errors = []
-    for req in confirmed_requests:
-        worker = req.worker
+    for worker in confirmed_workers:
         token, created = ClockInToken.objects.get_or_create(
             event=event,
             worker=worker,
-            defaults={'expires_at': timezone.now() + timedelta(days=1)})
-        qr_code_url = request.build_absolute_uri(reverse('display_qr_code', args=[event.slug, worker.id]))
+            defaults={'expires_at': timezone.now() + timedelta(days=1), 'qr_sent': False})
+        if token.qr_sent:
+            continue
+        qr_code_url = request.build_absolute_uri(reverse('display_qr_code', args=[event.slug, worker.slug]))
         if worker.sms_consent and not worker.stop_sms and worker.phone_number:
             message_body = (
                 f"{manager.company.name}: Your clock-in QR code for {event.event_name}. "
@@ -1902,10 +1903,14 @@ def send_clock_in_link(request, slug):
                         body=message_body,
                         from_=settings.TWILIO_PHONE_NUMBER,
                         to=str(worker.phone_number))
+                    token.qr_sent = True
+                    token.save()
                     log_sms(manager.company)
                 except TwilioRestException as e:
                     sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
             else:
+                token.qr_sent = True
+                token.save()
                 log_sms(manager.company)
                 print(message_body)
     if sms_errors:
@@ -1914,13 +1919,13 @@ def send_clock_in_link(request, slug):
         messages.success(request, "Clock-in QR code links sent to workers.")
     return redirect('event_detail', slug=event.slug)
 
-def display_qr_code(request, slug, worker_id):
+def display_qr_code(request, slug, worker_slug):
     event = get_object_or_404(Event, slug=slug)
-    worker = get_object_or_404(Worker, id=worker_id)
+    worker = get_object_or_404(Worker, slug=worker_slug)
     token, created = ClockInToken.objects.get_or_create(
         event=event,
         worker=worker,
-        defaults={'expires_at': timezone.now() + timedelta(days=1)})
+        defaults={'expires_at': timezone.now() + timedelta(days=1), 'qr_sent': False})
     clock_in_url = request.build_absolute_uri(reverse('worker_clock_in_out', args=[str(token.token)]))
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(clock_in_url)
@@ -1945,10 +1950,10 @@ def scan_qr_code(request, slug):
     return render(request, 'callManager/scan_qr_code.html', context)
 
 @login_required
-def manager_display_qr_code(request, slug, worker_id):
+def manager_display_qr_code(request, slug, worker_slug):
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
-    worker = get_object_or_404(Worker, id=worker_id)
+    worker = get_object_or_404(Worker, slug=worker_slug)
     token, created = ClockInToken.objects.get_or_create(
         event=event,
         worker=worker,
@@ -1975,6 +1980,7 @@ def worker_clock_in_out(request, token):
         return render(request, 'callManager/clock_in_error.html', {'message': 'This clock-in link has expired.'})
     event = token_obj.event
     worker = token_obj.worker
+    company = event.company
     if request.method == "POST":
         call_time_id = request.POST.get('call_time_id')
         action = request.POST.get('action')
@@ -1988,29 +1994,51 @@ def worker_clock_in_out(request, token):
         if action == 'clock_in' and not time_entry.start_time:
             time_entry.start_time = datetime.combine(call_time.date, call_time.time)
             time_entry.save()
-            messages.success(request, f"Clocked in at {time_entry.start_time.strftime('%I:%M %p')}.")
+            messages.success(request, f"Signed in at {time_entry.start_time.strftime('%I:%M %p')}.")
         elif action == 'clock_out' and time_entry.start_time and not time_entry.end_time:
             end_time = timezone.now()
             minutes = end_time.minute
-            if minutes > 35:
+            if minutes > 30 + company.hour_round_up:
                 end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-            elif minutes > 5:
+            elif minutes > company.hour_round_up:
                 end_time = end_time.replace(minute=30, second=0, microsecond=0)
             else:
                 end_time = end_time.replace(minute=0, second=0, microsecond=0)
             time_entry.end_time = end_time
             time_entry.save()
-            messages.success(request, f"Clocked out at {time_entry.end_time.strftime('%I:%M %p')}.")
+            messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")
         else:
             messages.error(request, "Invalid action or time entry state.")
         return redirect('scan_qr_code', slug=event.slug)
+    now = timezone.now()
+    one_hour_before = now - timedelta(hours=1)
+    one_hour_after = now + timedelta(hours=1)
     call_times = CallTime.objects.filter(
         event=event,
         labor_requirements__laborrequest__worker=worker,
-        labor_requirements__laborrequest__confirmed=True).distinct()
+        labor_requirements__laborrequest__confirmed=True).filter(
+        Q(date=now.date(), time__range=(one_hour_before.time(), one_hour_after.time())) |
+        Q(timeentry__worker=worker, timeentry__start_time__isnull=False, timeentry__end_time__isnull=True)
+    ).exclude(
+        timeentry__worker=worker,
+        timeentry__start_time__isnull=False,
+        timeentry__end_time__isnull=False
+    ).distinct()
+    call_time_status = []
+    for call_time in call_times:
+        is_signed_in = TimeEntry.objects.filter(
+            worker=worker,
+            call_time=call_time,
+            start_time__isnull=False,
+            end_time__isnull=True).exists()
+        call_time_status.append({
+            'call_time': call_time,
+            'is_signed_in': is_signed_in})
+    no_call_times_message = "No sign in available at this time. See steward." if not call_times.exists() else None
     context = {
         'event': event,
         'worker': worker,
-        'call_times': call_times,
-        'token': token}
+        'call_time_status': call_time_status,
+        'token': token,
+        'no_call_times_message': no_call_times_message}
     return render(request, 'callManager/worker_clock_in_out.html', context)

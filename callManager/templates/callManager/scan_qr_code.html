@@ -6,6 +6,15 @@
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">Use the iPad camera to scan a worker's QR code.</p>
         <div id="qr-reader" class="mb-4"></div>
         <div id="error-message" class="text-text-red mb-4 dark:text-dark-text-red hidden"></div>
+        {% if messages %}
+            <div id="messages" class="fixed inset-0 flex items-center justify-center space-y-2 z-50 pointer-events-none">
+                {% for message in messages %}
+                    <div class="message bg-card-bg text-text-{% if message.tags == 'success' %}green{% else %}red{% endif %} dark:bg-dark-card-bg dark:text-dark-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %} p-4 rounded-lg shadow-md opacity-100 transition-opacity duration-500 max-w-md text-center">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -37,6 +46,15 @@
         ).catch(err => {
             document.getElementById('error-message').textContent = 'Failed to access camera: ' + err;
             document.getElementById('error-message').classList.remove('hidden');
+        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(message => {
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    setTimeout(() => message.remove(), 500);
+                }, 3000);
+            });
         });
     </script>
 {% endblock %}
