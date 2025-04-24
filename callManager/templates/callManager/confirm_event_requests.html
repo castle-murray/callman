@@ -72,6 +72,11 @@
                     </li>
                 {% endfor %}
             </ul>
+            {% if qr_code_data %}
+                <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Your Clock-In QR Code</h2>
+                <p class="text-text-primary mb-4 dark:text-dark-text-primary">Scan this QR code at the event to clock in/out.</p>
+                <img src="data:image/png;base64,{{ qr_code_data }}" alt="Clock-In QR Code" class="mx-auto mb-4 max-w-xs">
+            {% endif %}
         {% endif %}
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">
             {% if registration_url %}

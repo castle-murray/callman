@@ -1,59 +1,36 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
-
 {% block title %}View Workers - CallMan{% endblock %}
-
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">View Workers</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Current Workers</h2>
-
-        <!-- Search Form -->
-        <form method="get" class="mb-4">
+        <form method="get" class="mb-4 flex space-x-4">
             <input type="text" 
                    autofocus
                    name="search" 
                    value="{{ search_query }}" 
                    placeholder="Search by name or phone..." 
-                   class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary">
-        </form>
-
-        {% if workers %}
-            <ul class="space-y-2">
-                {% for worker in workers %}
-                    <li class="flex items-center justify-between border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
-                        <span>{{ worker.name|default:"Unnamed Worker" }} {{ worker.formatted_phone_number }}</span>
-                        <div>
-                            <a href="{% url 'edit_worker' worker.id %}" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover mr-2">Edit</a>
-                            <form method="post" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="delete_id" value="{{ worker.id }}">
-                                <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Delete</button>
-                            </form>
-                        </div>
-                    </li>
+                   class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
+                   hx-get="{% url 'search_workers' %}"
+                   hx-target="#workers-list"
+                   hx-trigger="input delay:300ms"
+                   hx-include="[name='search'], [name='skill']">
+            <select id="skill" name="skill" class="w-full max-w-xs p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
+                    hx-get="{% url 'search_workers' %}"
+                    hx-target="#workers-list"
+                    hx-trigger="change"
+                    hx-include="[name='search'], [name='skill']">
+                <option value="">All Skills</option>
+                {% for labor_type in labor_types %}
+                    <option value="{{ labor_type.id }}" {% if skill_id == labor_type.id|stringformat:"i" %}selected{% endif %}>{{ labor_type.name }}</option>
                 {% endfor %}
-            </ul>
-
-            <!-- Pagination -->
-            <div class="mt-4 flex justify-between">
-                {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
-                {% else %}
-                    <span class="text-text-secondary dark:text-dark-text-secondary">Previous</span>
-                {% endif %}
-                <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
-                {% else %}
-                    <span class="text-text-secondary dark:text-dark-text-secondary">Next</span>
-                {% endif %}
-            </div>
-        {% else %}
-            <p class="text-text-secondary dark:text-dark-text-secondary">No workers found.</p>
-        {% endif %}
-
-        <!-- Add Worker Form -->
+            </select>
+            <a href="{% url 'view_workers' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Reset</a>
+        </form>
+        <div id="workers-list">
+            {% include 'callManager/workers_list_partial.html' %}
+        </div>
         <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Worker</h2>
         <form method="post" class="flex flex-col text-text-tertiary dark:text-dark-text-tertiary">
             {% csrf_token %}
@@ -67,7 +44,7 @@
                 {{ add_form.phone_number }}
             </div>
             <div class="mb-2">
-                {{ add_form.labor_types.label_tag }} <!-- Displays as "Skills" -->
+                {{ add_form.labor_types.label_tag }}
                 {{ add_form.labor_types }}
             </div>
             <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Add</button>

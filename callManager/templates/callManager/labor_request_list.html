@@ -1,51 +1,62 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
-
-{% block title %}Labor Requests - CallMan{% endblock %}
-
+{% block title %}Labor Requests - {{ labor_requirement.labor_type.name }} - CallMan{% endblock %}
 {% block content %}
-<div class="flex justify-between">
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Labor Requests for {{ labor_requirement.labor_type.name }}</h1>
-    <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="text-2xl inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
-</div>
-<div  class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
-    <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">
-        {{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time|time:"h:i A" }} on {{ labor_requirement.call_time.date }} - 
-        {% if confirmed_count >= labor_requirement.needed_labor %}
-        <span class="text-text-green dark:text-dark-text-green">FILLED</span>
-        {% else %}
-        {{ labor_requirement.needed_labor }} needed
-        {% endif %}
-    </h2>
-    <div class="mb-4">
-        <form method="post" class="inline-block">
-            {% csrf_token %}
-            <label for="fcfs_positions" class="text-text-primary dark:text-dark-text-primary">FCFS Positions:</label>
-            <input type="number" name="fcfs_positions" value="{{ labor_requirement.fcfs_positions }}" min="0" max="{{ labor_requirement.needed_labor }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border w-16">
-            <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Update</button>
-        </form>
+    <div class="flex justify-between">
+        <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Labor Requests for {{ labor_requirement.labor_type.name }}</h1>
+        <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="text-2xl inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
-    <div hx-get="{% url 'labor_request_list' labor_requirement.slug %}" hx-trigger="LaborRequestChanged from:body" hx-swap="innerHTML">
-        {% include 'callManager/labor_request_content_partial.html' %}
-    </div>
-    {% if confirmed_count < labor_requirement.needed_labor %}
-        <div class="mt-6">
-            <h3 class="text-lg font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Fill Call</h3>
-            <div class="mb-4">
-                <input type="text" 
-                       name="search" 
-                       value="{{ search_query|default:'' }}" 
-                       hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1" 
-                       hx-target="#fill-list" 
-                       hx-trigger="keyup changed delay:300ms" 
-                       hx-swap="outerHTML"
-                       placeholder="Search by name or phone..." 
-                       class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary">
-            </div>
-            <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1&search={{ search_query|urlencode }}" hx-trigger="load" hx-swap="outerHTML">
-                <!-- HTMX will load the partial here -->
-            </div>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">
+            {{ labor_requirement.call_time.name }} at {{ labor_requirement.call_time.time|time:"h:i A" }} on {{ labor_requirement.call_time.date }} - 
+            {% if confirmed_count >= labor_requirement.needed_labor %}
+                <span class="text-text-green dark:text-dark-text-green">FILLED</span>
+            {% else %}
+                {{ labor_requirement.needed_labor }} needed
+            {% endif %}
+        </h2>
+        <div class="mb-4">
+            <form method="post" class="inline-block">
+                {% csrf_token %}
+                <label for="fcfs_positions" class="text-text-primary dark:text-dark-text-primary">FCFS Positions:</label>
+                <input type="number" name="fcfs_positions" value="{{ labor_requirement.fcfs_positions }}" min="0" max="{{ labor_requirement.needed_labor }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border w-16">
+                <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Update</button>
+            </form>
         </div>
-    {% endif %}
-    <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+        <div hx-get="{% url 'labor_request_list' labor_requirement.slug %}" hx-trigger="LaborRequestChanged from:body" hx-swap="innerHTML">
+            {% include 'callManager/labor_request_content_partial.html' %}
+        </div>
+        {% if confirmed_count < labor_requirement.needed_labor %}
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Fill Call</h3>
+                <form method="get" class="mb-4 flex space-x-4">
+                    <input type="text" 
+                           autofocus
+                           name="search" 
+                           value="{{ search_query|default:'' }}" 
+                           placeholder="Search by name or phone..." 
+                           class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
+                           hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1"
+                           hx-target="#fill-list"
+                           hx-trigger="input delay:300ms"
+                           hx-include="[name='search'], [name='skill']">
+                    <select id="skill" name="skill" class="w-full max-w-xs p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
+                            hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1"
+                            hx-target="#fill-list"
+                            hx-trigger="change"
+                            hx-include="[name='search'], [name='skill']">
+                        <option value="">All Skills</option>
+                        {% for labor_type in labor_types %}
+                            <option value="{{ labor_type.id }}" {% if skill_id == labor_type.id|stringformat:"i" %}selected{% endif %}>{{ labor_type.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <a href="{% url 'labor_request_list' labor_requirement.slug %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Reset</a>
+                </form>
+                <div id="fill-list" hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}" hx-trigger="load" hx-swap="outerHTML">
+                    <!-- HTMX will load the partial here -->
+                </div>
+            </div>
+        {% endif %}
+        <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+    </div>
 {% endblock %}

@@ -44,4 +44,5 @@ urlpatterns = [
     path('event/<slug:slug>/manager-qr-code/<slug:worker_slug>/', views.manager_display_qr_code, name='manager_display_qr_code'),
     path('event/<slug:slug>/scan-qr/', views.scan_qr_code, name='scan_qr_code'),
     path('clock-in/<uuid:token>/', views.worker_clock_in_out, name='worker_clock_in_out'),
+    path('workers/search/', views.search_workers, name='search_workers'),
 ]

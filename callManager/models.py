@@ -1,3 +1,4 @@
+import string
 from django.db import models
 from django.contrib.auth.models import User
 from phonenumber_field.modelfields import PhoneNumberField
@@ -185,6 +186,8 @@ class Worker(models.Model):
 
     def formatted_phone_number(self):
         phone = self.phone_number.replace('-', '').replace('(', '').replace(')', '').replace(' ', '')
+        if phone.startswith('+1'):
+            phone = phone[2:]  # Remove +1 prefix
         if len(phone) == 10 and phone.isdigit():
             return f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
         return self.phone_number
