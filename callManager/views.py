@@ -1100,10 +1100,14 @@ def confirm_event_requests(request, slug, event_token):
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
             'event': event,
+            'labor_requests': labor_requests,
             'registration_url': registration_url,
             'confirmed_call_times': calendar_links,
             'qr_code_data': qr_code_data}
-        return render(request, 'callManager/confirm_success.html', context)
+        if not labor_requests.exists() and not calendar_links:
+            context['message'] = "No requests found for this link."
+            return render(request, 'callManager/confirm_error.html', context)
+        return render(request, 'callManager/confirm_event_requests.html', context)
     context = {
         'event': event,
         'labor_requests': labor_requests,
