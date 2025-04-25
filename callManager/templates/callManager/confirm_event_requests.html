@@ -2,8 +2,8 @@
 {% block title %}Confirm Event Requests - CallMan{% endblock %}
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Your Availability for {{ event.event_name }}</h1>
         {% if labor_requests %}
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Your Availability for {{ event.event_name }}</h1>
             <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm your availability for the following call times:</p>
             <form method="post">
                 {% csrf_token %}
@@ -56,8 +56,6 @@
                 </table>
                 <button type="submit" class="bg-primary text-dark-text-primary px-4 py-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Submit</button>
             </form>
-        {% else %}
-            <p class="text-text-primary mb-4 dark:text-dark-text-primary">No pending requests to confirm.</p>
         {% endif %}
         {% if confirmed_call_times %}
             <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Call Times</h2>
@@ -72,12 +70,15 @@
                     </li>
                 {% endfor %}
             </ul>
-            {% if qr_code_data %}
+            
+            {% if qr_code_data and company.time_tracking %}
                 <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Your Clock-In QR Code</h2>
-                <p class="text-text-primary mb-4 dark:text-dark-text-primary">Scan this QR code at the event to clock in/out.</p>
+                <p class="text-text-primary mb-1 dark:text-dark-text-primary">Scan this QR code at this event to clock in/out.</p>
+                <p class="text-text-primary mb-4 dark:text-dark-text-primary">This QR code is unique to this event. Do not attempt to clodk in at any other show with this code.</p>
                 <img src="data:image/png;base64,{{ qr_code_data }}" alt="Clock-In QR Code" class="mx-auto mb-4 max-w-xs">
             {% endif %}
         {% endif %}
+        <!--
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">
             {% if registration_url %}
                 You can register or update your profile <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
@@ -86,5 +87,6 @@
             {% endif %}
         </p>
         <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+        -->
     </div>
 {% endblock %}

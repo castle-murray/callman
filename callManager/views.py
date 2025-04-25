@@ -73,6 +73,7 @@ def confirm_assignment(request, token):
 @login_required
 def event_detail(request, slug):
     manager = request.user.manager
+    company = manager.company
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     call_times = event.call_times.all().order_by('date', 'time')
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
@@ -109,7 +110,6 @@ def event_detail(request, slug):
             'labor_requirement': lr
         }
     if request.method == "POST" and 'send_messages' in request.POST:
-        company = request.user.manager.company
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
@@ -182,9 +182,16 @@ def event_detail(request, slug):
                 message += f" Errors: {', '.join(sms_errors)}."
         else:
             message = "No queued requests to send."
-        context = {'event': event, 'call_times': call_times, 'labor_counts': labor_counts, 'message': message}
+        context = {
+                'company': company,
+                'event': event,
+                'call_times': call_times,
+                'labor_counts': labor_counts,
+                'message': message
+                }
         return render(request, 'callManager/event_detail.html', context)
     context = {
+        'company': company,
         'event': event,
         'call_times': call_times,
         'labor_counts': labor_counts
@@ -1098,12 +1105,14 @@ def confirm_event_requests(request, slug, event_token):
         if sms_errors:
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
+            'company': company,
             'event': event,
             'registration_url': registration_url,
             'confirmed_call_times': calendar_links,
             'qr_code_data': qr_code_data}
         return render(request, 'callManager/confirm_success.html', context)
     context = {
+        'company': company,
         'event': event,
         'labor_requests': labor_requests,
         'registration_url': registration_url,

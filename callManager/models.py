@@ -24,6 +24,7 @@ class Company(models.Model):
     phone_number = PhoneNumberField()
     email = models.EmailField()
     website = models.URLField(max_length=200)
+    time_tracking = models.BooleanField(default=False, help_text="Enable time tracking for this company")
 
 
     def __str__(self):

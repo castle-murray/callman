@@ -10,7 +10,8 @@ class CompanyAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'phone_number')
     fieldsets = (
         (None, {
-            'fields': ('name', 'address', 'city', 'state', 'phone_number', 'email', 'website')
+
+            'fields': ('name', 'address', 'city', 'state', 'phone_number', 'email', 'website','time_tracking')
         }),
         ('Time Settings', {
             'fields': ('meal_penalty_trigger_time', 'hour_round_up')
