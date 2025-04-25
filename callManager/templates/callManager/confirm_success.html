@@ -23,11 +23,7 @@
             <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">Your availability response has been recorded. Please await manager confirmation for non-First Come First Served positions.</p>
         {% endif %}
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">
-            {% if registration_url %}
-                You can register or update your profile <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
-            {% else %}
                 No further action is required.
-            {% endif %}
         </p>
         <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
