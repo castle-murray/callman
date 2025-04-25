@@ -1614,6 +1614,8 @@ def call_time_request_list(request, slug):
 @login_required
 def call_time_tracking(request, slug):
     manager = request.user.manager
+    company = manager.company
+    minimum_hours = company.minimum_hours
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -1640,6 +1642,8 @@ def call_time_tracking(request, slug):
                 messages.success(request, f"Signed in {worker.name}")
             elif action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
                 end_time = datetime.now()
+                if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
+                    end_time = time_entry.start_time + timedelta(hours=minimum_hours)
                 minutes = end_time.minute
                 if minutes > 35:
                     end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
