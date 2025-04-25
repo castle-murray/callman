@@ -1211,25 +1211,30 @@ def labor_request_list(request, slug):
                             messages.success(request, f"{worker.name} confirmed for {labor_requirement.labor_type.name}.")
                         else:
                             messages.error(request, "Labor requirement already filled.")
-                elif action == 'decline' and labor_request.availability_response is None:
-                    labor_request.availability_response = 'no'
-                    labor_request.responded_at = timezone.now()
-                    if labor_request.is_reserved:
-                        labor_request.is_reserved = False
-                        confirmed_count = LaborRequest.objects.filter(
-                            labor_requirement=labor_requirement,
-                            confirmed=True
-                        ).count()
-                        if confirmed_count < labor_requirement.fcfs_positions:
-                            available_fcfs = LaborRequest.objects.filter(
+                elif action == 'decline':
+                    if labor_request.availability_response is None:
+                        labor_request.availability_response = 'no'
+                        labor_request.responded_at = timezone.now()
+                        if labor_request.is_reserved:
+                            labor_request.is_reserved = False
+                            confirmed_count = LaborRequest.objects.filter(
                                 labor_requirement=labor_requirement,
-                                availability_response='yes',
-                                confirmed=False,
-                                is_reserved=False
-                            ).exclude(id=labor_request.id).order_by('responded_at').first()
-                            if available_fcfs:
-                                available_fcfs.confirmed = True
-                                available_fcfs.save()
+                                confirmed=True
+                            ).count()
+                            if confirmed_count < labor_requirement.fcfs_positions:
+                                available_fcfs = LaborRequest.objects.filter(
+                                    labor_requirement=labor_requirement,
+                                    availability_response='yes',
+                                    confirmed=False,
+                                    is_reserved=False
+                                ).exclude(id=labor_request.id).order_by('responded_at').first()
+                                if available_fcfs:
+                                    available_fcfs.confirmed = True
+                                    available_fcfs.save()
+                    elif labor_request.availability_response == 'yes':
+                        labor_request.confirmed = False
+                        labor_request.availability_response = 'no'
+
                     labor_request.save()
                     messages.success(request, f"{worker.name} declined for {labor_requirement.labor_type.name}.")
                 elif action == 'delete':
