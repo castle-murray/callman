@@ -54,6 +54,12 @@
                         <form method="post" class="inline ml-2">
                             {% csrf_token %}
                             <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="decline">
+                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Decline</button>
+                        </form>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
                             <input type="hidden" name="action" value="delete">
                             <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
                         </form>
@@ -72,6 +78,12 @@
                     {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number|default:"No phone" }})
                     {% if request.is_reserved %}<span class="ml-2 text-text-secondary dark:text-dark-text-secondary">(Reserved)</span>{% endif %}
                     <div>
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="decline">
+                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Decline</button>
+                        </form>
                         <form method="post" class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="request_id" value="{{ request.id }}">
