@@ -5,7 +5,7 @@
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">View Workers</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Current Workers</h2>
-        <form method="get" class="mb-4 flex space-x-4">
+        <form method="get" class="mb-4 flex flex-wrap gap-4">
             <input type="text" 
                    autofocus
                    name="search" 
@@ -15,20 +15,30 @@
                    hx-get="{% url 'search_workers' %}"
                    hx-target="#workers-list"
                    hx-trigger="input delay:300ms"
-                   hx-include="[name='search'], [name='skill']">
+                   hx-include="[name='search'], [name='skill'], [name='per_page']">
             <select id="skill" name="skill" class="w-full max-w-xs p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
                     hx-get="{% url 'search_workers' %}"
                     hx-target="#workers-list"
                     hx-trigger="change"
-                    hx-include="[name='search'], [name='skill']">
+                    hx-include="[name='search'], [name='skill'], [name='per_page']">
                 <option value="">All Skills</option>
                 {% for labor_type in labor_types %}
                     <option value="{{ labor_type.id }}" {% if skill_id == labor_type.id|stringformat:"i" %}selected{% endif %}>{{ labor_type.name }}</option>
                 {% endfor %}
             </select>
+            <select id="per_page" name="per_page" class="w-full max-w-[120px] p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
+                    hx-get="{% url 'search_workers' %}"
+                    hx-target="#workers-list"
+                    hx-trigger="change"
+                    hx-include="[name='search'], [name='skill'], [name='per_page']">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
             <a href="{% url 'view_workers' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Reset</a>
         </form>
-        <div id="workers-list">
+        <div id="workers-list" hx-get="{% url 'search_workers' %}?page=1&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}" hx-trigger="load" hx-swap="outerHTML">
             {% include 'callManager/workers_list_partial.html' %}
         </div>
         <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Worker</h2>

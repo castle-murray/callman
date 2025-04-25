@@ -1,25 +1,34 @@
-<!-- callManager/templates/callManager/worker_list_partial.html -->
-<div id="worker-list" class="bg-white p-6 rounded-lg shadow dark:bg-gray-900 dark:shadow-gray-700">
-    {% if workers %}
-        <ul class="space-y-4">
-            {% for worker in workers %}
-                <li class="border-b pb-2 flex justify-between items-center dark:border-gray-700">
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ worker.name }}</h2>
-                        <p class="text-gray-600 dark:text-gray-400">Phone: {{ worker.phone_number|default:"Not provided" }}</p>
-                        <p class="text-gray-600 dark:text-gray-400">Labor Types: 
-                            {% for labor_type in worker.labor_types.all %}
-                                {{ labor_type.name }}{% if not forloop.last %}, {% endif %}
-                            {% empty %}
-                                None assigned
-                            {% endfor %}
-                        </p>
-                    </div>
-                    <a href="{% url 'edit_worker' worker.id %}" class="text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">Edit</a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="text-gray-600 dark:text-gray-400">No workers found. Add one to get started!</p>
-    {% endif %}
-</div>
+{% if workers %}
+    <ul class="space-y-2">
+        {% for worker in workers %}
+            <li class="flex items-center justify-between border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
+                <span>{{ worker.name|default:"Unnamed Worker" }} {{ worker.formatted_phone_number }}</span>
+                <div>
+                    <a href="{% url 'edit_worker' worker.id %}" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover mr-2">Edit</a>
+                    <form method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete_id" value="{{ worker.id }}">
+                        <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Delete</button>
+                    </form>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+    <div class="mt-4 flex justify-between">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
+        {% else %}
+            <span class="text-text-secondary dark:text-dark-text-secondary">Previous</span>
+        {% endif %}
+        <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
+        {% else %}
+            <span class="text-text-secondary dark:text-dark-text-secondary">Next</span>
+        {% endif %}
+    </div>
+{% else %}
+    <p class="text-text-secondary dark:text-dark-text-secondary">No workers found.</p>
+{% endif %}

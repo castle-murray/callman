@@ -542,6 +542,10 @@ def view_workers(request):
     workers = Worker.objects.all().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
+    per_page = int(request.GET.get('per_page', manager.per_page_preference or 10))
+    if per_page != manager.per_page_preference:
+        manager.per_page_preference = per_page
+        manager.save()
     if search_query or skill_id:
         query = Q()
         if search_query:
@@ -549,7 +553,7 @@ def view_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, 10)
+    paginator = Paginator(workers, per_page)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -569,6 +573,8 @@ def view_workers(request):
                 query_params['search'] = search_query
             if skill_id:
                 query_params['skill'] = skill_id
+            if per_page != 10:
+                query_params['per_page'] = per_page
             redirect_url = reverse('view_workers')
             if query_params:
                 redirect_url += '?' + urlencode(query_params)
@@ -587,6 +593,8 @@ def view_workers(request):
                     query_params['search'] = search_query
                 if skill_id:
                     query_params['skill'] = skill_id
+                if per_page != 10:
+                    query_params['per_page'] = per_page
                 redirect_url = reverse('view_workers')
                 if query_params:
                     redirect_url += '?' + urlencode(query_params)
@@ -601,6 +609,7 @@ def view_workers(request):
         'page_obj': page_obj,
         'search_query': search_query,
         'skill_id': skill_id,
+        'per_page': per_page,
         'add_form': form,
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
@@ -613,6 +622,7 @@ def search_workers(request):
     workers = Worker.objects.all().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
+    per_page = int(request.GET.get('per_page', manager.per_page_preference or 10))
     if search_query or skill_id:
         query = Q()
         if search_query:
@@ -620,7 +630,7 @@ def search_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, 10)
+    paginator = Paginator(workers, per_page)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -632,7 +642,8 @@ def search_workers(request):
         'workers': page_obj,
         'page_obj': page_obj,
         'search_query': search_query,
-        'skill_id': skill_id}
+        'skill_id': skill_id,
+        'per_page': per_page}
     return render(request, 'callManager/workers_list_partial.html', context)
 
 
@@ -916,7 +927,7 @@ def import_workers(request):
         if form.is_valid():
             vcf_file = TextIOWrapper(request.FILES['file'].file, encoding='utf-8')
             imported = 0
-            errors = []
+            errors = 0
             current_name = None
             current_phone = None
             for i, line in enumerate(vcf_file):
@@ -924,7 +935,6 @@ def import_workers(request):
                 try:
                     if line.startswith('END:VCARD'):
                         if current_name or current_phone:
-                            # Normalize phone number to E.164
                             if current_phone:
                                 current_phone = current_phone.replace(' ', '').replace('-', '')
                                 if current_phone.startswith('1') and len(current_phone) == 11:
@@ -933,8 +943,7 @@ def import_workers(request):
                                     current_phone = f"+1{current_phone}"
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
-                                defaults={'name': current_name.strip() if current_name else None}
-                            )
+                                defaults={'name': current_name.strip() if current_name else None})
                             if created:
                                 imported += 1
                         current_name = None
@@ -942,16 +951,17 @@ def import_workers(request):
                     elif line.startswith('FN:'):
                         current_name = line[3:].strip()
                     elif line.startswith('TEL'):
-                        # Extract phone from TEL line (e.g., TEL;TYPE=CELL:+1234567890)
                         parts = line.split(':')
                         if len(parts) > 1:
                             current_phone = parts[-1].strip()
-                except Exception as e:
-                    errors.append(f"Error at line {i + 1}: {str(e)} (Line: {line[:50]})")
-            message = f"Imported {imported} workers."
+                except Exception:
+                    error_msg = f"Failed to import: {current_name or 'Unnamed'}, {current_phone or 'No phone'}"
+                    messages.error(request, error_msg)
+                    errors += 1
+            messages.success(request, f"Imported {imported} workers.")
             if errors:
-                message += f" Errors: {', '.join(errors[:5])}" + (f" and {len(errors) - 5} more" if len(errors) > 5 else "")
-            return render(request, 'callManager/import_workers.html', {'form': form, 'message': message})
+                messages.warning(request, f"Encountered {errors} import errors.")
+            return render(request, 'callManager/import_workers.html', {'form': form})
     else:
         form = WorkerImportForm()
     return render(request, 'callManager/import_workers.html', {'form': form})
@@ -1100,14 +1110,10 @@ def confirm_event_requests(request, slug, event_token):
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
             'event': event,
-            'labor_requests': labor_requests,
             'registration_url': registration_url,
             'confirmed_call_times': calendar_links,
             'qr_code_data': qr_code_data}
-        if not labor_requests.exists() and not calendar_links:
-            context['message'] = "No requests found for this link."
-            return render(request, 'callManager/confirm_error.html', context)
-        return render(request, 'callManager/confirm_event_requests.html', context)
+        return render(request, 'callManager/confirm_success.html', context)
     context = {
         'event': event,
         'labor_requests': labor_requests,

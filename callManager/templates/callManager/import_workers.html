@@ -1,10 +1,7 @@
 {% extends 'callManager/base.html' %}
-
 {% block title %}Import Workers - Autorigger{% endblock %}
-
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Import Workers from VCF</h1>
-    
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form class="mb-4" method="post" enctype="multipart/form-data">
             {% csrf_token %}
@@ -15,8 +12,12 @@
             <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Import Workers</button>
             <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
-        {% if message %}
-            <p class="mt-4 {% if 'Errors' in message %}text-text-red dark:text-dark-text-red{% else %}text-text-green dark:text-dark-text-green{% endif %}">{{ message }}</p>
+        {% if messages %}
+            <div class="mt-4 space-y-2">
+                {% for message in messages %}
+                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% elif message.tags == 'error' %}text-text-red dark:text-dark-text-red{% else %}text-text-yellow dark:text-dark-text-yellow{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
         {% endif %}
         <div class="mb-6">
             <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">How to Export a VCF File</h2>
