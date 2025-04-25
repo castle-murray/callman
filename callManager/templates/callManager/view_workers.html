@@ -38,7 +38,7 @@
             </select>
             <a href="{% url 'view_workers' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Reset</a>
         </form>
-        <div id="workers-list" hx-get="{% url 'search_workers' %}?page=1&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}" hx-trigger="load" hx-swap="outerHTML">
+        <div id="workers-list">
             {% include 'callManager/workers_list_partial.html' %}
         </div>
         <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Worker</h2>

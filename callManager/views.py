@@ -542,10 +542,6 @@ def view_workers(request):
     workers = Worker.objects.all().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
-    per_page = int(request.GET.get('per_page', manager.per_page_preference or 10))
-    if per_page != manager.per_page_preference:
-        manager.per_page_preference = per_page
-        manager.save()
     if search_query or skill_id:
         query = Q()
         if search_query:
@@ -553,7 +549,7 @@ def view_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, per_page)
+    paginator = Paginator(workers, 10)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -573,8 +569,6 @@ def view_workers(request):
                 query_params['search'] = search_query
             if skill_id:
                 query_params['skill'] = skill_id
-            if per_page != 10:
-                query_params['per_page'] = per_page
             redirect_url = reverse('view_workers')
             if query_params:
                 redirect_url += '?' + urlencode(query_params)
@@ -593,8 +587,6 @@ def view_workers(request):
                     query_params['search'] = search_query
                 if skill_id:
                     query_params['skill'] = skill_id
-                if per_page != 10:
-                    query_params['per_page'] = per_page
                 redirect_url = reverse('view_workers')
                 if query_params:
                     redirect_url += '?' + urlencode(query_params)
@@ -609,7 +601,6 @@ def view_workers(request):
         'page_obj': page_obj,
         'search_query': search_query,
         'skill_id': skill_id,
-        'per_page': per_page,
         'add_form': form,
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
@@ -622,7 +613,6 @@ def search_workers(request):
     workers = Worker.objects.all().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
-    per_page = int(request.GET.get('per_page', manager.per_page_preference or 10))
     if search_query or skill_id:
         query = Q()
         if search_query:
@@ -630,7 +620,7 @@ def search_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, per_page)
+    paginator = Paginator(workers, 10)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -642,8 +632,7 @@ def search_workers(request):
         'workers': page_obj,
         'page_obj': page_obj,
         'search_query': search_query,
-        'skill_id': skill_id,
-        'per_page': per_page}
+        'skill_id': skill_id}
     return render(request, 'callManager/workers_list_partial.html', context)
 
 
