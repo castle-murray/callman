@@ -1,0 +1,24 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Owner Dashboard - CallMan{% endblock %}
+{% block content %}
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Owner Dashboard</h1>
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Invite New Manager</h2>
+        <form method="post" class="flex flex-col gap-4">
+            {% csrf_token %}
+            <div class="flex items-center gap-2">
+                <label for="phone" class="text-text-tertiary dark:text-dark-text-tertiary">Phone Number:</label>
+                <input type="tel" name="phone" id="phone" required class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+            </div>
+            <button type="submit" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Send Invitation</button>
+        </form>
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Manager Dashboard</a>
+    </div>
+{% endblock %}

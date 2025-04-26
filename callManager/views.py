@@ -1,5 +1,4 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.http import base64
+#models
 from .models import (
         CallTime,
         LaborRequest,
@@ -11,8 +10,11 @@ from .models import (
         MealBreak,
         SentSMS,
         ClockInToken,
+        Owner,
+        Manager,
+        ManagerInvitation,
         )
-from django.contrib.auth.decorators import login_required
+#forms
 from .forms import (
         CallTimeForm,
         LaborTypeForm,
@@ -23,37 +25,53 @@ from .forms import (
         WorkerRegistrationForm,
         SkillForm,
         )
+# Django imports
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.http import base64
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q, Case, When, IntegerField, Count
 from datetime import datetime, time, timedelta
-from twilio.rest import Client
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from io import TextIOWrapper
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-import uuid
 from django.urls import reverse
-from urllib.parse import urlencode, quote
 from django.contrib import messages
-import pytz
-import io
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import FileResponse
+from django.db.models.functions import TruncDate, TruncMonth
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import UserCreationForm
+
+# Twilio imports
+from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
+
+# repotlab imports for PDF generation
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Table, TableStyle, Paragraph, SimpleDocTemplate
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+
+# other imports
 import qrcode
-from io import BytesIO
-from django.http import FileResponse
-from django.db.models.functions import TruncDate, TruncMonth
+from io import BytesIO, TextIOWrapper
 import re
+import uuid
+from urllib.parse import urlencode, quote
+
+# posssibly imports
+import pytz
+import io
 
 
 def log_sms(company):
+    """logs the SMS sent to the SentSMS model"""
     sms = SentSMS.objects.create(company=company)
     sms.save()
 
+# this view is dead and shold be removed soon
 def confirm_assignment(request, token):
     assignment = get_object_or_404(LaborRequest, token=token)
     if request.method == "POST":
@@ -72,6 +90,7 @@ def confirm_assignment(request, token):
 
 @login_required
 def event_detail(request, slug):
+    """event detail page for managers"""
     manager = request.user.manager
     company = manager.company
     event = get_object_or_404(Event, slug=slug, company=manager.company)
@@ -201,6 +220,8 @@ def event_detail(request, slug):
 
 @login_required
 def edit_event(request, slug):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     if request.method == "POST":
@@ -224,6 +245,148 @@ def delete_event(request, slug):
         event.delete()
         return redirect('manager_dashboard')
     return redirect('manager_dashboard')  # Fallback for GET requests
+
+
+@login_required
+def admin_dashboard(request):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('login')
+    yesterday = timezone.now().date() - timedelta(days=1)
+    search_query = request.GET.get('search', '').strip().lower()
+    include_past = request.GET.get('include_past', '') == 'on'
+    events = Event.objects.all()
+    if not include_past:
+        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
+    if search_query:
+        terms = search_query.split()
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12}
+        for term in terms:
+            term_filter = Q()
+            if term in month_map:
+                term_filter = Q(start_date__month=month_map[term])
+            elif term.isdigit() and len(term) == 4:
+                term_filter = Q(start_date__year=int(term))
+            elif re.match(r'\d{4}-\d{2}-\d{2}', term):
+                try:
+                    search_date = datetime.strptime(term, '%Y-%m-%d').date()
+                    term_filter = Q(start_date__exact=search_date) | Q(end_date__exact=search_date)
+                except ValueError:
+                    pass
+            else:
+                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+            events = events.filter(term_filter)
+    events = events.order_by('start_date').distinct()
+    total_events = events.count()
+    pending_requests = LaborRequest.objects.filter(
+        availability_response__isnull=True).count()
+    declined_requests = LaborRequest.objects.filter(
+        availability_response='no').count()
+    labor_requirements = LaborRequirement.objects.select_related(
+        'labor_type', 'call_time__event').annotate(
+        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+    unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
+    current_date = timezone.now()
+    start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (start_of_month + timedelta(days=32)).replace(day=1)
+    sent_messages = SentSMS.objects.filter(
+        datetime_sent__gte=start_of_month,
+        datetime_sent__lt=next_month).count()
+    event_labor_needs = {}
+    for event in events:
+        event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
+        unfilled_requirements = [
+            lr for lr in event_requirements if lr.confirmed_count < lr.needed_labor]
+        unfilled_count = len(unfilled_requirements)
+        total_unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in unfilled_requirements)
+        if unfilled_count > 3:
+            labor_needs_text = f"{unfilled_count} unfilled, {total_unfilled_spots} total labor needed"
+        elif unfilled_count > 0:
+            labor_needs_text = ", ".join(
+                f"{lr.labor_type.name}: {max(0, lr.needed_labor - lr.confirmed_count)} needed"
+                for lr in unfilled_requirements)
+        else:
+            labor_needs_text = "All calls filled"
+        event_labor_needs[event.id] = {
+            'unfilled_count': unfilled_count,
+            'total_unfilled_spots': total_unfilled_spots,
+            'labor_needs_text': labor_needs_text}
+    context = {
+        'events': events,
+        'total_events': total_events,
+        'pending_requests': pending_requests,
+        'sent_messages': sent_messages,
+        'declined': declined_requests,
+        'unfilled_spots': unfilled_spots,
+        'event_labor_needs': event_labor_needs,
+        'search_query': search_query,
+        'include_past': include_past}
+    return render(request, 'callManager/admin_dashboard.html', context)
+
+@login_required
+def admin_search_events(request):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('login')
+    yesterday = timezone.now().date() - timedelta(days=1)
+    search_query = request.GET.get('search', '').strip().lower()
+    include_past = request.GET.get('include_past', '') == 'on'
+    events = Event.objects.all()
+    if not include_past:
+        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
+    if search_query:
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
+            'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12}
+        terms = search_query.split()
+        for term in terms:
+            term_filter = Q()
+            if term in month_map:
+                term_filter = Q(start_date__month=month_map[term])
+            elif term.isdigit() and len(term) == 4:
+                term_filter = Q(start_date__year=int(term))
+            elif re.match(r'\d{4}-\d{2}-\d{2}', term):
+                try:
+                    search_date = datetime.strptime(term, '%Y-%m-%d').date()
+                    term_filter = Q(start_date__exact=search_date) | Q(end_date__exact=search_date)
+                except ValueError:
+                    pass
+            else:
+                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+            events = events.filter(term_filter)
+    events = events.order_by('start_date').distinct()
+    labor_requirements = LaborRequirement.objects.select_related(
+        'labor_type', 'call_time__event').annotate(
+        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+    event_labor_needs = {}
+    for event in events:
+        event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
+        unfilled_requirements = [
+            lr for lr in event_requirements if lr.confirmed_count < lr.needed_labor]
+        unfilled_count = len(unfilled_requirements)
+        total_unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in unfilled_requirements)
+        if unfilled_count > 3:
+            labor_needs_text = f"{unfilled_count} unfilled, {total_unfilled_spots} total labor needed"
+        elif unfilled_count > 0:
+            labor_needs_text = ", ".join(
+                f"{lr.labor_type.name}: {max(0, lr.needed_labor - lr.confirmed_count)} needed"
+                for lr in unfilled_requirements)
+        else:
+            labor_needs_text = "All calls filled"
+        event_labor_needs[event.id] = {
+            'unfilled_count': unfilled_count,
+            'total_unfilled_spots': total_unfilled_spots,
+            'labor_needs_text': labor_needs_text}
+    context = {
+        'events': events,
+        'event_labor_needs': event_labor_needs,
+        'search_query': search_query,
+        'include_past': include_past}
+    return render(request, 'callManager/events_list_partial.html', context)
 
 
 @login_required
@@ -520,11 +683,14 @@ def view_skills(request):
         elif 'add_skill' in request.POST:
             form = SkillForm(request.POST)
             if form.is_valid():
+
                 skill = form.save(commit=False)
+                skill.name = skill.name.title()
 
                 if skill.name not in skills.values_list('name', flat=True):
                     skill.company = manager.company
                     skill.save()
+                    messages.success(request, f"Skill {skill.name} added successfully.")
                     return redirect('view_skills')
                 else:
                     messages.error(request, "Skill already exists.")
@@ -583,6 +749,9 @@ def view_workers(request):
         elif 'add_worker' in request.POST:
             form = WorkerForm(request.POST, company=manager.company)
             if form.is_valid():
+                if Worker.objects.filter(phone_number=form.cleaned_data['phone_number'], companies=manager.company).exists():
+                    messages.error(request, "Worker with this phone number already exists.")
+                    return redirect('view_workers')
                 worker = form.save(commit=False)
                 worker.save()
                 worker.add_company(manager.company)
@@ -934,9 +1103,13 @@ def import_workers(request):
                             if current_phone:
                                 current_phone = current_phone.replace(' ', '').replace('-', '')
                                 if current_phone.startswith('1') and len(current_phone) == 11:
-                                    current_phone = f"+{current_phone}"
-                                elif not current_phone.startswith('+') and len(current_phone) == 10:
-                                    current_phone = f"+1{current_phone}"
+                                    current_phone = current_phone[1:]
+                                if current_phone.startswith('+') and len(current_phone) == 12:
+                                    current_phone = current_phone[2:]
+                                # if current_phone.startswith('1') and len(current_phone) == 11:
+                                #     current_phone = f"+{current_phone}"
+                                # elif not current_phone.startswith('+') and len(current_phone) == 10:
+                                #     current_phone = f"+1{current_phone}"
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
                                 defaults={'name': current_name.strip() if current_name else None})
@@ -1903,53 +2076,91 @@ def call_time_report(request, slug):
         'selected_labor_type': labor_type_filter}
     return render(request, 'callManager/call_time_report.html', context)
 
+
 @login_required
 def sms_usage_report(request):
     manager = request.user.manager
     daily_counts = SentSMS.objects.filter(
-        company=manager.company
-    ).annotate(
-        date=TruncDate('datetime_sent')
-    ).values(
-        'company__name', 'date'
-    ).annotate(
-        count=Count('id')
-    ).order_by(
+        company=manager.company).annotate(
+        date=TruncDate('datetime_sent')).values(
+        'company__name', 'date').annotate(
+        count=Count('id')).order_by(
         'company__name', '-date')
     monthly_counts = SentSMS.objects.filter(
-        company=manager.company
-    ).annotate(
-        month=TruncMonth('datetime_sent')
-    ).values(
-        'company__name', 'month'
-    ).annotate(
-        count=Count('id')
-    ).order_by(
+        company=manager.company).annotate(
+        month=TruncMonth('datetime_sent')).values(
+        'company__name', 'month').annotate(
+        count=Count('id')).order_by(
         'company__name', '-month')
     monthly_daily_data = {}
+    monthly_counts_with_keys = []
     for month_entry in monthly_counts:
         month = month_entry['month']
+        key = month.strftime('%Y-%m')
         daily_data = SentSMS.objects.filter(
             company=manager.company,
             datetime_sent__year=month.year,
-            datetime_sent__month=month.month
-        ).annotate(
-            date=TruncDate('datetime_sent')
-        ).values(
-            'date'
-        ).annotate(
-            count=Count('id')
-        ).order_by(
-            'date')
-        monthly_daily_data[month.strftime('%Y-%m')] = [
+            datetime_sent__month=month.month).annotate(
+            date=TruncDate('datetime_sent')).values(
+            'date').annotate(
+            count=Count('id')).order_by('date')
+        monthly_daily_data[key] = [
             {'date': entry['date'].strftime('%Y-%m-%d'), 'count': entry['count']}
             for entry in daily_data]
+        monthly_counts_with_keys.append({
+            'company__name': month_entry['company__name'],
+            'month': month,
+            'count': month_entry['count'],
+            'chart_key': key})
     context = {
         'daily_counts': daily_counts,
-        'monthly_counts': monthly_counts,
+        'monthly_counts': monthly_counts_with_keys,
         'monthly_daily_data': monthly_daily_data,
         'company': manager.company}
     return render(request, 'callManager/sms_usage_report.html', context)
+
+
+@login_required
+def admin_sms_usage_report(request):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('login')
+    daily_counts = SentSMS.objects.annotate(
+        date=TruncDate('datetime_sent')).values(
+        'company__name', 'date').annotate(
+        count=Count('id')).order_by(
+        'company__name', '-date')
+    monthly_counts = SentSMS.objects.annotate(
+        month=TruncMonth('datetime_sent')).values(
+        'company__name', 'month').annotate(
+        count=Count('id')).order_by(
+        'company__name', '-month')
+    monthly_daily_data = {}
+    monthly_counts_with_keys = []
+    for month_entry in monthly_counts:
+        month = month_entry['month']
+        company_name = month_entry['company__name']
+        key = f"{company_name}_{month.strftime('%Y-%m')}"
+        daily_data = SentSMS.objects.filter(
+            company__name=company_name,
+            datetime_sent__year=month.year,
+            datetime_sent__month=month.month).annotate(
+            date=TruncDate('datetime_sent')).values(
+            'date').annotate(
+            count=Count('id')).order_by('date')
+        monthly_daily_data[key] = [
+            {'date': entry['date'].strftime('%Y-%m-%d'), 'count': entry['count']}
+            for entry in daily_data]
+        monthly_counts_with_keys.append({
+            'company__name': company_name,
+            'month': month,
+            'count': month_entry['count'],
+            'chart_key': key})
+    context = {
+        'daily_counts': daily_counts,
+        'monthly_counts': monthly_counts_with_keys,
+        'monthly_daily_data': monthly_daily_data}
+    return render(request, 'callManager/admin_sms_usage_report.html', context)
+
 
 @login_required
 def send_clock_in_link(request, slug):
@@ -2120,3 +2331,52 @@ def worker_clock_in_out(request, token):
         'token': token,
         'no_call_times_message': no_call_times_message}
     return render(request, 'callManager/worker_clock_in_out.html', context)
+
+
+@login_required
+def owner_dashboard(request):
+    if not hasattr(request.user, 'owner'):
+        return redirect('login')
+    owner = request.user.owner
+    if request.method == "POST":
+        phone = request.POST.get('phone')
+        if phone:
+            invitation = ManagerInvitation.objects.create(company=owner.company)
+            registration_url = request.build_absolute_uri(reverse('register_manager', args=[str(invitation.token)]))
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+            message_body = f'You are invited to become a manager for {owner.company.name}. Register: {registration_url}'
+            if settings.TWILIO_ENABLED == 'enabled' and client:
+                try:
+                    client.messages.create(
+                        body=message_body,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=phone)
+                    log_sms(owner.company)
+                    messages.success(request, f"Invitation sent to {phone}.")
+                except TwilioRestException as e:
+                    messages.error(request, f"Failed to send invitation: {str(e)}")
+            else:
+                log_sms(owner.company)
+                print(message_body)
+                messages.success(request, f"Invitation printed for {phone}.")
+        else:
+            messages.error(request, "Please provide a phone number.")
+    return render(request, 'callManager/owner_dashboard.html')
+
+def register_manager(request, token):
+    invitation = get_object_or_404(ManagerInvitation, token=token, used=False)
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            Manager.objects.create(user=user, company=invitation.company)
+            invitation.used = True
+            invitation.save()
+            user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
+            login(request, user)
+            messages.success(request, "Registration successful. You are now a manager.")
+            return redirect('manager_dashboard')
+    else:
+        form = UserCreationForm()
+    context = {'form': form, 'invitation': invitation}
+    return render(request, 'callManager/register_manager.html', context)

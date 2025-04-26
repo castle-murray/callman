@@ -1,5 +1,19 @@
 from django.contrib import admin
-from .models import Event, CallTime, LaborRequirement, LaborType, SentSMS, Worker, Manager, LaborRequest, TimeEntry, MealBreak, Company
+from .models import (
+        Event,
+        CallTime,
+        LaborRequirement,
+        LaborType,
+        SentSMS,
+        Worker,
+        Manager,
+        LaborRequest,
+        TimeEntry,
+        MealBreak,
+        Company,
+        Owner,
+        Administrator,
+        )
 
     
     
@@ -17,6 +31,19 @@ class CompanyAdmin(admin.ModelAdmin):
             'fields': ('meal_penalty_trigger_time', 'hour_round_up')
         }),
     )
+
+@admin.register(Owner)
+class OwnerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'company__name')
+    list_filter = ('company',)
+
+
+@admin.register(Administrator)
+class AdministratorAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+    
+
 
 # Inline for MealBreak in TimeEntryAdmin
 class MealBreakInline(admin.TabularInline):

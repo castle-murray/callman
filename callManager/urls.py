@@ -45,4 +45,9 @@ urlpatterns = [
     path('event/<slug:slug>/scan-qr/', views.scan_qr_code, name='scan_qr_code'),
     path('clock-in/<uuid:token>/', views.worker_clock_in_out, name='worker_clock_in_out'),
     path('workers/search/', views.search_workers, name='search_workers'),
+    path('owner/', views.owner_dashboard, name='owner_dashboard'),
+    path('manager/register/<uuid:token>/', views.register_manager, name='register_manager'),
+    path('callman-admin/', views.admin_dashboard, name='admin_dashboard'),
+    path('callman-admin/search-events/', views.admin_search_events, name='admin_search_events'),
+    path('callman-admin/sms-usage/', views.admin_sms_usage_report, name='admin_sms_usage_report'),
 ]

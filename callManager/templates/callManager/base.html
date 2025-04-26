@@ -22,6 +22,12 @@
                     <div class="flex items-center space-x-4">
                         {% if user.is_authenticated %}
                         <span class="text-text-tertiary dark:text-dark-text-tertiary">Hello, {{ user.get_full_name|default:user.username }}</span>
+                        {% if request.user.administrator %}
+                            <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin Dashboard</a></li>
+                        {% endif %}
+                        {% if request.user.owner %}
+                            <li><a href="{% url 'owner_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Owner Dashboard</a></li>
+                        {% endif %}
                         <a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a>
                         <form method="post" action="{% url 'logout' %}" style="display:inline;">
                             {% csrf_token %}

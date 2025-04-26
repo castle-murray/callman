@@ -1,14 +1,15 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
-{% block title %}SMS Usage Report - {{ company.name }}{% endblock %}
+{% block title %}Admin SMS Usage Report - CallMan{% endblock %}
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">SMS Usage Report for {{ company.name }}</h1>
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Admin SMS Usage Report</h1>
         <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Daily SMS Counts</h2>
         {% if daily_counts %}
             <table class="w-full mb-4 border-collapse">
                 <thead>
                     <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Company</th>
                         <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Date</th>
                         <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">SMS Sent</th>
                     </tr>
@@ -16,6 +17,7 @@
                 <tbody>
                     {% for entry in daily_counts %}
                         <tr class="border-b dark:border-dark-border">
+                            <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.company__name }}</td>
                             <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.date|date:"Y-m-d" }}</td>
                             <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.count }}</td>
                         </tr>
@@ -23,28 +25,30 @@
                 </tbody>
             </table>
         {% else %}
-            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No SMS sent for this company.</p>
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No SMS sent across companies.</p>
         {% endif %}
         <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Monthly SMS Counts</h2>
         {% for entry in monthly_counts %}
             <table class="w-full mb-4 border-collapse">
                 <thead>
                     <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Company</th>
                         <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">Month</th>
                         <th class="p-2 text-left text-text-heading dark:text-dark-text-primary">SMS Sent</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="border-b dark:border-dark-border">
+                        <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.company__name }}</td>
                         <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.month|date:"Y-m" }}</td>
                         <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ entry.count }}</td>
                     </tr>
                 </tbody>
             </table>
-            <h3 class="text-lg font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Daily Sends for {{ entry.month|date:"F Y" }}</h3>
-            <canvas id="chart-{{ entry.chart_key }}" width="400" height="200"></canvas>
+            <h3 class="text-lg font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Daily Sends for {{ entry.company__name }} - {{ entry.month|date:"F Y" }}</h3>
+            <canvas id="chart-{{ entry.chart_key|slugify }}" width="400" height="200"></canvas>
             <script>
-                var ctx = document.getElementById('chart-{{ entry.chart_key }}').getContext('2d');
+                var ctx = document.getElementById('chart-{{ entry.chart_key|slugify }}').getContext('2d');
                 var chart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -67,7 +71,7 @@
                 });
             </script>
         {% empty %}
-            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No SMS sent for this company.</p>
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No SMS sent across companies.</p>
         {% endfor %}
     </div>
 {% endblock %}

@@ -1,13 +1,13 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
 
-{% block title %}View Skills - CallMan{% endblock %}
+{% block title %}Skill List - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">View Skills</h1>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Skill List</h1>
     {% if messages %}
     {% for message in messages %}
-    <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
+    <p class="justify-around text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
     {% endfor %}
     {% endif %}
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
@@ -19,7 +19,7 @@
             {{ add_form.name }}
             <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ml-2">Add</button>
         </form>
-        <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Current Skills</h2>
+        <h2 class="text-xl font-semibold my-4 text-text-heading dark:text-dark-text-primary">Current Skills</h2>
         {% if skills %}
             <ul class="space-y-4">
                 {% for skill in skills %}

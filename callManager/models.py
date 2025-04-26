@@ -13,6 +13,11 @@ def generate_unique_slug(model_class, length=7):
         if not model_class.objects.filter(slug=slug).exists():
             return slug
 
+class Administrator(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='administrator')
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} (Administrator)"
+
 # Company model (e.g., "ABC Production Co.")
 class Company(models.Model):
     name = models.CharField(max_length=200)
@@ -30,6 +35,22 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+
+class Owner(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='owner')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='owners')
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} (Owner)"
+
+
+class ManagerInvitation(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='invitations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    def __str__(self):
+        return f"Invitation for {self.company.name} ({self.token})"
+
 
 class SentSMS(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='sent_sms')

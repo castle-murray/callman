@@ -1,22 +1,22 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
-{% block title %}Manager Dashboard - {{ company.name }}{% endblock %}
+{% block title %}Admin Dashboard - CallMan{% endblock %}
 {% block content %}
-    <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">{{ company.name }} Dashboard</h1>
+    <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Admin Dashboard</h1>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
             <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Total Events</h2>
             <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ total_events }}</p>
         </div>
-        <a href="{% url 'pending_requests' %}" class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
             <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Pending Requests</h2>
             <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ pending_requests }}</p>
-        </a>
-        <a href="{% url 'declined_requests' %}" class="block bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        </div>
+        <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
             <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Declined</h2>
             <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ declined }}</p>
-        </a>
-        <a href="{% url 'sms_usage_report' %}" class="block bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        </div>
+        <a href="{% url 'admin_sms_usage_report' %}" class="block bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
             <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Sent Messages</h2>
             <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ sent_messages }}</p>
         </a>
@@ -30,9 +30,20 @@
     <div class="bg-card-bg p-6 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Upcoming Events</h2>
         <form method="get" class="mb-4 flex items-center space-x-4">
-            <input type="text" name="search" value="{{ search_query }}" placeholder="Search by name, month, date, or location" class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border" hx-get="{% url 'search_events' %}" hx-target="#events-list" hx-swap="outerHTML" hx-trigger="keyup changed delay:300ms, change" hx-include="[name='include_past']">
+            <input type="text" name="search" value="{{ search_query }}" placeholder="Search by name, month, date, or location" 
+                   class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border" 
+                   hx-get="{% url 'admin_search_events' %}" 
+                   hx-target="#events-list" 
+                   hx-swap="outerHTML" 
+                   hx-trigger="keyup changed delay:300ms, change" 
+                   hx-include="[name='include_past']">
             <label class="flex items-center text-text-primary dark:text-dark-text-primary">
-                <input type="checkbox" name="include_past" {% if include_past %}checked{% endif %} class="h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue" hx-get="{% url 'search_events' %}" hx-target="#events-list" hx-swap="outerHTML" hx-trigger="change">
+                <input type="checkbox" name="include_past" {% if include_past %}checked{% endif %} 
+                       class="h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue" 
+                       hx-get="{% url 'admin_search_events' %}" 
+                       hx-target="#events-list" 
+                       hx-swap="outerHTML" 
+                       hx-trigger="change">
                 <span class="ml-2">Include Past Shows</span>
             </label>
         </form>
