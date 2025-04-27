@@ -753,6 +753,10 @@ def view_workers(request):
                     messages.error(request, "Worker with this phone number already exists.")
                     return redirect('view_workers')
                 worker = form.save(commit=False)
+                if worker.phone_number.startswith('1') and len(worker.phone_number) == 11:
+                    worker.phone_number = f"+{worker.phone_number}"
+                elif not worker.phone_number.startswith('+') and len(worker.phone_number) == 10:
+                    worker.phone_number = f"+1{worker.phone_number}"
                 worker.save()
                 worker.add_company(manager.company)
                 messages.success(request, f"Worker {worker.name} added successfully.")
