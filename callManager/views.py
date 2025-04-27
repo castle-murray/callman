@@ -1102,14 +1102,14 @@ def import_workers(request):
                         if current_name or current_phone:
                             if current_phone:
                                 current_phone = current_phone.replace(' ', '').replace('-', '')
+                                #if current_phone.startswith('1') and len(current_phone) == 11:
+                                #    current_phone = current_phone[1:]
+                                #if current_phone.startswith('+') and len(current_phone) == 12:
+                                #    current_phone = current_phone[2:]
                                 if current_phone.startswith('1') and len(current_phone) == 11:
-                                    current_phone = current_phone[1:]
-                                if current_phone.startswith('+') and len(current_phone) == 12:
-                                    current_phone = current_phone[2:]
-                                # if current_phone.startswith('1') and len(current_phone) == 11:
-                                #     current_phone = f"+{current_phone}"
-                                # elif not current_phone.startswith('+') and len(current_phone) == 10:
-                                #     current_phone = f"+1{current_phone}"
+                                    current_phone = f"+{current_phone}"
+                                elif not current_phone.startswith('+') and len(current_phone) == 10:
+                                    current_phone = f"+1{current_phone}"
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
                                 defaults={'name': current_name.strip() if current_name else None})
