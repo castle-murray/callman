@@ -1,16 +1,9 @@
-{% load static tailwind_tags %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign-In Scanner - {{ event.event_name }}</title>
-    {% tailwind_css %}
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-</head>
-<body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
-    <div class="max-w-md w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Sign-In Scanner for {{ event.event_name }}</h1>
+{% extends 'callManager/base.html' %}
+{% block title %}Scan QR Code - {{ event.event_name }}{% endblock %}
+{% block content %}
+    <div class="max-w-2xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Scan QR Code for {{ event.event_name }}</h1>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Use the iPad camera to scan a worker's QR code.</p>
         <div class="mb-4">
             <label for="camera-select" class="block text-text-primary dark:text-dark-text-primary mb-2">Select Camera:</label>
             <select id="camera-select" class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
@@ -19,89 +12,122 @@
         </div>
         <div id="qr-reader" class="mb-4"></div>
         <div id="error-message" class="text-text-red mb-4 dark:text-dark-text-red hidden"></div>
-        <script>
-            const html5QrCode = new Html5Qrcode("qr-reader");
-            let currentStream = null;
+        {% if messages %}
+            <div id="messages" class="fixed inset-0 flex items-center justify-center space-y-2 z-50 pointer-events-none">
+                {% for message in messages %}
+                    <div class="message bg-card-bg text-text-{% if message.tags == 'success' %}green{% else %}red{% endif %} dark:bg-dark-card-bg dark:text-dark-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %} p-4 rounded-lg shadow-md opacity-100 transition-opacity duration-500 max-w-md text-center">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+    </div>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        const html5QrCode = new Html5Qrcode("qr-reader");
 
-            function stopCurrentStream() {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
-                    currentStream = null;
-                }
-            }
-
-            function startScanner(cameraId) {
-                stopCurrentStream();
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                html5QrCode.start(
-                    cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
-                    config,
-                    (decodedText) => {
-                        try {
-                            const tokenMatch = decodedText.match(/\/clock-in\/([0-9a-f-]{36})\//);
-                            if (tokenMatch && tokenMatch[1]) {
-                                window.location.href = `/clock-in/${tokenMatch[1]}/`;
-                            } else {
-                                document.getElementById('error-message').textContent = 'Invalid QR code format.';
-                                document.getElementById('error-message').classList.remove('hidden');
-                            }
-                        } catch (e) {
-                            document.getElementById('error-message').textContent = 'Error processing QR code.';
+        function startScanner(cameraId) {
+            console.log(`Starting scanner with cameraId: ${cameraId || 'default (environment)'}`);
+            html5QrCode.start(
+                cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    try {
+                        const tokenMatch = decodedText.match(/\/clock-in\/([0-9a-f-]{36})\//);
+                        if (tokenMatch && tokenMatch[1]) {
+                            console.log(`Valid QR code scanned: /clock-in/${tokenMatch[1]}/`);
+                            window.location.href = `/clock-in/${tokenMatch[1]}/`;
+                        } else {
+                            console.log('Invalid QR code format');
+                            document.getElementById('error-message').textContent = 'Invalid QR code format.';
                             document.getElementById('error-message').classList.remove('hidden');
                         }
-                    },
-                    (error) => {
-                        console.warn(`QR scan error: ${error}`);
+                    } catch (e) {
+                        console.log('Error processing QR code:', e);
+                        document.getElementById('error-message').textContent = 'Error processing QR code.';
+                        document.getElementById('error-message').classList.remove('hidden');
                     }
-                ).catch(err => {
-                    document.getElementById('error-message').textContent = 'Failed to access camera: ' + err;
-                    document.getElementById('error-message').classList.remove('hidden');
-                });
-            }
+                },
+                (error) => {
+                    console.warn(`QR scan error: ${error}`);
+                }
+            ).catch(err => {
+                console.error('Failed to start scanner:', err);
+                document.getElementById('error-message').textContent = 'Failed to access camera: ' + err;
+                document.getElementById('error-message').classList.remove('hidden');
+            });
+        }
 
-            function populateCameraSelect() {
-                navigator.mediaDevices.enumerateDevices().then(devices => {
-                    const cameraSelect = document.getElementById('camera-select');
-                    cameraSelect.innerHTML = '<option value="">Select a camera</option>';
-                    devices.forEach(device => {
-                        if (device.kind === 'videoinput') {
-                            const option = document.createElement('option');
-                            option.value = device.deviceId;
-                            option.text = device.label || `Camera ${cameraSelect.options.length}`;
-                            cameraSelect.appendChild(option);
-                        }
-                    });
-                    if (cameraSelect.options.length > 1) {
-                        cameraSelect.value = ''; // Default to no selection
-                        startScanner(null); // Start with default (rear) camera
-                    }
-                }).catch(err => {
-                    console.error('Error enumerating devices:', err);
-                    document.getElementById('error-message').textContent = 'Failed to list cameras: ' + err;
-                    document.getElementById('error-message').classList.remove('hidden');
+        function populateCameraSelect() {
+            Html5Qrcode.getCameras().then(devices => {
+                console.log(`Found ${devices.length} cameras`);
+                const cameraSelect = document.getElementById('camera-select');
+                cameraSelect.innerHTML = '<option value="">Select a camera</option>';
+                devices.forEach(device => {
+                    console.log(`Camera: ${device.label || 'Unnamed'} (ID: ${device.id})`);
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.text = device.label || `Camera ${cameraSelect.options.length}`;
+                    cameraSelect.appendChild(option);
                 });
-            }
+                if (devices.length > 0) {
+                    cameraSelect.value = devices[0].id; // Default to first camera
+                    startScanner(devices[0].id);
+                } else {
+                    console.log('No cameras found');
+                    document.getElementById('error-message').textContent = 'No cameras detected. Please ensure camera access is allowed.';
+                    document.getElementById('error-message').classList.remove('hidden');
+                }
+            }).catch(err => {
+                console.error('Error enumerating cameras:', err);
+                document.getElementById('error-message').textContent = 'Failed to list cameras: ' + err;
+                document.getElementById('error-message').classList.remove('hidden');
+                startScanner(null); // Fallback to default
+            });
+        }
 
-            document.getElementById('camera-select').addEventListener('change', (event) => {
-                const cameraId = event.target.value;
+        document.getElementById('camera-select').addEventListener('change', (event) => {
+            const cameraId = event.target.value;
+            console.log(`Camera selected: ${cameraId || 'default'}`);
+            html5QrCode.stop().then(() => {
+                console.log('Previous scanner stopped');
                 if (cameraId) {
                     startScanner(cameraId);
                 } else {
-                    stopCurrentStream();
                     startScanner(null);
                 }
+            }).catch(err => {
+                console.error('Error stopping scanner:', err);
+                document.getElementById('error-message').textContent = 'Failed to switch camera: ' + err;
+                document.getElementById('error-message').classList.remove('hidden');
             });
+        });
 
-            document.addEventListener('DOMContentLoaded', () => {
-                if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+        document.addEventListener('DOMContentLoaded', () => {
+            if ('mediaDevices' in navigator && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true }).then(() => {
+                    console.log('Camera permission granted');
                     populateCameraSelect();
-                } else {
-                    document.getElementById('error-message').textContent = 'Camera selection not supported in this browser.';
+                }).catch(err => {
+                    console.error('Camera permission denied:', err);
+                    document.getElementById('error-message').textContent = 'Camera access denied: ' + err;
                     document.getElementById('error-message').classList.remove('hidden');
-                    startScanner(null); // Fallback to default
-                }
+                    startScanner(null);
+                });
+            } else {
+                console.log('MediaDevices not supported');
+                document.getElementById('error-message').textContent = 'Camera selection not supported in this browser.';
+                document.getElementById('error-message').classList.remove('hidden');
+                startScanner(null);
+            }
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(message => {
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    setTimeout(() => message.remove(), 500);
+                }, 3000);
             });
-        </script>
-    </div>
-</body>
-</html>
+        });
+    </script>
+{% endblock %}
