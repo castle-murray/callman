@@ -553,10 +553,6 @@ def steward_invite(request):
         return redirect('login')
     manager = request.user.manager
     company = manager.company
-    search_query = request.GET.get('search', '').strip()
-    workers = Worker.objects.filter(companies=company).order_by('name')
-    if search_query:
-        workers = workers.filter(Q(name__icontains=search_query) | Q(phone_number__icontains=search_query))
     if request.method == "POST":
         worker_id = request.POST.get('worker_id')
         if worker_id:
@@ -582,11 +578,27 @@ def steward_invite(request):
             return redirect('manager_dashboard')
         else:
             messages.error(request, "Please select a worker.")
+    workers = Worker.objects.filter(companies=company).order_by('name')
     context = {
         'workers': workers,
-        'search_query': search_query,
+        'search_query': '',
         'company': company}
     return render(request, 'callManager/steward_invite.html', context)
+
+@login_required
+def steward_invite_search(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    search_query = request.GET.get('search', '').strip()
+    workers = Worker.objects.filter(companies=company).order_by('name')
+    if search_query:
+        workers = workers.filter(Q(name__icontains=search_query) | Q(phone_number__icontains=search_query))
+    context = {
+        'workers': workers,
+        'search_query': search_query}
+    return render(request, 'callManager/steward_invite_partial.html', context)
 
 @login_required
 def register_steward(request, token):

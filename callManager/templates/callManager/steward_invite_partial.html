@@ -1,0 +1,18 @@
+<div id="worker-list">
+    {% if workers %}
+        <ul class="space-y-2">
+            {% for worker in workers %}
+                <li class="flex items-center justify-between border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
+                    <span>{{ worker.name|default:"Unnamed Worker" }} {{ worker.formatted_phone_number }}</span>
+                    <form method="post" action="{% url 'steward_invite' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="worker_id" value="{{ worker.id }}">
+                        <button type="submit" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Invite as Steward</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-text-secondary dark:text-dark-text-secondary">No workers found.</p>
+    {% endif %}
+</div>

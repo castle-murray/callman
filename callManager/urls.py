@@ -57,4 +57,5 @@ urlpatterns = [
     path('steward/register/<uuid:token>/', views.register_steward, name='register_steward'),
     path('event/<slug:slug>/generate-signin-qr/', views.generate_signin_qr, name='generate_signin_qr'),
     path('signin-station/<uuid:token>/', views.signin_station, name='signin_station'),
+    path('steward/invite/search/', views.steward_invite_search, name='steward_invite_search'),
 ]
