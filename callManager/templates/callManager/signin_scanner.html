@@ -1,29 +1,46 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign-In Scanner - {{ event.event_name }}</title>
-    <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    {% tailwind_css %}
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
     <div class="max-w-md w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Sign-In Scanner for {{ event.event_name }}</h1>
         <div id="qr-reader" class="mb-4"></div>
+        <div id="error-message" class="text-text-red mb-4 dark:text-dark-text-red hidden"></div>
         <script>
+            function onScanSuccess(decodedText, decodedResult) {
+                try {
+                    const tokenMatch = decodedText.match(/\/clock-in\/([0-9a-f-]{36})\//);
+                    if (tokenMatch && tokenMatch[1]) {
+                        window.location.href = `/clock-in/${tokenMatch[1]}/`;
+                    } else {
+                        document.getElementById('error-message').textContent = 'Invalid QR code format.';
+                        document.getElementById('error-message').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    document.getElementById('error-message').textContent = 'Error processing QR code.';
+                    document.getElementById('error-message').classList.remove('hidden');
+                }
+            }
+            function onScanFailure(error) {
+                console.warn(`QR scan error: ${error}`);
+            }
             const html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    window.location.href = decodedText;
-                },
-                (errorMessage) => {
-                    console.warn(errorMessage);
-                }
-            ).catch((err) => {
-                console.error("QR Code scanning failed: ", err);
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                document.getElementById('error-message').textContent = 'Failed to access camera: ' + err;
+                document.getElementById('error-message').classList.remove('hidden');
             });
         </script>
     </div>

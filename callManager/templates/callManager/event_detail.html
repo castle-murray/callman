@@ -11,13 +11,11 @@
 </div>
 {% endif %}
 <div class="mb-6 ml-5 flex space-x-4">
-    {% if not user.steward %}
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="send_messages" value="true">
         <button type="submit" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send Messages</button>
     </form>
-    {% endif %}
     {% if company.time_tracking %}
     <form method="post" action="{% url 'send_clock_in_link' event.slug %}">
         {% csrf_token %}

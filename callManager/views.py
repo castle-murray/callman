@@ -2409,6 +2409,7 @@ def manager_display_qr_code(request, slug, worker_slug):
         'qr_code_data': base64.b64encode(buffer.getvalue()).decode('utf-8')}
     return render(request, 'callManager/display_qr_code.html', context)
 
+
 @login_required
 def worker_clock_in_out(request, token):
     token_obj = get_object_or_404(ClockInToken, token=token)
@@ -2417,6 +2418,13 @@ def worker_clock_in_out(request, token):
     event = token_obj.event
     worker = token_obj.worker
     company = event.company
+    # Store referer in session on GET, use session referer for redirects
+    if request.method == "GET":
+        referer = request.META.get('HTTP_REFERER', reverse('scan_qr_code', kwargs={'slug': event.slug}))
+        request.session['clock_in_referer'] = referer
+        print(f"Stored Referer: {referer}")
+    referer = request.session.get('clock_in_referer', reverse('scan_qr_code', kwargs={'slug': event.slug}))
+    print(f"Using Referer: {referer}")
     if request.method == "POST":
         call_time_id = request.POST.get('call_time_id')
         action = request.POST.get('action')
@@ -2445,7 +2453,7 @@ def worker_clock_in_out(request, token):
             messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")
         else:
             messages.error(request, "Invalid action or time entry state.")
-        return redirect('scan_qr_code', slug=event.slug)
+        return redirect(referer)
     now = timezone.now()
     one_hour_before = now - timedelta(hours=1)
     one_hour_after = now + timedelta(hours=1)

@@ -1,7 +1,14 @@
-{% extends 'callManager/base.html' %}
-{% block title %}Clock In/Out - {{ event.event_name }}{% endblock %}
-{% block content %}
-    <div class="max-w-2xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clock In/Out - {{ event.event_name }}</title>
+    {% tailwind_css %}
+</head>
+<body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
+    <div class="max-w-2xl w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Clock In/Out for {{ worker.name }} - {{ event.event_name }}</h1>
         {% if messages %}
             {% for message in messages %}
@@ -10,6 +17,11 @@
         {% endif %}
         {% if no_call_times_message %}
             <p class="text-text-red mb-4 dark:text-dark-text-red">{{ no_call_times_message }}</p>
+            <script>
+                setTimeout(() => {
+                    window.location.href = "{{ request.META.HTTP_REFERER|default:'/manager/' }}";
+                }, 5000);
+            </script>
         {% else %}
             <form method="post" class="space-y-4">
                 {% csrf_token %}
@@ -31,4 +43,5 @@
             </form>
         {% endif %}
     </div>
-{% endblock %}
+</body>
+</html>
