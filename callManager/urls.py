@@ -55,4 +55,6 @@ urlpatterns = [
     path('event/<slug:slug>/assign-steward/', views.assign_steward, name='assign_steward'),
     path('steward/invite/', views.steward_invite, name='steward_invite'),
     path('steward/register/<uuid:token>/', views.register_steward, name='register_steward'),
+    path('event/<slug:slug>/generate-signin-qr/', views.generate_signin_qr, name='generate_signin_qr'),
+    path('signin-station/<uuid:token>/', views.signin_station, name='signin_station'),
 ]

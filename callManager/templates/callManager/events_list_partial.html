@@ -6,7 +6,7 @@
                 <div class="border-b p-2 rounded-md pb-4 dark:border-dark-border-dark {% if event_labor_needs|get_item:event.id|get_item:'unfilled_count' == 0 %}bg-filled-event-gradient dark:bg-dark-filled-event-gradient{% endif %}">
                     <a href="{% url 'event_detail' event.slug %}" class="block cursor-pointer">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-medium text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">{{ event.event_name }}{% if user.administrator %} - {{ event.company }}{% endif %} </h3>
+                            <h3 class="text-lg font-medium text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">{{ event.event_name }}{% if admindashboard %} - {{ event.company }}{% endif %} </h3>
                         </div>
                         <p class="text-text-secondary dark:text-dark-text-secondary">
                             {% if event.is_single_day %}

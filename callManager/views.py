@@ -17,6 +17,7 @@ from .models import (
         ManagerInvitation,
         Company,
         StewardInvitation,
+        TemporaryScanner,
         )
 #forms
 from .forms import (
@@ -47,6 +48,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
 # Twilio imports
@@ -185,7 +187,6 @@ def event_detail(request, slug):
                                     from_=settings.TWILIO_PHONE_NUMBER,
                                     to=str(worker.phone_number)
                                 )
-                                print(f"Sent SMS to {worker.phone_number} with token {token}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
                             finally:
@@ -257,6 +258,7 @@ def delete_event(request, slug):
 def admin_dashboard(request):
     if not hasattr(request.user, 'administrator'):
         return redirect('login')
+    admindashboard = True
     yesterday = timezone.now().date() - timedelta(days=1)
     search_query = request.GET.get('search', '').strip().lower()
     include_past = request.GET.get('include_past', '') == 'on'
@@ -362,7 +364,9 @@ def admin_dashboard(request):
         'unfilled_spots': unfilled_spots,
         'event_labor_needs': event_labor_needs,
         'search_query': search_query,
-        'include_past': include_past}
+        'include_past': include_past,
+        'admindashboard': admindashboard,
+        }
     return render(request, 'callManager/admin_dashboard.html', context)
 
 def register_owner(request, token):
@@ -392,6 +396,7 @@ def register_owner(request, token):
 def admin_search_events(request):
     if not hasattr(request.user, 'administrator'):
         return redirect('login')
+    admindashboard = True
     yesterday = timezone.now().date() - timedelta(days=1)
     search_query = request.GET.get('search', '').strip().lower()
     include_past = request.GET.get('include_past', '') == 'on'
@@ -447,7 +452,9 @@ def admin_search_events(request):
         'events': events,
         'event_labor_needs': event_labor_needs,
         'search_query': search_query,
-        'include_past': include_past}
+        'include_past': include_past,
+        'admindashboard': admindashboard,
+        }
     return render(request, 'callManager/events_list_partial.html', context)
 
 
@@ -1059,7 +1066,6 @@ def edit_call_time(request, slug):
                                         body=message_body,
                                         from_=settings.TWILIO_PHONE_NUMBER,
                                         to=str(worker.phone_number))
-                                    print(f"Sent change notification to {worker.phone_number}")
                                 except TwilioRestException as e:
                                     sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                                 finally:
@@ -1380,7 +1386,6 @@ def confirm_event_requests(request, slug, event_token):
                                         body=message_body,
                                         from_=settings.TWILIO_PHONE_NUMBER,
                                         to=str(worker.phone_number))
-                                    print(f"Sent change notification to {worker.phone_number}")
                                 except TwilioRestException as e:
                                     sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                                 finally:
@@ -1402,7 +1407,6 @@ def confirm_event_requests(request, slug, event_token):
                                     body=message_body,
                                     from_=settings.TWILIO_PHONE_NUMBER,
                                     to=str(worker.phone_number))
-                                print(f"Sent change notification to {worker.phone_number}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                             finally:
@@ -1504,7 +1508,6 @@ def labor_request_list(request, slug):
                                     body=message_body,
                                     from_=settings.TWILIO_PHONE_NUMBER,
                                     to=str(worker.phone_number))
-                                print(f"Sent change notification to {worker.phone_number}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                             finally:
@@ -1896,7 +1899,6 @@ def call_time_request_list(request, slug):
                                     body=message_body,
                                     from_=settings.TWILIO_PHONE_NUMBER,
                                     to=str(worker.phone_number))
-                                print(f"Sent change notification to {worker.phone_number}")
                             except TwilioRestException as e:
                                 sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                             finally:
@@ -1981,7 +1983,6 @@ def call_time_tracking(request, slug):
                     end_time = end_time.replace(minute=0, second=0, microsecond=0)
                 time_entry.end_time = end_time
                 time_entry.save()
-                print(f"Sign Out Time: {end_time}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                 messages.success(request, f"Signed out {worker.name}")
             elif action == 'ncns' and not was_ncns:
                 labor_request.confirmed = False
@@ -2033,17 +2034,14 @@ def call_time_tracking(request, slug):
                     if start_date <= date_obj <= end_date and time_entry.start_time <= new_time and (not time_entry.end_time or new_time <= time_entry.end_time):
                         meal_break.break_time = new_time
                         meal_break.save()
-                        print(f"Updated Meal Break: {new_time}, Type: {meal_break.break_type}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                         if request.headers.get('HX-Request'):
                             context = {'call_time': call_time, 'meal_break': meal_break}
                             return render(request, 'callManager/meal_break_display_partial.html', context)
                         messages.success(request, f"Updated meal break for {worker.name}")
                     else:
                         error_message = "Meal break time must be within the shift duration"
-                        print(f"Meal Break Validation Failed: {time_str}, Date: {date_str}, Start: {time_entry.start_time}, End: {time_entry.end_time or datetime.now()}, Worker: {worker.name}")
                 except (ValueError, TypeError) as e:
                     error_message = "Invalid date or time format for meal break"
-                    print(f"Meal Break Update Error: {str(e)}, Time: {time_str}, Date: {date_str}, Worker: {worker.name}")
                 if request.headers.get('HX-Request'):
                     context = {
                         'call_time': call_time,
@@ -2072,7 +2070,6 @@ def call_time_tracking(request, slug):
                             new_time = new_time.replace(minute=0)
                         time_entry.end_time = new_time
                     time_entry.save()
-                    print(f"Updated Time: {new_time}, Action: {action}, Normal Hours: {time_entry.normal_hours}, Meal Penalty Hours: {time_entry.meal_penalty_hours}, Worker: {worker.name}")
                     if request.headers.get('HX-Request'):
                         context = {'call_time': call_time, 'labor_request': labor_request, 'field': action.replace('update_', '')}
                         return render(request, 'callManager/time_entry_display_partial.html', context)
@@ -2552,3 +2549,30 @@ def steward_dashboard(request):
     events = Event.objects.filter(steward=steward).order_by('start_date')
     context = {'events': events}
     return render(request, 'callManager/steward_dashboard.html', context)
+
+
+@login_required
+def generate_signin_qr(request, slug):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    event = get_object_or_404(Event, slug=slug, company=request.user.manager.company)
+    if request.method == "POST":
+        temp_username = f"scanner_{uuid.uuid4().hex[:8]}"
+        temp_password = uuid.uuid4().hex[:12]
+        temp_user = User.objects.create_user(
+            username=temp_username,
+            password=temp_password)
+        scanner = TemporaryScanner.objects.create(
+            event=event,
+            user=temp_user,
+            expires_at=timezone.now() + timedelta(days=7))
+        qr_url = request.build_absolute_uri(reverse('signin_station', args=[str(scanner.token)]))
+        context = {'qr_url': qr_url, 'event': event}
+        return render(request, 'callManager/signin_qr.html', context)
+    return render(request, 'callManager/signin_qr.html', {'event': event})
+
+def signin_station(request, token):
+    scanner = get_object_or_404(TemporaryScanner, token=token, expires_at__gt=timezone.now())
+    user = scanner.user
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    return render(request, 'callManager/signin_scanner.html', {'event': scanner.event})

@@ -225,7 +225,6 @@ class Worker(models.Model):
         super().save(*args, **kwargs)
 
     def add_company(self, company):
-        print("yep")
         if not self.companies.filter(id=company.id).exists():
             self.companies.add(company)
             self.save()
@@ -366,3 +365,12 @@ class MealBreak(models.Model):
 
     def __str__(self):
         return f"{self.break_type.capitalize()} Break for {self.time_entry.worker.name} at {self.break_time}"
+
+class TemporaryScanner(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    event = models.ForeignKey('Event', on_delete=models.CASCADE, related_name='temporary_scanners')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    def __str__(self):
+        return f"Temporary Scanner for {self.event.event_name} ({self.token})"

@@ -24,11 +24,9 @@
         <button type="submit" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send QR to all</button>
     </form>
     <a href="{% url 'scan_qr_code' event.slug %}" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Scan QR Code</a>
+    <a href="{% url 'generate_signin_qr' event.slug %}" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Sign In Station</a>
     {% endif %}
 </div>
-{% if message %}
-<p class="text-text-green mb-4 dark:text-dark-text-green">{{ message }}</p>
-{% endif %}
 <div class="bg-card-bg p-6 rounded-lg shadow mb-6 dark:bg-dark-card-bg dark:shadow-dark-shadow">
     <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Date:</strong> 
     {% if event.is_single_day %}
