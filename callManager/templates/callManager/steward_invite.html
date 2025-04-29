@@ -1,0 +1,44 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Invite Steward - CallMan{% endblock %}
+{% block content %}
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Invite New Steward</h1>
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="mb-4">
+            <input type="text" 
+                   name="search" 
+                   value="{{ search_query|default:'' }}" 
+                   hx-get="{% url 'steward_invite' %}?page=1" 
+                   hx-target="#worker-list" 
+                   hx-trigger="keyup changed delay:300ms" 
+                   hx-swap="outerHTML"
+                   placeholder="Search by name or phone..." 
+                   class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary">
+        </div>
+        <div id="worker-list">
+            {% if workers %}
+                <ul class="space-y-2">
+                    {% for worker in workers %}
+                        <li class="flex items-center justify-between border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
+                            <span>{{ worker.name|default:"Unnamed Worker" }} {{ worker.formatted_phone_number }}</span>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="worker_id" value="{{ worker.id }}">
+                                <button type="submit" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Invite as Steward</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-text-secondary dark:text-dark-text-secondary">No workers found.</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Dashboard</a>
+    </div>
+{% endblock %}

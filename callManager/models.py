@@ -65,6 +65,15 @@ class Steward(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} (Steward)"
 
+class StewardInvitation(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='steward_invitations')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='steward_invitations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    def __str__(self):
+        return f"Steward Invitation for {self.company.name} ({self.token})"
+
 class SentSMS(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='sent_sms')
     datetime_sent = models.DateTimeField(auto_now_add=True)

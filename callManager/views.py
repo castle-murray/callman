@@ -16,6 +16,7 @@ from .models import (
         Manager,
         ManagerInvitation,
         Company,
+        StewardInvitation,
         )
 #forms
 from .forms import (
@@ -540,6 +541,69 @@ def manager_dashboard(request):
 
 
 @login_required
+def steward_invite(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    search_query = request.GET.get('search', '').strip()
+    workers = Worker.objects.filter(companies=company).order_by('name')
+    if search_query:
+        workers = workers.filter(Q(name__icontains=search_query) | Q(phone_number__icontains=search_query))
+    if request.method == "POST":
+        worker_id = request.POST.get('worker_id')
+        if worker_id:
+            worker = get_object_or_404(Worker, id=worker_id, companies=company)
+            invitation = StewardInvitation.objects.create(worker=worker, company=company)
+            registration_url = request.build_absolute_uri(reverse('register_steward', args=[str(invitation.token)]))
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+            message_body = f'You are invited to become a steward for {company.name}. Register: {registration_url}'
+            if settings.TWILIO_ENABLED == 'enabled' and client:
+                try:
+                    client.messages.create(
+                        body=message_body,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=worker.phone_number)
+                    log_sms(company)
+                    messages.success(request, f"Invitation sent to {worker.name}.")
+                except TwilioRestException as e:
+                    messages.error(request, f"Failed to send invitation: {str(e)}")
+            else:
+                log_sms(company)
+                print(message_body)
+                messages.success(request, f"Invitation printed for {worker.name}.")
+            return redirect('manager_dashboard')
+        else:
+            messages.error(request, "Please select a worker.")
+    context = {
+        'workers': workers,
+        'search_query': search_query,
+        'company': company}
+    return render(request, 'callManager/steward_invite.html', context)
+
+@login_required
+def register_steward(request, token):
+    invitation = get_object_or_404(StewardInvitation, token=token, used=False)
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            steward = Steward.objects.create(user=user, company=invitation.company)
+            invitation.worker.user = user
+            invitation.worker.save()
+            invitation.used = True
+            invitation.save()
+            user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
+            login(request, user)
+            messages.success(request, "Registration successful. You are now a steward.")
+            return redirect('steward_dashboard')
+    else:
+        form = UserCreationForm(initial={'username': invitation.worker.name})
+    context = {'form': form, 'invitation': invitation}
+    return render(request, 'callManager/register_steward.html', context)
+
+
+@login_required
 def search_events(request):
     manager = request.user.manager
     company = manager.company
@@ -577,7 +641,6 @@ def search_events(request):
         'labor_type', 'call_time__event').annotate(
         confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
     stewards = Steward.objects.filter(company=company)
-    print(stewards)
     event_labor_needs = {}
     for event in events:
         event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
@@ -1189,18 +1252,18 @@ def import_workers(request):
                         if current_name or current_phone:
                             if current_phone:
                                 current_phone = current_phone.replace(' ', '').replace('-', '')
-                                #if current_phone.startswith('1') and len(current_phone) == 11:
-                                #    current_phone = current_phone[1:]
-                                #if current_phone.startswith('+') and len(current_phone) == 12:
-                                #    current_phone = current_phone[2:]
                                 if current_phone.startswith('1') and len(current_phone) == 11:
                                     current_phone = f"+{current_phone}"
                                 elif not current_phone.startswith('+') and len(current_phone) == 10:
                                     current_phone = f"+1{current_phone}"
+                                elif len(current_phone) < 10:
+                                    messages.error(request, f"Invalid phone number: {current_phone}")
+                                    continue
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
                                 defaults={'name': current_name.strip() if current_name else None})
                             if created:
+                                worker.add_company(manager.company)
                                 imported += 1
                         current_name = None
                         current_phone = None
