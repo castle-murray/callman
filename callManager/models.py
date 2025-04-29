@@ -42,6 +42,14 @@ class Owner(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} (Owner)"
 
+class OwnerInvitation(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    phone = models.CharField(max_length=15, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    def __str__(self):
+        return f"Owner Invitation for {self.company_name} ({self.token})"
+
 
 class ManagerInvitation(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -51,6 +59,11 @@ class ManagerInvitation(models.Model):
     def __str__(self):
         return f"Invitation for {self.company.name} ({self.token})"
 
+class Steward(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='steward')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='stewards')
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} (Steward)"
 
 class SentSMS(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='sent_sms')
@@ -91,6 +104,7 @@ class Event(models.Model):
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='events')
     created_by = models.ForeignKey('Manager', on_delete=models.SET_NULL, null=True, blank=True)
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+    steward = models.ForeignKey('Steward', on_delete=models.SET_NULL, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:

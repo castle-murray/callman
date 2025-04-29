@@ -2,7 +2,15 @@
 {% load callman_tags %}
 {% block title %}Admin Dashboard - CallMan{% endblock %}
 {% block content %}
-    <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Admin Dashboard</h1>
+<h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Admin Dashboard</h1>
+
+{% if messages %}
+<div class="mt-4">
+    {% for message in messages %}
+    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% elif message.tags == 'warning' %}text-text-yellow dark:text-dark-text-yellow{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
+    {% endfor %}
+</div>
+{% endif %}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
             <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Total Events</h2>
@@ -26,6 +34,17 @@
         <a href="{% url 'view_skills' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
         <a href="{% url 'view_workers' %}" class="bg-purple text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Edit/Add Workers</a>
         <a href="{% url 'import_workers' %}" class="bg-indigo text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Contacts</a>
+    </div>
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Invite New Owner</h2>
+        <form method="post" class="flex flex-col gap-4">
+            {% csrf_token %}
+            <div class="flex items-center gap-2">
+                <label for="phone" class="text-text-tertiary dark:text-dark-text-tertiary">Phone Number:</label>
+                <input type="tel" name="phone" id="phone" required class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+            </div>
+            <button type="submit" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Send Invitation</button>
+        </form>
     </div>
     <div class="bg-card-bg p-6 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Upcoming Events</h2>

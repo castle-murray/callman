@@ -11,15 +11,17 @@
 </div>
 {% endif %}
 <div class="mb-6 ml-5 flex space-x-4">
+    {% if not user.steward %}
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="send_messages" value="true">
         <button type="submit" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send Messages</button>
     </form>
+    {% endif %}
     {% if company.time_tracking %}
     <form method="post" action="{% url 'send_clock_in_link' event.slug %}">
         {% csrf_token %}
-        <button type="submit" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send QR Code</button>
+        <button type="submit" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send QR to all</button>
     </form>
     <a href="{% url 'scan_qr_code' event.slug %}" class="bg-success text-dark-text-primary p-4 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Scan QR Code</a>
     {% endif %}
@@ -53,10 +55,12 @@
             <a href="{% url 'edit_call_time' call_time.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Edit Call Time</a>
             <form method="post" action="{% url 'delete_call_time' call_time.slug %}" class="inline ml-2">
                 {% csrf_token %}
+                {% if not user.steward %}
                 <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover" 
                     onclick="return confirm('Are you sure you want to delete this call time? This will also delete associated labor requirements.');">
                     Delete
                 </button>
+                {% endif %}
             </form>
         </h3>
         <ul class="space-y-2">
@@ -70,6 +74,7 @@
                     </a>
                 </span>
                 <div class="space-x-2">
+                        {% if not user.steward %}
                     <a href="{% url 'edit_labor_requirement' labor.slug %}" 
                         class="inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
                         Edit
@@ -80,6 +85,7 @@
                             onclick="return confirm('Are you sure you want to delete this labor requirement?');">
                             Delete
                         </button>
+                        {% endif %}
                     </form>
                 </div>
             </li>

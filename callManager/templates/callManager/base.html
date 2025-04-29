@@ -8,9 +8,9 @@
         {% tailwind_css %}
         <script src="https://unpkg.com/htmx.org@1.9.6" integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni" crossorigin="anonymous"></script>
         <style>
-            body {
-                transition: background-color 0.5s ease, color 0.5s ease;
-            }
+body {
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
         </style>
         {% block extra_head %}{% endblock %}
     </head>
@@ -21,20 +21,25 @@
                     <a href="{% url 'manager_dashboard' %}" class="text-xl font-bold text-text-primary dark:text-dark-text-primary">Callman</a>
                     <div class="flex items-center space-x-4">
                         {% if user.is_authenticated %}
-                        <span class="text-text-tertiary dark:text-dark-text-tertiary">Hello, {{ user.get_full_name|default:user.username }}</span>
-                        {% if request.user.administrator %}
-                            <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin Dashboard</a></li>
-                        {% endif %}
-                        {% if request.user.owner %}
-                            <li><a href="{% url 'owner_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Owner Dashboard</a></li>
-                        {% endif %}
-                        <a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a>
-                        <form method="post" action="{% url 'logout' %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Logout</button>
-                        </form>
-                        {% else %}
-                        <a href="{% url 'login' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Login</a>
+                            <span class="text-text-tertiary dark:text-dark-text-tertiary">Hello, {{ user.get_full_name|default:user.username }}</span>
+                            {% if request.user.administrator %}
+                                <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin</a></li>
+                            {% endif %}
+                            {% if request.user.owner %}
+                                <li><a href="{% url 'owner_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Owner</a></li>
+                            {% endif %}
+                            {% if request.user.manager %}
+                            <li><a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Manager</a></li>
+                            {% endif %}
+                            {% if request.user.steward %}
+                                <li><a href="{% url 'steward_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Steward</a></li>
+                            {% endif %}
+                            <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <li><button type="submit" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Logout</button></li>
+                            </form>
+                            {% else %}
+                            <a href="{% url 'login' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Login</a>
                         {% endif %}
                         <button id="dark-mode-toggle" class="p-1 text-text-tertiary dark:text-dark-text-tertiary hover:text-primary dark:hover:text-dark-text-blue focus:outline-none">
                             <svg id="sun-icon" class="w-6 h-6 block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

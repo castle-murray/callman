@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django import forms
-from .models import Event, CallTime, LaborRequirement, LaborType, Worker
+from django.contrib.auth.forms import UserCreationForm
+from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company
 
 class LaborTypeForm(forms.ModelForm):
     class Meta:
@@ -147,5 +148,55 @@ class SkillForm(forms.ModelForm):
         model = LaborType
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border autofocus'}),
         }
+
+
+class OwnerRegistrationForm(UserCreationForm):
+    company_name = forms.CharField(max_length=200, required=True)
+    class Meta:
+        model = User
+        fields = ['username', 'password1', 'password2', 'company_name']
+
+class CompanyForm(forms.ModelForm):
+    name = forms.CharField(
+        label="Company Name",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    meal_penalty_trigger_time = forms.IntegerField(
+        label="Meal Penalty Trigger Time (Hours)",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    hour_round_up = forms.IntegerField(
+        label="Minutes to round to next half hour",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    address = forms.CharField(
+        label="Address",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    city = forms.CharField(
+        label="City",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    state = forms.CharField(
+        label="State",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    phone_number = forms.CharField(
+        label="Phone Number",
+        widget=forms.TextInput(attrs={'type': 'tel', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    website = forms.URLField(
+        label="Website",
+        widget=forms.URLInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    time_tracking = forms.BooleanField(
+        label="Enable Time Tracking",
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue dark:text-dark-text-blue'}))
+    minimum_hours = forms.IntegerField(
+        label="Minimum Call Time Hours",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+
+    class Meta:
+        model = Company
+        fields = [
+            'name', 'meal_penalty_trigger_time', 'hour_round_up', 'address',
+            'city', 'state', 'phone_number', 'email', 'website',
+            'time_tracking', 'minimum_hours']

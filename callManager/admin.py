@@ -5,6 +5,7 @@ from .models import (
         LaborRequirement,
         LaborType,
         SentSMS,
+        Steward,
         Worker,
         Manager,
         LaborRequest,
@@ -38,6 +39,12 @@ class OwnerAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'company__name')
     list_filter = ('company',)
 
+
+@admin.register(Steward)
+class StewardAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'company__name')
+    list_filter = ('company',)
 
 @admin.register(Administrator)
 class AdministratorAdmin(admin.ModelAdmin):

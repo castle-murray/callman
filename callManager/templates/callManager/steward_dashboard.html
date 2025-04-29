@@ -1,0 +1,23 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Steward Dashboard - CallMan{% endblock %}
+{% block content %}
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Steward Dashboard</h1>
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Assigned Events</h2>
+        {% if events %}
+            <ul class="space-y-2">
+                {% for event in events %}
+                    <li class="border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border">
+                        <a href="{% url 'event_detail' event.slug %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
+                            {{ event.event_name }} - {{ event.start_date|date:"F j, Y" }}
+                            {% if event.end_date %} to {{ event.end_date|date:"F j, Y" }}{% endif %}
+                            {% if event.event_location %} ({{ event.event_location }}){% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary dark:text-dark-text-secondary">No events assigned.</p>
+        {% endif %}
+    </div>
+{% endblock %}

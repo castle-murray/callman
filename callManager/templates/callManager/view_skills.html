@@ -4,7 +4,7 @@
 {% block title %}Skill List - CallMan{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Skill List</h1>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Skill List bacon</h1>
     {% if messages %}
     {% for message in messages %}
     <p class="justify-around text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
@@ -15,7 +15,7 @@
         <h2 class="text-xl font-semibold mt-6 mb-2 text-text-heading dark:text-dark-text-primary">Add New Skill</h2>
         <form method="post" class="flex items-center">
             {% csrf_token %}
-            <input type="hidden" name="add_skill" value="true">
+            <input type="hidden" name="add_skill" tabindex="1" >
             {{ add_form.name }}
             <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ml-2">Add</button>
         </form>

@@ -5,14 +5,17 @@ from .models import (
         Event,
         LaborRequirement,
         LaborType,
+        Steward,
         Worker,
         TimeEntry,
         MealBreak,
         SentSMS,
         ClockInToken,
         Owner,
+        OwnerInvitation,
         Manager,
         ManagerInvitation,
+        Company,
         )
 #forms
 from .forms import (
@@ -24,6 +27,8 @@ from .forms import (
         WorkerImportForm,
         WorkerRegistrationForm,
         SkillForm,
+        OwnerRegistrationForm,
+        CompanyForm,
         )
 # Django imports
 from django.shortcuts import render, get_object_or_404, redirect
@@ -258,12 +263,12 @@ def admin_dashboard(request):
     if not include_past:
         events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
     if search_query:
-        terms = search_query.split()
         month_map = {
             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
             'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
             'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9,
             'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12}
+        terms = search_query.split()
         for term in terms:
             term_filter = Q()
             if term in month_map:
@@ -314,6 +319,39 @@ def admin_dashboard(request):
             'unfilled_count': unfilled_count,
             'total_unfilled_spots': total_unfilled_spots,
             'labor_needs_text': labor_needs_text}
+    if request.method == "POST":
+        phone = request.POST.get('phone')
+        if phone and phone != '':
+            phone = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+            if len(phone) == 10:
+                phone = f"+1{phone}"
+            elif len(phone) == 11 and phone.startswith('1'):
+                phone = f"+{phone}"
+            elif len(phone) < 10:
+                phone = None
+        else:
+            phone = None
+        if phone:
+            invitation = OwnerInvitation.objects.create(phone=phone)
+            registration_url = request.build_absolute_uri(reverse('register_owner', args=[str(invitation.token)]))
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+            message_body = f'You are invited to become an owner. Register: {registration_url}'
+            if settings.TWILIO_ENABLED == 'enabled' and client:
+                try:
+                    client.messages.create(
+                        body=message_body,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=phone)
+                    log_sms(None)
+                    messages.success(request, f"Invitation sent to {phone}.")
+                except TwilioRestException as e:
+                    messages.error(request, f"Failed to send invitation: {str(e)}")
+            else:
+                log_sms(request.user.manager.company)
+                print(message_body)
+                messages.success(request, f"Invitation printed for {phone}.")
+        else:
+            messages.error(request, "Please provide a valid phone number.") 
     context = {
         'events': events,
         'total_events': total_events,
@@ -325,6 +363,29 @@ def admin_dashboard(request):
         'search_query': search_query,
         'include_past': include_past}
     return render(request, 'callManager/admin_dashboard.html', context)
+
+def register_owner(request, token):
+    invitation = get_object_or_404(OwnerInvitation, token=token, used=False)
+    if request.method == "POST":
+        form = OwnerRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            company = Company.objects.create(
+                name=form.cleaned_data['company_name'],
+                phone_number=invitation.phone)
+            Owner.objects.create(user=user, company=company)
+            Manager.objects.create(user=user, company=company)
+            invitation.used = True
+            invitation.save()
+            user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
+            login(request, user)
+            messages.success(request, f"Registration successful. You are now an owner and manager of {company.name}.")
+            return redirect('manager_dashboard')
+    else:
+        form = OwnerRegistrationForm()
+    context = {'form': form, 'invitation': invitation}
+    return render(request, 'callManager/register_owner.html', context)
+
 
 @login_required
 def admin_search_events(request):
@@ -444,6 +505,7 @@ def manager_dashboard(request):
         datetime_sent__gte=start_of_month,
         datetime_sent__lt=next_month).count()
     event_labor_needs = {}
+    stewards = Steward.objects.filter(company=company)
     for event in events:
         event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
         unfilled_requirements = [
@@ -472,8 +534,10 @@ def manager_dashboard(request):
         'unfilled_spots': unfilled_spots,
         'event_labor_needs': event_labor_needs,
         'search_query': search_query,
+        'stewards': stewards,
         'include_past': include_past}
     return render(request, 'callManager/manager_dashboard.html', context)
+
 
 @login_required
 def search_events(request):
@@ -512,6 +576,8 @@ def search_events(request):
         call_time__event__company=company).select_related(
         'labor_type', 'call_time__event').annotate(
         confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+    stewards = Steward.objects.filter(company=company)
+    print(stewards)
     event_labor_needs = {}
     for event in events:
         event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
@@ -535,8 +601,25 @@ def search_events(request):
         'events': events,
         'event_labor_needs': event_labor_needs,
         'search_query': search_query,
-        'include_past': include_past}
+        'include_past': include_past,
+        'stewards': stewards}
     return render(request, 'callManager/events_list_partial.html', context)
+
+
+@login_required
+def assign_steward(request, slug):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    event = get_object_or_404(Event, slug=slug, company=request.user.manager.company)
+    if request.method == "POST":
+        steward_id = request.POST.get('steward_id')
+        if steward_id:
+            steward = get_object_or_404(Steward, id=steward_id, company=request.user.manager.company)
+            event.steward = steward
+        else:
+            event.steward = None
+        event.save()
+    return redirect('manager_dashboard')
 
 
 @login_required
@@ -2337,35 +2420,47 @@ def worker_clock_in_out(request, token):
     return render(request, 'callManager/worker_clock_in_out.html', context)
 
 
-@login_required
 def owner_dashboard(request):
     if not hasattr(request.user, 'owner'):
         return redirect('login')
     owner = request.user.owner
+    company = owner.company
     if request.method == "POST":
-        phone = request.POST.get('phone')
-        if phone:
-            invitation = ManagerInvitation.objects.create(company=owner.company)
-            registration_url = request.build_absolute_uri(reverse('register_manager', args=[str(invitation.token)]))
-            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
-            message_body = f'You are invited to become a manager for {owner.company.name}. Register: {registration_url}'
-            if settings.TWILIO_ENABLED == 'enabled' and client:
-                try:
-                    client.messages.create(
-                        body=message_body,
-                        from_=settings.TWILIO_PHONE_NUMBER,
-                        to=phone)
-                    log_sms(owner.company)
-                    messages.success(request, f"Invitation sent to {phone}.")
-                except TwilioRestException as e:
-                    messages.error(request, f"Failed to send invitation: {str(e)}")
+        if 'phone' in request.POST:
+            phone = request.POST.get('phone')
+            if phone:
+                invitation = ManagerInvitation.objects.create(company=company)
+                registration_url = request.build_absolute_uri(reverse('register_manager', args=[str(invitation.token)]))
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+                message_body = f'You are invited to become a manager for {company.name}. Register: {registration_url}'
+                if settings.TWILIO_ENABLED == 'enabled' and client:
+                    try:
+                        client.messages.create(
+                            body=message_body,
+                            from_=settings.TWILIO_PHONE_NUMBER,
+                            to=phone)
+                        log_sms(company)
+                        messages.success(request, f"Invitation sent to {phone}.")
+                    except TwilioRestException as e:
+                        messages.error(request, f"Failed to send invitation: {str(e)}")
+                else:
+                    log_sms(company)
+                    print(message_body)
+                    messages.success(request, f"Invitation printed for {phone}.")
             else:
-                log_sms(owner.company)
-                print(message_body)
-                messages.success(request, f"Invitation printed for {phone}.")
+                messages.error(request, "Please provide a phone number.")
         else:
-            messages.error(request, "Please provide a phone number.")
-    return render(request, 'callManager/owner_dashboard.html')
+            form = CompanyForm(request.POST, instance=company)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Company information updated successfully.")
+            else:
+                messages.error(request, "Failed to update company information.")
+    else:
+        form = CompanyForm(instance=company)
+    context = {'form': form, 'company': company}
+    return render(request, 'callManager/owner_dashboard.html', context)
+
 
 def register_manager(request, token):
     invitation = get_object_or_404(ManagerInvitation, token=token, used=False)
@@ -2384,3 +2479,13 @@ def register_manager(request, token):
         form = UserCreationForm()
     context = {'form': form, 'invitation': invitation}
     return render(request, 'callManager/register_manager.html', context)
+
+
+@login_required
+def steward_dashboard(request):
+    if not hasattr(request.user, 'steward'):
+        return redirect('login')
+    steward = request.user.steward
+    events = Event.objects.filter(steward=steward).order_by('start_date')
+    context = {'events': events}
+    return render(request, 'callManager/steward_dashboard.html', context)

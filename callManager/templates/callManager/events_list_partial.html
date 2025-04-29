@@ -6,7 +6,7 @@
                 <div class="border-b p-2 rounded-md pb-4 dark:border-dark-border-dark {% if event_labor_needs|get_item:event.id|get_item:'unfilled_count' == 0 %}bg-filled-event-gradient dark:bg-dark-filled-event-gradient{% endif %}">
                     <a href="{% url 'event_detail' event.slug %}" class="block cursor-pointer">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-medium text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">{{ event.event_name }}</h3>
+                            <h3 class="text-lg font-medium text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">{{ event.event_name }}{% if user.administrator %} - {{ event.company }}{% endif %} </h3>
                         </div>
                         <p class="text-text-secondary dark:text-dark-text-secondary">
                             {% if event.is_single_day %}
@@ -21,7 +21,19 @@
                             <strong>{{ event_labor_needs|get_item:event.id|get_item:'labor_needs_text' }}</strong>
                         </p>
                     </a>
-                    <div class="space-x-2 text-right">
+                    <div class="flex items-center justify-end space-x-2">
+                        <form method="post" action="{% url 'assign_steward' event.slug %}" class="inline">
+                            {% csrf_token %}
+                            <select name="steward_id" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border"
+                                    hx-post="{% url 'assign_steward' event.slug %}"
+                                    hx-target="body"
+                                    hx-swap="outerHTML">
+                                <option value="">No Steward</option>
+                                {% for steward in stewards %}
+                                    <option value="{{ steward.id }}" {% if event.steward == steward %}selected{% endif %}>{{ steward.user.get_full_name|default:steward.user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                         <a href="{% url 'edit_event' event.slug %}" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover data-no-nav" hx-disinherit="*">Edit</a>
                         <form method="post" action="{% url 'delete_event' event.slug %}" class="inline" hx-disinherit="*">
                             {% csrf_token %}

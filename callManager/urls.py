@@ -50,4 +50,7 @@ urlpatterns = [
     path('callman-admin/', views.admin_dashboard, name='admin_dashboard'),
     path('callman-admin/search-events/', views.admin_search_events, name='admin_search_events'),
     path('callman-admin/sms-usage/', views.admin_sms_usage_report, name='admin_sms_usage_report'),
+    path('owner/register/<uuid:token>/', views.register_owner, name='register_owner'),
+    path('steward/', views.steward_dashboard, name='steward_dashboard'),
+    path('event/<slug:slug>/assign-steward/', views.assign_steward, name='assign_steward'),
 ]
