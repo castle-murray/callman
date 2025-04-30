@@ -2,6 +2,7 @@ from django.urls import path
 from callManager import views
 
 urlpatterns = [
+    path('', views.index, name='index'),
     path('confirm/<uuid:token>/', views.confirm_assignment, name='confirm_assignment'),
     path('event/create/', views.create_event, name='create_event'),
     path('event/<slug:slug>/', views.event_detail, name='event_detail'),
@@ -12,7 +13,7 @@ urlpatterns = [
     path('call/<slug:slug>/add-labor/', views.add_labor_to_call, name='add_labor_to_call'),
     path('call/<slug:slug>/edit/', views.edit_call_time, name='edit_call_time'),
     path('call/<slug:slug>/delete/', views.delete_call_time, name='delete_call_time'),
-    path('', views.manager_dashboard, name='manager_dashboard'),
+    path('dashboard', views.manager_dashboard, name='manager_dashboard'),
     path('search-events/', views.search_events, name='search_events'),
     path('skills/', views.view_skills, name='view_skills'),
     path('workers/', views.view_workers, name='view_workers'),

@@ -74,6 +74,11 @@ import pytz
 import io
 
 
+from django.shortcuts import render
+def index(request):
+    return render(request, 'callManager/index.html')
+
+
 def log_sms(company):
     """logs the SMS sent to the SentSMS model"""
     sms = SentSMS.objects.create(company=company)
@@ -460,7 +465,9 @@ def admin_search_events(request):
 
 @login_required
 def manager_dashboard(request):
-    if not hasattr(request.user, 'manager'):
+    if not hasattr(request.user, 'manager') and hasattr(request.user, 'steward'):
+        return redirect('steward_dashboard')
+    elif not hasattr(request.user, 'manager') and not hasattr(request.user, 'steward'):
         return redirect('login')
     manager = request.user.manager
     company = manager.company
@@ -2536,8 +2543,7 @@ def owner_dashboard(request):
                 messages.success(request, "Company information updated successfully.")
             else:
                 messages.error(request, "Failed to update company information.")
-    else:
-        form = CompanyForm(instance=company)
+    form = CompanyForm(instance=company)
     context = {'form': form, 'company': company}
     return render(request, 'callManager/owner_dashboard.html', context)
 
@@ -2555,8 +2561,7 @@ def register_manager(request, token):
             login(request, user)
             messages.success(request, "Registration successful. You are now a manager.")
             return redirect('manager_dashboard')
-    else:
-        form = UserCreationForm()
+    form = UserCreationForm()
     context = {'form': form, 'invitation': invitation}
     return render(request, 'callManager/register_manager.html', context)
 
