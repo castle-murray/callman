@@ -7,6 +7,11 @@
     <title>Scan QR Code - {{ event.event_name }}</title>
     {% tailwind_css %}
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        #qr-reader video {
+            transform: scaleX(-1);
+        }
+    </style>
 </head>
 <body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
     <div class="max-w-2xl w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
@@ -71,10 +76,10 @@
                 if (html5QrCode.isScanning) {
                     html5QrCode.stop().then(() => {
                         console.log('Scanner stopped successfully');
-                        setTimeout(resolve, 100); // Add 100ms delay to ensure cleanup
+                        setTimeout(resolve, 100);
                     }).catch(err => {
                         console.error('Error stopping scanner:', err);
-                        resolve(); // Continue even if stop fails
+                        resolve();
                     });
                 } else {
                     console.log('No active scanner to stop');
@@ -96,7 +101,7 @@
                     cameraSelect.appendChild(option);
                 });
                 if (devices.length > 0) {
-                    cameraSelect.value = devices[0].id; // Default to first camera
+                    cameraSelect.value = devices[0].id;
                     startScanner(devices[0].id);
                 } else {
                     console.log('No cameras found');
@@ -107,7 +112,7 @@
                 console.error('Error enumerating cameras:', err);
                 document.getElementById('error-message').textContent = 'Failed to list cameras: ' + err;
                 document.getElementById('error-message').classList.remove('hidden');
-                startScanner(null); // Fallback to default
+                startScanner(null);
             });
         }
 

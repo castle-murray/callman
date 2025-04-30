@@ -350,7 +350,7 @@ def admin_dashboard(request):
                         body=message_body,
                         from_=settings.TWILIO_PHONE_NUMBER,
                         to=phone)
-                    log_sms(None)
+                    log_sms(request.user.manager.company)
                     messages.success(request, f"Invitation sent to {phone}.")
                 except TwilioRestException as e:
                     messages.error(request, f"Failed to send invitation: {str(e)}")
@@ -592,6 +592,7 @@ def steward_invite(request):
         'company': company}
     return render(request, 'callManager/steward_invite.html', context)
 
+
 @login_required
 def steward_invite_search(request):
     if not hasattr(request.user, 'manager'):
@@ -606,6 +607,7 @@ def steward_invite_search(request):
         'workers': workers,
         'search_query': search_query}
     return render(request, 'callManager/steward_invite_partial.html', context)
+
 
 @login_required
 def register_steward(request, token):
@@ -801,6 +803,7 @@ def add_labor_to_call(request, slug):
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/add_labor_to_call.html', context)
 
+
 @login_required
 def labor_type_partial(request, slug):
     manager = request.user.manager
@@ -815,7 +818,6 @@ def labor_type_partial(request, slug):
     context = {'form': form, 'labor_type': labor_type}
     return render(request, 'callManager/labor_type_partial.html', context)
 
-@login_required
 
 @login_required
 def create_event(request):
@@ -855,10 +857,8 @@ def view_skills(request):
         elif 'add_skill' in request.POST:
             form = SkillForm(request.POST)
             if form.is_valid():
-
                 skill = form.save(commit=False)
                 skill.name = skill.name.title()
-
                 if skill.name not in skills.values_list('name', flat=True):
                     skill.company = manager.company
                     skill.save()
@@ -867,8 +867,6 @@ def view_skills(request):
                 else:
                     messages.error(request, "Skill already exists.")
                     return redirect('view_skills')
-
-    # GET request: show all skills and forms
     edit_forms = {skill.id: SkillForm(instance=skill) for skill in skills}
     add_form = SkillForm()
     context = {
@@ -1021,6 +1019,7 @@ def increment_nocallnoshow(request, worker_id):
         'worker': worker,
     }
     return render(request, 'callManager/nocallnoshow_partial.html', context)
+
 
 @login_required
 def decrement_nocallnoshow(request, worker_id):
