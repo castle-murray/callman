@@ -4,25 +4,6 @@
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Workers</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        {% if messages %}
-            <div class="mb-4">
-                {% for message in messages %}
-                    <div class="text-text-tertiary dark:text-dark-text-tertiary">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-        {% if error_message %}
-            <div class="text-red-500 mb-4">
-                {{ error_message }}
-            </div>
-        {% endif %}
-        {% if success_message %}
-            <div class="text-green-500 mb-4">
-                {{ success_message }}
-            </div>
-        {% endif %}
         <form method="get" class="mb-4 flex flex-wrap gap-4">
             <input type="text" 
                    autofocus

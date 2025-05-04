@@ -21,4 +21,10 @@
             hx-get="{% url 'call_time_tracking_meal_display' call_time.slug %}?meal_break_id={{ meal_break.id }}" 
             hx-target="#meal-break-{{ meal_break.id }}" 
             class="ml-2 bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Cancel</button>
+    <button type="button" action="delete_meal_break"
+            hx-post="{% url 'delete_meal_break' meal_break.id %}"
+            hx-target="#meal-break-{{ meal_break.id }}"
+            hx-swap="outerHTML"
+            class="ml-2 bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Delete</button>
 </form>
+

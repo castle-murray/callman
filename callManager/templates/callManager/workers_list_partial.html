@@ -8,21 +8,33 @@
                     <form method="post" class="inline">
                         {% csrf_token %}
                         <input type="hidden" name="delete_id" value="{{ worker.id }}">
-                        <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Delete</button>
                     </form>
+                        <span hx-delete="{% url 'delete_worker' worker.slug %}"
+                            hx-target="closest li"
+                            hx-trigger="click"
+                            hx-swap="outerHTML"
+                            class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Delete</span>
                 </div>
             </li>
         {% endfor %}
     </ul>
     <div class="mt-4 flex justify-between">
         {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
+            <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               hx-get="{% url 'search_workers' %}?page={{ page_obj.previous_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               hx-target="#workers-list"
+               hx-swap="outerHTML"
+               class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Previous</a>
         {% else %}
             <span class="text-text-secondary dark:text-dark-text-secondary">Previous</span>
         {% endif %}
         <span class="text-text-tertiary dark:text-dark-text-tertiary">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
+            <a href="?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               hx-get="{% url 'search_workers' %}?page={{ page_obj.next_page_number }}&search={{ search_query|urlencode }}&skill={{ skill_id|urlencode }}&per_page={{ per_page|urlencode }}"
+               hx-target="#workers-list"
+               hx-swap="outerHTML"
+               class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Next</a>
         {% else %}
             <span class="text-text-secondary dark:text-dark-text-secondary">Next</span>
         {% endif %}

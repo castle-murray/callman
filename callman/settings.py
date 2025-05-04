@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'tailwind',
     'theme',
     'callManager.apps.CallmanagerConfig',
+    'django_htmx',
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')

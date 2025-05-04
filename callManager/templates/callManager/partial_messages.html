@@ -1,0 +1,18 @@
+<!-- templates/callManager/partial_messages.html -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="text-text-tertiary dark:text-dark-text-tertiary bg-card-bg dark:bg-dark-card-bg p-4 rounded-md mb-2 shadow">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+{% if error_message %}
+    <div class="text-red-500 dark:text-dark-text-red bg-card-bg dark:bg-dark-card-bg p-4 rounded-md mb-2 shadow">
+        {{ error_message }}
+    </div>
+{% endif %}
+{% if success_message %}
+    <div class="text-green-500 dark:text-dark-text-green bg-card-bg dark:bg-dark-card-bg p-4 rounded-md mb-2 shadow">
+        {{ success_message }}
+    </div>
+{% endif %}

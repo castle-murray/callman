@@ -1,9 +1,4 @@
 <div id="labor-request-content" class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
-    {% if messages %}
-        {% for message in messages %}
-            <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
     <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">Pending  {% if pending_count %}  {{ pending_count }} {% endif %}</h2>
     {% if pending_requests %}
         <ul class="space-y-2 mb-4">

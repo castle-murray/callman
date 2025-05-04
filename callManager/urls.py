@@ -59,4 +59,7 @@ urlpatterns = [
     path('event/<slug:slug>/generate-signin-qr/', views.generate_signin_qr, name='generate_signin_qr'),
     path('signin-station/<uuid:token>/', views.signin_station, name='signin_station'),
     path('steward/invite/search/', views.steward_invite_search, name='steward_invite_search'),
+    path('call/delete_meal_break/<int:meal_break_id>/', views.delete_meal_break, name='delete_meal_break'),
+    path('worker/delete/<slug:slug>/', views.delete_worker, name='delete_worker'),
+    path('get-messages/', views.fetch_messages, name='get_messages'),
 ]

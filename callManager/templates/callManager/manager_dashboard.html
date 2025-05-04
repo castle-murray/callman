@@ -24,7 +24,7 @@
         <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ declined }}</p>
     </a>
     <a href="{% url 'sms_usage_report' %}" class="block bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Sent Messages</h2>
+        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">SMS Sent: {{ current_month_name }}</h2>
         <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ sent_messages }}</p>
     </a>
 </div>

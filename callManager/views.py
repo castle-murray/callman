@@ -1,4 +1,5 @@
 #models
+from time import sleep
 from .models import (
         CallTime,
         LaborRequest,
@@ -44,6 +45,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
+from django.contrib.messages import get_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
@@ -78,6 +80,17 @@ from django.shortcuts import render
 def index(request):
     return render(request, 'callManager/index.html')
 
+def fetch_messages(request):
+    storage = get_messages(request)
+    messages = [msg for msg in storage]
+    context = {
+        'messages': messages,
+        'error_message': request.session.pop('error_message', None),
+        'success_message': request.session.pop('success_message', None),
+    }
+    for message in messages:
+        storage.used = True
+    return render(request, 'callManager/partial_messages.html', context)
 
 def log_sms(company):
     """logs the SMS sent to the SentSMS model"""
@@ -901,22 +914,7 @@ def view_workers(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
     if request.method == "POST":
-        if 'delete_id' in request.POST:
-            worker_id = request.POST.get('delete_id')
-            worker = get_object_or_404(Worker, id=worker_id)
-            worker.delete()
-            query_params = {}
-            if page_number != '1':
-                query_params['page'] = page_number
-            if search_query:
-                query_params['search'] = search_query
-            if skill_id:
-                query_params['skill'] = skill_id
-            redirect_url = reverse('view_workers')
-            if query_params:
-                redirect_url += '?' + urlencode(query_params)
-            return redirect(redirect_url)
-        elif 'add_worker' in request.POST:
+        if 'add_worker' in request.POST:
             form = WorkerForm(request.POST, company=manager.company)
             if form.is_valid():
                 if Worker.objects.filter(phone_number=form.cleaned_data['phone_number'], companies=manager.company).exists():
@@ -943,8 +941,7 @@ def view_workers(request):
                 return redirect(redirect_url)
             else:
                 messages.error(request, "Failed to add worker. Please check the form errors.")
-    else:
-        form = WorkerForm(company=manager.company)
+    form = WorkerForm(company=manager.company)
     labor_types = LaborType.objects.filter(company=manager.company)
     context = {
         'workers': page_obj,
@@ -955,6 +952,21 @@ def view_workers(request):
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
 
+@login_required
+def delete_worker(request, slug):
+    if request.method == "DELETE":
+        if request.htmx:
+            print("bacon")
+        worker = get_object_or_404(Worker, slug=slug)
+        labor_requests = LaborRequest.objects.filter(worker=worker)
+        if labor_requests:
+            messages.error(request, "Worker has labor requests and cannot be deleted.")
+            return redirect('view_workers')
+        print(labor_requests)
+        worker.delete()
+        messages.success(request, "Worker deleted successfully.")
+        return HttpResponse("")
+    
 @login_required
 def search_workers(request):
     if not hasattr(request.user, 'manager'):
@@ -2094,6 +2106,14 @@ def call_time_tracking(request, slug):
                     messages.success(request, f"Updated {action.replace('update_', '')} for {worker.name}")
                 except (ValueError, TypeError):
                     messages.error(request, f"Invalid date or time format")
+            elif action == 'delete_meal_break':
+                meal_break_id = request.POST.get('meal_break_id')
+
+                meal_break = get_object_or_404(MealBreak, id=meal_break_id, time_entry=time_entry)
+                print(meal_break)
+                meal_break.delete()
+                messages.success(request, f"Deleted meal break for {worker.name}")
+                return HttpResponse(" ")
         if not request.headers.get('HX-Request'):
             return redirect('call_time_tracking', slug=slug)
     confirmed_requests = labor_requests
@@ -2177,6 +2197,13 @@ def call_time_tracking_meal_display(request, slug):
     }
     return render(request, 'callManager/meal_break_display_partial.html', context)
 
+@login_required
+def delete_meal_break(request, meal_break_id):
+    meal_break = get_object_or_404(MealBreak, id=meal_break_id)
+    meal_break.delete()
+    if request.headers.get('HX-Request'):
+        print("Deleted meal break")
+    return HttpResponse("")
 
 @login_required
 def call_time_report(request, slug):
