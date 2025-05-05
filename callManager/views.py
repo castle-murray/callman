@@ -19,6 +19,7 @@ from .models import (
         Company,
         StewardInvitation,
         TemporaryScanner,
+        LocationProfile,
         )
 #forms
 from .forms import (
@@ -32,6 +33,7 @@ from .forms import (
         SkillForm,
         OwnerRegistrationForm,
         CompanyForm,
+        LocationProfileForm,
         )
 # Django imports
 from django.shortcuts import render, get_object_or_404, redirect
@@ -795,11 +797,10 @@ def add_labor_to_call(request, slug):
     manager = request.user.manager
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     if request.method == "POST":
-        form = LaborRequirementForm(request.POST, company=manager.company)
+        form = LaborRequirementForm(request.POST, company=manager.company, call_time=call_time)
         if form.is_valid():
             labor_requirement = form.save(commit=False)
             labor_requirement.call_time = call_time
-            # Check for existing LaborRequirement
             existing = LaborRequirement.objects.filter(
                 call_time=call_time,
                 labor_type=labor_requirement.labor_type
@@ -811,8 +812,7 @@ def add_labor_to_call(request, slug):
             labor_requirement.save()
             return redirect('event_detail', slug=call_time.event.slug)
     else:
-        form = LaborRequirementForm(company=manager.company)
-    
+        form = LaborRequirementForm(company=manager.company, call_time=call_time)
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/add_labor_to_call.html', context)
 
@@ -837,16 +837,18 @@ def create_event(request):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
     manager = request.user.manager
+    company = manager.company
+    print(f"Company: {company.name}, Location Profiles: {company.location_profiles.count()}")
     if request.method == "POST":
-        form = EventForm(request.POST)
+        form = EventForm(request.POST, company=company)
         if form.is_valid():
             event = form.save(commit=False)
-            event.company = manager.company
-            event.save()  # Slug generated via save()
-            return redirect('event_detail', slug=event.slug)  # Use slug instead of event_id
+            event.company = company
+            event.save()
+            return redirect('event_detail', slug=event.slug)
     else:
-        form = EventForm()
-    context = {'form': form}
+        form = EventForm(company=company)
+    context = {'form': form, 'company': company}
     return render(request, 'callManager/create_event.html', context)
 
 
@@ -952,21 +954,23 @@ def view_workers(request):
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
 
+
 @login_required
 def delete_worker(request, slug):
     if request.method == "DELETE":
-        if request.htmx:
-            print("bacon")
         worker = get_object_or_404(Worker, slug=slug)
+        worker_name = worker.name or "Unnamed Worker"
         labor_requests = LaborRequest.objects.filter(worker=worker)
         if labor_requests:
             messages.error(request, "Worker has labor requests and cannot be deleted.")
-            return redirect('view_workers')
-        print(labor_requests)
-        worker.delete()
-        messages.success(request, "Worker deleted successfully.")
-        return HttpResponse("")
+        else:
+            worker.delete()
+            sleep(2)
+            messages.success(request, f"{worker_name} deleted.")
+        return render(request, "callManager/messages_partial.html")
+        
     
+
 @login_required
 def search_workers(request):
     if not hasattr(request.user, 'manager'):
@@ -1975,7 +1979,7 @@ def call_time_request_list(request, slug):
 def call_time_tracking(request, slug):
     manager = request.user.manager
     company = manager.company
-    minimum_hours = company.minimum_hours
+    minimum_hours = labor_requirement.minimum_hours or call_time.minimum_hours or event.location_profile.minimum_hours or company.minimum_hours
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -2627,3 +2631,76 @@ def signin_station(request, token):
     user = scanner.user
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     return render(request, 'callManager/signin_scanner.html', {'event': scanner.event})
+
+@login_required
+def location_profiles(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    profiles = LocationProfile.objects.filter(company=company)
+    context = {'profiles': profiles, 'company': company}
+    return render(request, 'callManager/location_profiles.html', context)
+
+
+@login_required
+def create_location_profile(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    if request.method == "POST":
+        form = LocationProfileForm(request.POST)
+        if form.is_valid():
+            profile = form.save(commit=False)
+            profile.company = company
+            profile.save()
+            messages.success(request, "Location profile created successfully.")
+            return redirect('location_profiles')
+        else:
+            messages.error(request, "Failed to create location profile.")
+    else:
+        initial = {
+            'minimum_hours': company.minimum_hours,
+            'meal_penalty_trigger_time': company.meal_penalty_trigger_time,
+            'hour_round_up': company.hour_round_up,
+        }
+        form = LocationProfileForm(initial=initial)
+    context = {'form': form, 'company': company}
+    return render(request, 'callManager/create_location_profile.html', context)
+
+
+@login_required
+def edit_location_profile(request, pk):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    profile = get_object_or_404(LocationProfile, pk=pk, company=company)
+    if request.method == "POST":
+        form = LocationProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Location profile updated successfully.")
+            return redirect('location_profiles')
+        else:
+            messages.error(request, "Failed to update location profile.")
+    else:
+        form = LocationProfileForm(instance=profile)
+    context = {'form': form, 'profile': profile, 'company': company}
+    return render(request, 'callManager/edit_location_profile.html', context)
+
+
+@login_required
+def delete_location_profile(request, pk):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    profile = get_object_or_404(LocationProfile, pk=pk, company=company)
+    if request.method == "POST":
+        profile.delete()
+        messages.success(request, f"Location profile '{profile.name}' deleted successfully.")
+        return redirect('location_profiles')
+    messages.error(request, "Invalid request method.")
+    return redirect('location_profiles')

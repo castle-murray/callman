@@ -49,8 +49,8 @@ module.exports = {
     ],
     theme: {
         extend: {
-        colors: {
-            // Light Mode
+            colors: {
+                // Light Mode
                 'body-bg': '#f3f4f6',      // gray-100
                 'card-bg': '#ffffff',      // white
                 'cream-bg': '#fef9f5',     // cream (approximation)
@@ -79,6 +79,8 @@ module.exports = {
                 'indigo-hover': '#4f46e5', // indigo-600
                 'teal': '#14b8a6',        // teal-500
                 'teal-hover': '#0d9488',   // teal-600
+                'yellow': '#eab308',      // yellow-500
+                'yellow-hover': '#ca8a04', // yellow-600
                 'border-light': '#d1d5db', // gray-300
                 'text-available': '#1e40af', // Deep blue for available requests
 
@@ -109,15 +111,17 @@ module.exports = {
                 'dark-indigo-hover': '#4338ca', // indigo-700
                 'dark-teal': '#0d9488',       // teal-600
                 'dark-teal-hover': '#0f766e', // teal-700
+                'dark-yellow': '#ca8a04',     // yellow-600
+                'dark-yellow-hover': '#a16207', // yellow-700
                 'dark-border': '#4b5563',     // gray-600
                 'dark-border-dark': '#374151', // gray-700
                 'dark-shadow': '#374151',     // gray-700
                 'dark-text-available': '#06b6d4', // Cyan for available requests
-          },
-        backgroundImage: {
-            'filled-event-gradient': 'linear-gradient(to right, #f7fafc, #d1fae5)',
-            'dark-filled-event-gradient': 'linear-gradient(to right, #1a202c, #185235)',
-          },
+            },
+            backgroundImage: {
+                'filled-event-gradient': 'linear-gradient(to right, #f7fafc, #d1fae5)',
+                'dark-filled-event-gradient': 'linear-gradient(to right, #1a202c, #185235)',
+            },
         },
     },
     plugins: [

@@ -57,13 +57,6 @@
 
 
         <main class="lg:container lg:mx-auto py-6 ml-2 lg:px-6 lg:flex-grow">
-            {% if messages %}
-            <div class="mt-4">
-                {% for message in messages %}
-                <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% elif message.tags == 'warning' %}text-text-yellow dark:text-dark-text-yellow{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
-                {% endfor %}
-            </div>
-            {% endif %}
             {% block content %}{% endblock %}
         </main>
 

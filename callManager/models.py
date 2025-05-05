@@ -110,6 +110,7 @@ class Event(models.Model):
     end_date = models.DateField(null=True, blank=True )    # New end date
     is_single_day = models.BooleanField(default=False)  # New single-day flag
     event_description = models.TextField()
+    location_profile = models.ForeignKey('LocationProfile', on_delete=models.SET_NULL, null=True, blank=True)
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='events')
     created_by = models.ForeignKey('Manager', on_delete=models.SET_NULL, null=True, blank=True)
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
@@ -124,19 +125,26 @@ class Event(models.Model):
     def __str__(self):
         return self.event_name
 
+
 class CallTime(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='call_times')
     date = models.DateField(null=True, blank=True)
-    name = models.CharField(max_length=200)  # e.g., "Walk and Chalk", "Pre Rig"
-    time = models.TimeField()  # e.g., 08:00, 09:00
+    name = models.CharField(max_length=200)
+    time = models.TimeField()
+    minimum_hours = models.PositiveIntegerField(blank=True, null=True, help_text="Minimum hours for this call time (defaults to event's location profile or company)")
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
-    # New fields for tracking changes
     original_date = models.DateField(null=True, blank=True)
     original_time = models.TimeField(null=True, blank=True)
     last_modified = models.DateTimeField(auto_now=True)
     message = models.TextField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        if not self.pk and self.minimum_hours is None:
+            # Set default minimum_hours from event's location profile or company
+            if self.event.location_profile and self.event.location_profile.minimum_hours is not None:
+                self.minimum_hours = self.event.location_profile.minimum_hours
+            else:
+                self.minimum_hours = self.event.company.minimum_hours
         if not self.pk:  # New instance
             self.original_date = self.date
             self.original_time = self.time
@@ -159,14 +167,18 @@ class CallTime(models.Model):
     def __str__(self):
         return f"{self.name} at {self.time} ({self.event})"
 
+
 class LaborRequirement(models.Model):
     call_time = models.ForeignKey(CallTime, on_delete=models.CASCADE, related_name='labor_requirements', null=True, blank=True)
     labor_type = models.ForeignKey(LaborType, on_delete=models.CASCADE)
     needed_labor = models.IntegerField()
+    minimum_hours = models.PositiveIntegerField(blank=True, null=True, help_text="Minimum hours for this labor requirement (defaults to call time)")
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
     fcfs_positions = models.PositiveIntegerField(default=0, help_text="Number of positions filled by First Come First Served")
 
     def save(self, *args, **kwargs):
+        if not self.pk and self.minimum_hours is None and self.call_time:
+            self.minimum_hours = self.call_time.minimum_hours
         if not self.slug:
             self.slug = generate_unique_slug(LaborRequirement)
         if self.fcfs_positions > self.needed_labor:
@@ -374,3 +386,22 @@ class TemporaryScanner(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     def __str__(self):
         return f"Temporary Scanner for {self.event.event_name} ({self.token})"
+
+
+class LocationProfile(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='location_profiles')
+    name = models.CharField(max_length=200)
+    address = models.CharField(max_length=200)
+    minimum_hours = models.PositiveIntegerField(blank=True, null=True, help_text="Minimum hours for a call time (defaults to company value if blank)")
+    meal_penalty_trigger_time = models.PositiveIntegerField(blank=True, null=True, help_text="Hours after start time to trigger meal penalty (defaults to company value if blank)")
+    hour_round_up = models.PositiveIntegerField(blank=True, null=True, help_text="Minutes to round up hours worked (defaults to company value if blank)")
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+    def save(self, *args, **kwargs):
+        if self.minimum_hours is None:
+            self.minimum_hours = self.company.minimum_hours
+        if self.meal_penalty_trigger_time is None:
+            self.meal_penalty_trigger_time = self.company.meal_penalty_trigger_time
+        if self.hour_round_up is None:
+            self.hour_round_up = self.company.hour_round_up
+        super().save(*args, **kwargs)

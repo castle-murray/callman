@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company
+from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company, LocationProfile
 
 class LaborTypeForm(forms.ModelForm):
     class Meta:
@@ -17,49 +17,84 @@ class LaborTypeForm(forms.ModelForm):
             raise forms.ValidationError("Labor type name cannot be empty.")
         return name
 
-class EventForm(forms.ModelForm):
-    class Meta:
-        model = Event
-        fields = ['event_name', 'start_date', 'end_date', 'is_single_day', 'event_location', 'event_description']
-        widgets = {
-            'event_name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'is_single_day': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue'}),
-            'event_location': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'event_description': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-        }
 
+class EventForm(forms.ModelForm):
+    event_name = forms.CharField(
+        label="Event Name",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    start_date = forms.DateField(
+        label="Start Date",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    end_date = forms.DateField(
+        label="End Date",
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    is_single_day = forms.BooleanField(
+        label="Single Day Event",
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue border-light rounded dark:bg-dark-card-bg dark:border-dark-border dark:text-dark-text-blue'}))
+    location_profile = forms.ModelChoiceField(
+        label="Location Profile",
+        queryset=LocationProfile.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    event_description = forms.CharField(
+        label="Event Description",
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if company:
+            self.fields['location_profile'].queryset = company.location_profiles.all()
+            print(f"EventForm initialized with {company.location_profiles.count()} location profiles")
+        else:
+            print("bacon")
+            self.fields['location_profile'].queryset = LocationProfile.objects.none()
     def clean(self):
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')
         is_single_day = cleaned_data.get('is_single_day')
-
         if is_single_day and start_date and end_date and start_date != end_date:
             raise forms.ValidationError("Single-day events must have the same start and end date.")
         elif start_date and end_date and start_date > end_date:
             raise forms.ValidationError("End date must be on or after start date.")
         return cleaned_data
+    class Meta:
+        model = Event
+        fields = ['event_name', 'start_date', 'is_single_day', 'end_date', 'location_profile', 'event_description']
+
 
 class CallTimeForm(forms.ModelForm):
-    class Meta:
-        model = CallTime
-        fields = ['name', 'date', 'time', 'message']
-        widgets = {
-            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'time': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'message': forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-        }
+    name = forms.CharField(
+        label="Call Time Name",
+        widget=forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    date = forms.DateField(
+        label="Date",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    time = forms.TimeField(
+        label="Time",
+        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    minimum_hours = forms.IntegerField(
+        label="Minimum Hours",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    message = forms.CharField(
+        label="Message",
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
-    def __init__(self, *args, **kwargs):
-        event = kwargs.pop('event', None)
+    def __init__(self, *args, event=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if event and event.is_single_day:
-            self.fields['date'].initial = event.start_date
-            self.fields['date'].disabled = True
-            self.fields['date'].widget.attrs['readonly'] = True
+        if event:
+            self.fields['date'].initial = event.start_date if event.is_single_day else None
+            self.fields['date'].disabled = event.is_single_day
+            self.fields['date'].widget.attrs['readonly'] = event.is_single_day
+            # Pre-populate minimum_hours from event's location profile or company
+            if event.location_profile and event.location_profile.minimum_hours is not None:
+                self.fields['minimum_hours'].initial = event.location_profile.minimum_hours
+            else:
+                self.fields['minimum_hours'].initial = event.company.minimum_hours
 
     def clean(self):
         cleaned_data = super().clean()
@@ -72,20 +107,33 @@ class CallTimeForm(forms.ModelForm):
                 raise forms.ValidationError("Call time date cannot be after the event's end date.")
         return cleaned_data
 
-class LaborRequirementForm(forms.ModelForm):
     class Meta:
-        model = LaborRequirement
-        fields = ['labor_type', 'needed_labor']
-        widgets = {
-            'labor_type': forms.Select(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'needed_labor': forms.NumberInput(attrs={'min': 1, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-        }
+        model = CallTime
+        fields = ['name', 'date', 'time', 'minimum_hours', 'message']
 
-    def __init__(self, *args, **kwargs):
-        company = kwargs.pop('company', None)
+class LaborRequirementForm(forms.ModelForm):
+    labor_type = forms.ModelChoiceField(
+        label="Labor Type",
+        queryset=LaborType.objects.none(),
+        widget=forms.Select(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    needed_labor = forms.IntegerField(
+        label="Needed Labor",
+        widget=forms.NumberInput(attrs={'min': 1, 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    minimum_hours = forms.IntegerField(
+        label="Minimum Hours",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+
+    def __init__(self, *args, company=None, call_time=None, **kwargs):
         super().__init__(*args, **kwargs)
         if company:
             self.fields['labor_type'].queryset = LaborType.objects.filter(company=company)
+        if call_time:
+            self.fields['minimum_hours'].initial = call_time.minimum_hours
+
+    class Meta:
+        model = LaborRequirement
+        fields = ['labor_type', 'needed_labor', 'minimum_hours']
 
 class WorkerForm(forms.ModelForm):
     class Meta:
@@ -186,10 +234,6 @@ class CompanyForm(forms.ModelForm):
     website = forms.URLField(
         label="Website",
         widget=forms.URLInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-    time_tracking = forms.BooleanField(
-        label="Enable Time Tracking",
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-text-blue dark:text-dark-text-blue'}))
     minimum_hours = forms.IntegerField(
         label="Minimum Call Time Hours",
         widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
@@ -199,4 +243,28 @@ class CompanyForm(forms.ModelForm):
         fields = [
             'name', 'meal_penalty_trigger_time', 'hour_round_up', 'address',
             'city', 'state', 'phone_number', 'email', 'website',
-            'time_tracking', 'minimum_hours']
+            'minimum_hours']
+
+
+class LocationProfileForm(forms.ModelForm):
+    name = forms.CharField(
+        label="Location Name",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    address = forms.CharField(
+        label="Address",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    minimum_hours = forms.IntegerField(
+        label="Minimum Call Time Hours",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    meal_penalty_trigger_time = forms.IntegerField(
+        label="Meal Penalty Trigger Time (Hours)",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    hour_round_up = forms.IntegerField(
+        label="Minutes to round to next half hour",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    class Meta:
+        model = LocationProfile
+        fields = ['name', 'address', 'minimum_hours', 'meal_penalty_trigger_time', 'hour_round_up']

@@ -62,4 +62,9 @@ urlpatterns = [
     path('call/delete_meal_break/<int:meal_break_id>/', views.delete_meal_break, name='delete_meal_break'),
     path('worker/delete/<slug:slug>/', views.delete_worker, name='delete_worker'),
     path('get-messages/', views.fetch_messages, name='get_messages'),
+    path('location-profiles/', views.location_profiles, name='location_profiles'),
+    path('location-profiles/create/', views.create_location_profile, name='create_location_profile'),
+    path('location-profiles/edit/<int:pk>/', views.edit_location_profile, name='edit_location_profile'),
+    path('location-profiles/delete/<int:pk>/', views.delete_location_profile, name='delete_location_profile'),
+
 ]
