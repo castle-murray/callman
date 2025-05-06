@@ -54,6 +54,7 @@ from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.views import LoginView
 
 # Twilio imports
 from twilio.rest import Client
@@ -914,7 +915,7 @@ def view_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, 10)
+    paginator = Paginator(workers, int(request.GET.get('per_page', manager.per_page_preference)))
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -991,7 +992,12 @@ def search_workers(request):
         if skill_id:
             query &= Q(labor_types__id=skill_id)
         workers = workers.filter(query)
-    paginator = Paginator(workers, 10)
+    per_page = request.GET.get('per_page', '')
+    if not per_page or not per_page.isdigit():
+        per_page = manager.per_page_preference
+    else:
+        per_page = int(per_page)
+    paginator = Paginator(workers, per_page)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.page(page_number)
@@ -1003,7 +1009,9 @@ def search_workers(request):
         'workers': page_obj,
         'page_obj': page_obj,
         'search_query': search_query,
-        'skill_id': skill_id}
+        'skill_id': skill_id,
+        'per_page': per_page,
+        }
     return render(request, 'callManager/workers_list_partial.html', context)
 
 
@@ -2288,6 +2296,19 @@ def call_time_report(request, slug):
     return render(request, 'callManager/call_time_report.html', context)
 
 
+class CustomLoginView(LoginView):
+    template_name = 'callManager/login.html'
+    
+    def get_success_url(self):
+        user = self.request.user
+        if hasattr(user, 'steward'):
+            return reverse('steward_dashboard')
+        elif hasattr(user, 'manager'):
+            return reverse('manager_dashboard')
+        else:
+            return reverse('index')
+
+
 @login_required
 def sms_usage_report(request):
     manager = request.user.manager
@@ -2640,7 +2661,7 @@ def generate_signin_qr(request, slug):
         scanner = TemporaryScanner.objects.create(
             event=event,
             user=temp_user,
-            expires_at=timezone.now() + timedelta(days=7))
+            expires_at=timezone.now() + timedelta(hours=24))
         qr_url = request.build_absolute_uri(reverse('signin_station', args=[str(scanner.token)]))
         context = {'qr_url': qr_url, 'event': event}
         return render(request, 'callManager/signin_qr.html', context)

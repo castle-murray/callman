@@ -66,5 +66,5 @@ urlpatterns = [
     path('location-profiles/create/', views.create_location_profile, name='create_location_profile'),
     path('location-profiles/edit/<int:pk>/', views.edit_location_profile, name='edit_location_profile'),
     path('location-profiles/delete/<int:pk>/', views.delete_location_profile, name='delete_location_profile'),
-
+    path('login/', views.CustomLoginView.as_view(), name='login'),
 ]
