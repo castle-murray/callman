@@ -813,7 +813,8 @@ def add_labor_to_call(request, slug):
             return redirect('event_detail', slug=call_time.event.slug)
     else:
         form = LaborRequirementForm(company=manager.company, call_time=call_time)
-    context = {'form': form, 'call_time': call_time}
+        labor_types = LaborType.objects.filter(company=manager.company)
+    context = {'form': form, 'call_time': call_time, 'labor_types': labor_types}
     return render(request, 'callManager/add_labor_to_call.html', context)
 
 
@@ -858,9 +859,14 @@ def view_skills(request):
     skills = LaborType.objects.filter(company=manager.company)
     if request.method == "POST":
         if 'delete_id' in request.POST:
+            # check all events for labor requirements using this skill
+            if LaborRequirement.objects.filter(labor_type__id=request.POST.get('delete_id')).exists():
+                messages.error(request, "Cannot delete skill that is in use.")
+                return redirect('view_skills')
             skill_id = request.POST.get('delete_id')
             skill = get_object_or_404(LaborType, id=skill_id, company=manager.company)
             skill.delete()
+            messages.success(request, f"{skill.name} deleted")
             return redirect('view_skills')
         elif 'edit_id' in request.POST:
             skill_id = request.POST.get('edit_id')
@@ -897,7 +903,8 @@ def view_workers(request):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
     manager = request.user.manager
-    workers = Worker.objects.all().order_by('name')
+    company = manager.company
+    workers = Worker.objects.filter(companies=company).order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
@@ -968,8 +975,7 @@ def delete_worker(request, slug):
             sleep(2)
             messages.success(request, f"{worker_name} deleted.")
         return render(request, "callManager/messages_partial.html")
-        
-    
+
 
 @login_required
 def search_workers(request):
@@ -1356,6 +1362,15 @@ def confirm_event_requests(request, slug, event_token):
         'labor_requirement__labor_type').order_by(
         'labor_requirement__call_time__date',
         'labor_requirement__call_time__time')
+    available_call_times = LaborRequest.objects.filter(
+        labor_requirement__call_time__event=event,
+        availability_response='yes',
+        confirmed=False,
+        worker__phone_number=worker_phone).select_related(
+        'labor_requirement__call_time',
+        'labor_requirement__labor_type').order_by(
+        'labor_requirement__call_time__date',
+        'labor_requirement__call_time__time')
     registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
     calendar_links = []
     for req in confirmed_call_times:
@@ -1470,6 +1485,7 @@ def confirm_event_requests(request, slug, event_token):
             'event': event,
             'registration_url': registration_url,
             'confirmed_call_times': calendar_links,
+            'available_call_times': available_call_times,
             'qr_code_data': qr_code_data}
         return render(request, 'callManager/confirm_success.html', context)
     context = {
@@ -1477,9 +1493,10 @@ def confirm_event_requests(request, slug, event_token):
         'event': event,
         'labor_requests': labor_requests,
         'registration_url': registration_url,
+        'available_call_times': available_call_times,
         'confirmed_call_times': calendar_links,
         'qr_code_data': qr_code_data}
-    if not labor_requests.exists() and not calendar_links:
+    if not labor_requests.exists() and not available_call_times.exists() and not calendar_links:
         context['message'] = "No requests found for this link."
         return render(request, 'callManager/confirm_error.html', context)
     return render(request, 'callManager/confirm_event_requests.html', context)
@@ -2476,9 +2493,11 @@ def worker_clock_in_out(request, token):
     print(f"Using Referer: {referer}")
     if request.method == "POST":
         call_time_id = request.POST.get('call_time_id')
+        
         action = request.POST.get('action')
         call_time = get_object_or_404(CallTime, id=call_time_id, event=event)
         labor_request = get_object_or_404(LaborRequest, worker=worker, labor_requirement__call_time=call_time, confirmed=True)
+        minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or event.location_profile.minimum_hours or company.minimum_hours
         time_entry, created = TimeEntry.objects.get_or_create(
             labor_request=labor_request,
             worker=worker,
@@ -2491,12 +2510,15 @@ def worker_clock_in_out(request, token):
         elif action == 'clock_out' and time_entry.start_time and not time_entry.end_time:
             end_time = timezone.now()
             minutes = end_time.minute
-            if minutes > 30 + company.hour_round_up:
+            round_up = event.location_profile.hour_round_up or company.hour_round_up
+            if minutes > 30 + round_up:
                 end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
             elif minutes > company.hour_round_up:
                 end_time = end_time.replace(minute=30, second=0, microsecond=0)
             else:
                 end_time = end_time.replace(minute=0, second=0, microsecond=0)
+            if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
+                end_time = time_entry.start_time + timedelta(hours=minimum_hours)
             time_entry.end_time = end_time
             time_entry.save()
             messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")

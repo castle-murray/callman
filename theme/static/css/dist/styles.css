@@ -1063,9 +1063,18 @@ select {
   border-bottom-width: 1px;
 }
 
+.border-t {
+  border-top-width: 1px;
+}
+
 .border-gray-300 {
   --tw-border-opacity: 1;
   border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
+
+.border-text-secondary {
+  --tw-border-opacity: 1;
+  border-color: rgb(75 85 99 / var(--tw-border-opacity, 1));
 }
 
 .bg-blue-500 {
@@ -1541,6 +1550,11 @@ select {
 .dark\:border-gray-600:is(.dark *) {
   --tw-border-opacity: 1;
   border-color: rgb(75 85 99 / var(--tw-border-opacity, 1));
+}
+
+.dark\:border-dark-text-secondary:is(.dark *) {
+  --tw-border-opacity: 1;
+  border-color: rgb(124 140 162 / var(--tw-border-opacity, 1));
 }
 
 .dark\:bg-blue-600:is(.dark *) {

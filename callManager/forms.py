@@ -196,7 +196,7 @@ class SkillForm(forms.ModelForm):
         model = LaborType
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border autofocus'}),
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
         }
 
 

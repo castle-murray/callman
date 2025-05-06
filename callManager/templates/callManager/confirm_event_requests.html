@@ -78,15 +78,12 @@
                 <img src="data:image/png;base64,{{ qr_code_data }}" alt="Clock-In QR Code" class="mx-auto mb-4 max-w-xs">
             {% endif %}
         {% endif %}
-        <!--
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">
-            {% if registration_url %}
-                You can register or update your profile <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
-            {% else %}
-                No further action is required.
-            {% endif %}
+
+            You can register <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.
         </p>
-        <a href="{% url 'event_detail' event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
-        -->
+        <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">
+            Registration is not required or necessary.
+        </p>
     </div>
 {% endblock %}

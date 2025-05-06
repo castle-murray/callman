@@ -6,7 +6,7 @@
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Error</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <p class="text-text-red dark:text-dark-text-red">{{ message }}</p>
-        <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">New worker? <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Register here</a>.</p>
-        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Return to Home</a>
+        <p class="mt-4 text-text-tertiary dark:text-dark-text-tertiary">You can register <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.</p>
+        Registration is not required or necessary.
     </div>
 {% endblock %}
