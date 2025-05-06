@@ -982,7 +982,7 @@ def search_workers(request):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
     manager = request.user.manager
-    workers = Worker.objects.all().order_by('name')
+    workers = Worker.objects.filter(companies=manager.company).distinct().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
