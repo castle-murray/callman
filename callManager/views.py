@@ -972,7 +972,6 @@ def delete_worker(request, slug):
             messages.error(request, "Worker has labor requests and cannot be deleted.")
         else:
             worker.delete()
-            sleep(2)
             messages.success(request, f"{worker_name} deleted.")
         return render(request, "callManager/messages_partial.html")
 
