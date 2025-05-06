@@ -1611,7 +1611,6 @@ def labor_request_list(request, slug):
                     elif labor_request.availability_response == 'yes':
                         labor_request.confirmed = False
                         labor_request.availability_response = 'no'
-
                     labor_request.save()
                     messages.success(request, f"{worker.name} declined for {labor_requirement.labor_type.name}.")
                 elif action == 'delete':
@@ -1656,7 +1655,7 @@ def labor_request_list(request, slug):
         available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
         confirmed_requests = labor_requests.filter(confirmed=True)
         declined_requests = labor_requests.filter(availability_response='no')
-        workers = Worker.objects.all().distinct()
+        workers = Worker.objects.filter(companies=company).distinct()
         workers_list = list(workers)
         workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
         search_query = request.POST.get('search', request.GET.get('search', '')).strip()
@@ -1724,7 +1723,7 @@ def labor_request_list(request, slug):
     available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
     declined_requests = labor_requests.filter(availability_response='no')
-    workers = Worker.objects.all().distinct()
+    workers = Worker.objects.filter(companies=company).distinct()
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
     search_query = request.GET.get('search', '').strip()
@@ -1793,7 +1792,7 @@ def fill_labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
-    workers = Worker.objects.all().distinct()
+    workers = Worker.objects.filter(companies=manager.company).distinct()
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
