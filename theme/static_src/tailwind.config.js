@@ -83,6 +83,7 @@ module.exports = {
                 'yellow-hover': '#ca8a04', // yellow-600
                 'border-light': '#d1d5db', // gray-300
                 'text-available': '#1e40af', // Deep blue for available requests
+                'bg-available': '#e0f2fe', // Light blue for available requests
 
                 // Dark Mode
                 'dark-body-bg': '#1f2937', // gray-900
@@ -117,6 +118,7 @@ module.exports = {
                 'dark-border-dark': '#374151', // gray-700
                 'dark-shadow': '#374151',     // gray-700
                 'dark-text-available': '#06b6d4', // Cyan for available requests
+                'dark-bg-available': '#0891b2', // Darker Cyan for available requests
             },
             backgroundImage: {
                 'filled-event-gradient': 'linear-gradient(to right, #f7fafc, #d1fae5)',

@@ -79,9 +79,11 @@ import pytz
 import io
 
 
-from django.shortcuts import render
 def index(request):
     return render(request, 'callManager/index.html')
+
+def custom_404(request, exception):
+    return render(request, 'callManager/404.html', status=404)
 
 def fetch_messages(request):
     storage = get_messages(request)
@@ -625,16 +627,25 @@ def steward_invite_search(request):
     return render(request, 'callManager/steward_invite_partial.html', context)
 
 
-@login_required
 def register_steward(request, token):
     invitation = get_object_or_404(StewardInvitation, token=token, used=False)
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = WorkerRegistrationForm(request.POST)
         if form.is_valid():
+            phone_number = form.cleaned_data['phone_number']
+            workers = Worker.objects.filter(phone_number=phone_number)
+            if not workers.exists() or invitation.worker not in workers:
+                messages.error(request, "No worker found with this phone number or phone number does not match invitation.")
+                return render(request, 'callManager/register_steward.html', {'form': form, 'invitation': invitation})
+            already_registered = workers.filter(user__isnull=False)
+            if already_registered.exists():
+                messages.error(request, "One or more workers with this phone number are already registered with a user account.")
+                return render(request, 'callManager/register_steward.html', {'form': form, 'invitation': invitation})
             user = form.save()
-            steward = Steward.objects.create(user=user, company=invitation.company)
-            invitation.worker.user = user
-            invitation.worker.save()
+            Steward.objects.create(user=user, company=invitation.company)
+            for worker in workers:
+                worker.user = user
+                worker.save()
             invitation.used = True
             invitation.save()
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
@@ -642,7 +653,7 @@ def register_steward(request, token):
             messages.success(request, "Registration successful. You are now a steward.")
             return redirect('steward_dashboard')
     else:
-        form = UserCreationForm(initial={'username': invitation.worker.name})
+        form = WorkerRegistrationForm(initial={'phone_number': invitation.worker.phone_number})
     context = {'form': form, 'invitation': invitation}
     return render(request, 'callManager/register_steward.html', context)
 
@@ -1378,7 +1389,7 @@ def confirm_event_requests(request, slug, event_token):
         'labor_requirement__labor_type').order_by(
         'labor_requirement__call_time__date',
         'labor_requirement__call_time__time')
-    registration_url = request.build_absolute_uri(f"/worker/register/?phone={worker_phone}")
+    registration_url = request.build_absolute_uri(f"/user/register/?phone={worker_phone}")
     calendar_links = []
     for req in confirmed_call_times:
         call_time = req.labor_requirement.call_time
@@ -1509,31 +1520,32 @@ def confirm_event_requests(request, slug, event_token):
     return render(request, 'callManager/confirm_event_requests.html', context)
 
 
-def worker_registration(request):
+def user_registration(request):
     phone_number = request.GET.get('phone', '')
     if request.method == "POST":
         form = WorkerRegistrationForm(request.POST)
         if form.is_valid():
             phone_number = form.cleaned_data['phone_number']
-            existing_worker = Worker.objects.filter(phone_number=phone_number).first()
-            if existing_worker and existing_worker.user:
-                # Update existing worker’s name and labor types if user exists
-                existing_worker.name = form.cleaned_data['name']
-                existing_worker.labor_types.set(form.cleaned_data['labor_types'])
-                existing_worker.save()
-                return redirect('registration_success')
-            else:
-                # Create new worker and user
-                worker = form.save()
-                return redirect('registration_success')
+            workers = Worker.objects.filter(phone_number=phone_number)
+            if not workers.exists():
+                messages.error(request, "No workers found with this phone number.")
+                return render(request, 'callManager/user_registration.html', {'form': form, 'phone_number': phone_number})
+            already_registered = workers.filter(user__isnull=False)
+            if already_registered.exists():
+                messages.error(request, "One or more workers with this phone number are already registered with a user account.")
+                return render(request, 'callManager/user_registration.html', {'form': form, 'phone_number': phone_number})
+            user = form.save()
+            workers.update(user=user)
+            user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
+            login(request, user)
+            messages.success(request, "Registration successful. You are now a worker.")
+            return redirect('user_profile')
     else:
         form = WorkerRegistrationForm(initial={'phone_number': phone_number})
-        form.fields['phone_number'].disabled = True
-    context = {
-        'form': form,
-        'phone_number': phone_number,
-    }
-    return render(request, 'callManager/worker_registration.html', context)
+    context = {'form': form, 'phone_number': phone_number}
+    return render(request, 'callManager/user_registration.html', context)
+
+
 def registration_success(request):
     return render(request, 'callManager/registration_success.html')
 
@@ -2745,3 +2757,39 @@ def delete_location_profile(request, pk):
         return redirect('location_profiles')
     messages.error(request, "Invalid request method.")
     return redirect('location_profiles')
+
+
+@login_required
+def user_profile(request):
+    workers = request.user.workers.all()
+    if not workers.exists():
+        messages.error(request, "You are not currently associated with any company accounts. Please contact your manager.")
+        return redirect('login')
+    labor_requests = LaborRequest.objects.filter(worker__user=request.user).select_related(
+        'labor_requirement__call_time__event'
+    ).order_by('labor_requirement__call_time__date')
+    context = {'labor_requests': labor_requests, 'workers': workers}
+    return render(request, 'callManager/user_profile.html', context)
+
+@login_required
+def labor_request_action(request, request_id, action):
+    if not request.user.workers.exists():
+        return redirect('login')
+    labor_request = get_object_or_404(LaborRequest, id=request_id, worker__user=request.user)
+    if request.method == "POST":
+        if labor_request.availability_response is not None or labor_request.confirmed:
+            messages.error(request, "This request cannot be modified.")
+            return redirect('user_profile')
+        if action == 'confirm':
+            labor_request.availability_response = 'yes'
+            labor_request.save()
+            messages.success(request, "Request confirmed successfully.")
+        elif action == 'decline':
+            labor_request.availability_response = 'no'
+            labor_request.save()
+            messages.success(request, "Request declined successfully.")
+        else:
+            messages.error(request, "Invalid action.")
+        return redirect('user_profile')
+    messages.error(request, "Invalid request method.")
+    return redirect('user_profile')

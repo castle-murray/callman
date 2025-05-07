@@ -26,7 +26,7 @@
     {{ event.start_date }} - {{ event.end_date }}
     {% endif %}
     </p>
-    <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Location:</strong> {{ event.event_location }}</p>
+    <p class="text-text-tertiary dark:text-dark-text-tertiary"><strong>Location:</strong> {{ event.location_profile.name|default:"Not specified" }}</p>
     <p class="text-text-tertiary dark:text-dark-text-tertiary">{{ event.event_description|default:"No description provided" }}</p>
 </div>
 <div class="bg-card-bg p-2 w-full rounded-lg shadow mb-6 dark:bg-dark-card-bg dark:shadow-dark-shadow">

@@ -216,7 +216,7 @@ class LaborRequest(models.Model):
     
 
 class Worker(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='workers')
     phone_number = models.CharField(max_length=15)  # No unique constraint
     name = models.CharField(max_length=200, blank=True)
     companies = models.ManyToManyField('Company', related_name='workers', blank=True)  # Managers will populate this

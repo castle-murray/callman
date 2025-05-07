@@ -23,8 +23,7 @@ urlpatterns = [
     path('sms/reply/', views.sms_webhook, name='sms_webhook'),
     path('worker/import/', views.import_workers, name='import_workers'),
     path('event/<slug:slug>/confirm/<uuid:event_token>/', views.confirm_event_requests, name='confirm_event_requests'),
-    path('worker/register/', views.worker_registration, name='worker_registration'),
-    path('worker/register/success/', views.registration_success, name='registration_success'),
+    path('user/register/success/', views.registration_success, name='registration_success'),
     path('labor/<slug:slug>/requests/', views.labor_request_list, name='labor_request_list'),
     path('calltime/<slug:slug>/requests/', views.call_time_request_list, name='call_time_request_list'),
     path('call/<slug:slug>/track/', views.call_time_tracking, name='call_time_tracking'),
@@ -67,4 +66,7 @@ urlpatterns = [
     path('location-profiles/edit/<int:pk>/', views.edit_location_profile, name='edit_location_profile'),
     path('location-profiles/delete/<int:pk>/', views.delete_location_profile, name='delete_location_profile'),
     path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('user-profile/', views.user_profile, name='user_profile'),
+    path('user/register/', views.user_registration, name='user_registration'),
+    path('labor-request/<int:request_id>/<str:action>/', views.labor_request_action, name='labor_request_action'),
 ]

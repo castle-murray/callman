@@ -164,32 +164,33 @@ class WorkerForm(forms.ModelForm):
 class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
-class WorkerRegistrationForm(forms.ModelForm):
-    username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}), required=True)
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+class WorkerRegistrationForm(UserCreationForm):
+    phone_number = forms.CharField(
+        label="Phone Number",
+        widget=forms.HiddenInput()
+    )
 
     class Meta:
-        model = Worker
-        fields = ['name', 'phone_number', 'labor_types']
+        model = User
+        fields = ['username', 'password1', 'password2', 'phone_number']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'phone_number': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-            'labor_types': forms.CheckboxSelectMultiple(attrs={'class': 'text-text-blue dark:text-dark-text-blue'}),
+            'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
         }
 
-    def save(self, commit=True):
-        worker = super().save(commit=False)
-        user = User.objects.create_user(
-            username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
-            password=self.cleaned_data['password']
-        )
-        worker.user = user
-        if commit:
-            worker.save()
-            self.save_m2m()  # Save labor_types
-        return worker
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        # Normalize phone number (e.g., remove spaces, dashes)
+        phone_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        if len(phone_number) == 10:
+            phone_number = f"+1{phone_number}"
+        elif len(phone_number) == 11 and phone_number.startswith('1'):
+            phone_number = f"+{phone_number}"
+        elif len(phone_number) < 10:
+            raise forms.ValidationError("Please provide a valid phone number.")
+        return phone_number
+
 
 class SkillForm(forms.ModelForm):
     class Meta:
