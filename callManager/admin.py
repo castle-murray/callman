@@ -178,4 +178,3 @@ class SentSMSAdmin(admin.ModelAdmin):
 @admin.register(TimeChangeConfirmation)
 class TimeChangeConfirmationAdmin(admin.ModelAdmin):
     list_display = ('labor_request', 'expires_at')
-    ordering = ('expires_at')
