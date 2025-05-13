@@ -319,7 +319,7 @@ def admin_dashboard(request):
                 except ValueError:
                     pass
             else:
-                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+                term_filter = Q(event_name__icontains=term) | Q(location_profile__name__icontains=term)
             events = events.filter(term_filter)
     events = events.order_by('start_date').distinct()
     total_events = events.count()
@@ -457,7 +457,7 @@ def admin_search_events(request):
                 except ValueError:
                     pass
             else:
-                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+                term_filter = Q(event_name__icontains=term) | Q(location_profile__name__icontains=term)
             events = events.filter(term_filter)
     events = events.order_by('start_date').distinct()
     labor_requirements = LaborRequirement.objects.select_related(
@@ -501,7 +501,7 @@ def manager_dashboard(request):
     manager = request.user.manager
     has_skills = LaborType.objects.filter(company=manager.company).exists()
     has_locations = LocationProfile.objects.filter(company=manager.company).exists()
-    has_workers = Worker.objects.filter(companies=manager.company).exists()
+    has_workers = Worker.objects.filter(company=manager.company).exists()
     company = manager.company
     yesterday = timezone.now().date() - timedelta(days=1)
     search_query = request.GET.get('search', '').strip().lower()
@@ -694,7 +694,7 @@ def steward_invite(request):
     if request.method == "POST":
         worker_id = request.POST.get('worker_id')
         if worker_id:
-            worker = get_object_or_404(Worker, id=worker_id, companies=company)
+            worker = get_object_or_404(Worker, id=worker_id, company=company)
             invitation = StewardInvitation.objects.create(worker=worker, company=company)
             registration_url = request.build_absolute_uri(reverse('register_steward', args=[str(invitation.token)]))
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None

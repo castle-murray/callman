@@ -76,7 +76,7 @@ class MealBreakInline(admin.TabularInline):
 class EventAdmin(admin.ModelAdmin):
     list_display = ('event_name', 'start_date', 'end_date', 'is_single_day', 'location_profile', 'company')
     list_filter = ('is_single_day', 'start_date')
-    search_fields = ('event_name', 'event_location')
+    search_fields = ('event_name', 'location_profile__name')
 
 @admin.register(CallTime)
 class CallTimeAdmin(admin.ModelAdmin):
@@ -178,5 +178,4 @@ class SentSMSAdmin(admin.ModelAdmin):
 @admin.register(TimeChangeConfirmation)
 class TimeChangeConfirmationAdmin(admin.ModelAdmin):
     list_display = ('labor_request', 'expires_at')
-    list_filter = ('expires_at',)
-    ordering = ('expires_at',)
+    ordering = ('expires_at')

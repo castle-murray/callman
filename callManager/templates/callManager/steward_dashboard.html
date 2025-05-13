@@ -11,7 +11,7 @@
                         <a href="{% url 'event_detail' event.slug %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
                             {{ event.event_name }} - {{ event.start_date|date:"F j, Y" }}
                             {% if event.end_date %} to {{ event.end_date|date:"F j, Y" }}{% endif %}
-                            {% if event.event_location %} ({{ event.event_location }}){% endif %}
+                            {% if event.location_profile %} ({{ event.location_profile.name }}){% endif %}
                         </a>
                     </li>
                 {% endfor %}
