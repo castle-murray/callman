@@ -43,5 +43,8 @@
     </div>
 {% else %}
     <p class="text-text-secondary dark:text-dark-text-secondary">No workers found.</p>
+    <a href="{%url 'import_workers' %}" class="inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Import contacts from your phone.</a>
+    
+
 {% endif %}
 </div>

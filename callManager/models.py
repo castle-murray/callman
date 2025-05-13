@@ -209,10 +209,22 @@ class LaborRequest(models.Model):
     requested = models.BooleanField(default=False)
     sms_sent = models.BooleanField(default=False)
     event_token = models.CharField(max_length=36, null=True, blank=True)
+    sent_time = models.DateTimeField(null=True, blank=True)
+    time_change_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
         return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
+
+class TimeChangeConfirmation(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    labor_request = models.ForeignKey('LaborRequest', on_delete=models.CASCADE, related_name='time_change_confirmations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    confirmed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Time change confirmation for {self.labor_request}"
     
 
 class Worker(models.Model):
@@ -405,3 +417,14 @@ class LocationProfile(models.Model):
         if self.hour_round_up is None:
             self.hour_round_up = self.company.hour_round_up
         super().save(*args, **kwargs)
+
+
+class OneTimeLoginToken(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"One-time login token for {self.user.username}"

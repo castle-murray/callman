@@ -16,6 +16,7 @@ from .models import (
         Administrator,
         StewardInvitation,
         LocationProfile,
+        TimeChangeConfirmation,
         )
 
     
@@ -173,3 +174,9 @@ class SentSMSAdmin(admin.ModelAdmin):
     list_display = ('company', 'datetime_sent')
     list_filter = ('datetime_sent',)
     ordering = ('datetime_sent',)
+
+@admin.register(TimeChangeConfirmation)
+class TimeChangeConfirmationAdmin(admin.ModelAdmin):
+    list_display = ('labor_request', 'expires_at')
+    list_filter = ('expires_at',)
+    ordering = ('expires_at',)

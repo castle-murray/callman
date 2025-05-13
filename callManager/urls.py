@@ -70,4 +70,7 @@ urlpatterns = [
     path('user/register/', views.user_registration, name='user_registration'),
     path('labor-request/<int:request_id>/<str:action>/', views.labor_request_action, name='labor_request_action'),
     path('cancel-event/<slug:slug>/', views.cancel_event, name='cancel_event'),
+    path('auto-login/<uuid:token>/', views.auto_login, name='auto_login'),
+    path('confirm-time-change/<uuid:token>/', views.confirm_time_change, name='confirm_time_change'),
+    path('call-time-confirmations/<slug:slug>/', views.call_time_confirmations, name='call_time_confirmations'),
 ]

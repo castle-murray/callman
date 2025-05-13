@@ -15,6 +15,7 @@ django-dotenv==1.4.2
 django-htmx==1.23.0
 django-phonenumber-field==8.0.0
 django-tailwind==3.8.0
+django-user-agents==0.4.0
 dotenv==0.9.9
 filelock==3.18.0
 frozenlist==1.5.0
@@ -47,7 +48,10 @@ tokenizers==0.21.1
 tqdm==4.67.1
 twilio==9.5.1
 typing_extensions==4.13.1
+ua-parser==1.0.1
+ua-parser-builtins==0.18.0.post1
 urllib3==2.3.0
+user-agents==2.2.0
 vobject==0.9.9
 whitenoise==6.9.0
 yarl==1.18.3

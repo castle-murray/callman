@@ -42,6 +42,9 @@
             <a href="{% url 'call_time_tracking' call_time.slug %}" class="ml-2 inline-block bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Time Sheet</a>
             {% endif %}
             <a href="{% url 'edit_call_time' call_time.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Edit Call Time</a>
+            {% if call_time.has_changed %}
+                <a href="{% url 'call_time_confirmations' call_time.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Confirmations</a>
+            {% endif %}
             <form method="post" action="{% url 'delete_call_time' call_time.slug %}" class="inline ml-2">
                 {% csrf_token %}
                 {% if user.manager%}

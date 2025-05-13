@@ -14,4 +14,30 @@
             <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
     </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isSingleDayCheckbox = document.getElementById('id_is_single_day');
+        const startDateInput = document.getElementById('id_start_date');
+        const endDateInput = document.getElementById('id_end_date');
+
+        function toggleEndDate() {
+            if (isSingleDayCheckbox.checked) {
+                endDateInput.value = startDateInput.value;
+                endDateInput.disabled = true;
+                endDateInput.setAttribute('readonly', true);
+            } else {
+                endDateInput.disabled = false;
+                endDateInput.removeAttribute('readonly');
+            }
+        }
+
+        toggleEndDate();
+        isSingleDayCheckbox.addEventListener('change', toggleEndDate);
+        startDateInput.addEventListener('change', function() {
+            if (isSingleDayCheckbox.checked) {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+    });
+</script>
 {% endblock %}

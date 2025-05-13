@@ -6,7 +6,9 @@ from .models import (
         Event,
         LaborRequirement,
         LaborType,
+        OneTimeLoginToken,
         Steward,
+        TimeChangeConfirmation,
         Worker,
         TimeEntry,
         MealBreak,
@@ -73,6 +75,7 @@ from io import BytesIO, TextIOWrapper
 import re
 import uuid
 from urllib.parse import urlencode, quote
+from user_agents import parse
 
 # posssibly imports
 import pytz
@@ -126,6 +129,11 @@ def event_detail(request, slug):
     company = manager.company
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     call_times = event.call_times.all().order_by('date', 'time')
+    for call_time in call_times:
+        if call_time.original_time != call_time.time or call_time.original_date != call_time.date:
+            call_time.has_changed = True
+        else:
+            call_time.has_changed = False
     labor_requirements = LaborRequirement.objects.filter(call_time__event=event)
     labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event).values('labor_requirement_id').annotate(
         pending_count=Count('id', filter=Q(requested=True) & Q(availability_response__isnull=True)),
@@ -253,6 +261,7 @@ def edit_event(request, slug):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
     manager = request.user.manager
+    company = manager.company
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     if request.method == "POST":
         form = EventForm(request.POST, instance=event)
@@ -260,8 +269,10 @@ def edit_event(request, slug):
             form.save()
             return redirect('manager_dashboard')
     else:
-        form = EventForm(instance=event)
+        form = EventForm(instance=event, company=company)
+
     context = {
+        'company': company,
         'form': form,
         'event': event,
     }
@@ -488,6 +499,9 @@ def manager_dashboard(request):
     elif not hasattr(request.user, 'manager') and not hasattr(request.user, 'steward'):
         return redirect('login')
     manager = request.user.manager
+    has_skills = LaborType.objects.filter(company=manager.company).exists()
+    has_locations = LocationProfile.objects.filter(company=manager.company).exists()
+    has_workers = Worker.objects.filter(companies=manager.company).exists()
     company = manager.company
     yesterday = timezone.now().date() - timedelta(days=1)
     search_query = request.GET.get('search', '').strip().lower()
@@ -568,7 +582,11 @@ def manager_dashboard(request):
         'event_labor_needs': event_labor_needs,
         'search_query': search_query,
         'stewards': stewards,
+        'has_skills': has_skills,
+        'has_locations': has_locations,
+        'has_workers': has_workers,
         'include_past': include_past}
+
     return render(request, 'callManager/manager_dashboard.html', context)
 
 
@@ -1201,7 +1219,6 @@ def edit_call_time(request, slug):
                 confirmed_requests = LaborRequest.objects.filter(
                     labor_requirement__call_time=call_time,
                     confirmed=True,
-                    sms_sent=True
                 ).select_related('worker')
                 if confirmed_requests:
                     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
@@ -1209,9 +1226,18 @@ def edit_call_time(request, slug):
                     for req in confirmed_requests:
                         worker = req.worker
                         if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                            # Create a confirmation token
+                            confirmation = TimeChangeConfirmation.objects.create(
+                                labor_request=req,
+                                expires_at=timezone.now() + timedelta(days=7)
+                            )
+                            confirm_url = request.build_absolute_uri(
+                                reverse('confirm_time_change', args=[str(confirmation.token)])
+                            )
                             message_body = (
                                 f"{company.name}: {call_time.event.event_name} {call_time.name} time changed. "
-                                f"Now: {updated_call_time.date.strftime('%B %d')} at {updated_call_time.time.strftime('%I:%M %p')}."
+                                f"Now: {updated_call_time.date.strftime('%B %d')} at {updated_call_time.time.strftime('%I:%M %p')}. "
+                                f"Confirm: {confirm_url}"
                             )
                             if settings.TWILIO_ENABLED == 'enabled' and client:
                                 try:
@@ -1236,6 +1262,42 @@ def edit_call_time(request, slug):
         form = CallTimeForm(instance=call_time, event=call_time.event)
     context = {'form': form, 'call_time': call_time}
     return render(request, 'callManager/edit_call_time.html', context)
+
+
+def confirm_time_change(request, token):
+    try:
+        confirmation = TimeChangeConfirmation.objects.get(
+            token=token,
+            expires_at__gt=timezone.now(),
+            confirmed=False
+        )
+        confirmation.confirmed = True
+        confirmation.labor_request.time_change_confirmed = True
+        confirmation.labor_request.save()
+        confirmation.save()
+        messages.success(request, "Time change confirmed successfully.")
+    except TimeChangeConfirmation.DoesNotExist:
+        messages.error(request, "Invalid or expired confirmation link.")
+    return render(request, 'callManager/confirm_time_change.html')
+
+
+@login_required
+def call_time_confirmations(request, slug):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=request.user.manager.company)
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=True
+    ).select_related('worker', 'labor_requirement__labor_type')
+    confirmed_requests = labor_requests.filter(time_change_confirmed=True)
+    unconfirmed_requests = labor_requests.filter(time_change_confirmed=False)
+    context = {
+        'call_time': call_time,
+        'confirmed_requests': confirmed_requests,
+        'unconfirmed_requests': unconfirmed_requests,
+    }
+    return render(request, 'callManager/call_time_confirmations.html', context)
 
 
 @login_required
@@ -1395,7 +1457,16 @@ def sms_reply_webhook(request):
 
 @login_required
 def import_workers(request):
+    user_agent = parse(request.META.get('HTTP_USER_AGENT', ''))
     manager = request.user.manager
+    is_mobile = user_agent.is_mobile or user_agent.is_tablet
+    qr_url = None
+    if not is_mobile:
+        token = OneTimeLoginToken.objects.create(
+                user=request.user,
+                expires_at=timezone.now() + timedelta(hours=1)
+                )
+        qr_url = request.build_absolute_uri(reverse('auto_login', args=[str(token.token)]))
     if request.method == "POST":
         form = WorkerImportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -1439,10 +1510,10 @@ def import_workers(request):
             messages.success(request, f"Imported {imported} workers.")
             if errors:
                 messages.warning(request, f"Encountered {errors} import errors.")
-            return render(request, 'callManager/import_workers.html', {'form': form})
+            return render(request, 'callManager/import_workers.html', {'form': form, 'qr_url': qr_url, 'is_mobile': is_mobile})
     else:
         form = WorkerImportForm()
-    return render(request, 'callManager/import_workers.html', {'form': form})
+    return render(request, 'callManager/import_workers.html', {'form': form, 'qr_url': qr_url, 'is_mobile': is_mobile})
 
 
 def confirm_event_requests(request, slug, event_token):
@@ -2917,3 +2988,18 @@ def labor_request_action(request, request_id, action):
         return redirect('user_profile')
     messages.error(request, "Invalid request method.")
     return redirect('user_profile')
+
+def auto_login(request, token):
+    try:
+        login_token = OneTimeLoginToken.objects.get(
+            token=token,
+            expires_at__gt=timezone.now(),
+            used=False
+        )
+        login_token.used = True
+        login_token.save()
+        login(request, login_token.user)
+        return redirect('import_workers')
+    except OneTimeLoginToken.DoesNotExist:
+        messages.error(request, "Invalid or expired login token.")
+        return redirect('login')

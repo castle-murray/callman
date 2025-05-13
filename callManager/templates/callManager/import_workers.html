@@ -1,5 +1,5 @@
 {% extends 'callManager/base.html' %}
-{% block title %}Import Workers - Autorigger{% endblock %}
+{% block title %}Import Workers - CallMan{% endblock %}
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Import Workers from VCF</h1>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
@@ -40,5 +40,12 @@
                 </ol>
             </div>
         </div>
+        {% if not is_mobile and qr_url %}
+            <div class="mb-6 text-center">
+                <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Quick Access QR Code</h2>
+                <p class="text-text-primary mb-4 dark:text-dark-text-primary">Scan this QR code on a mobile device to access the import workers page.</p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ qr_url|urlencode }}" alt="QR Code" class="mx-auto mb-4">
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

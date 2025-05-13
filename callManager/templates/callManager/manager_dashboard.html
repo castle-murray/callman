@@ -28,13 +28,27 @@
         <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ sent_messages }}</p>
     </a>
 </div>
+{% if not has_skills or not has_locations or not has_workers %}
+<h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Things to do:</h2>
+<ul class="list-disc pl-5 pb-2">
+    {% if not has_skills %}
+    <li class="text-text-secondary dark:text-dark-text-secondary">Add Skills: use the add/edit skills button.</li>
+    {% endif %}
+    {% if not has_workers %}
+    <li class="text-text-secondary dark:text-dark-text-secondary">Add Contacts: use the import contacts button to get the contacts off your phone or add them manually using the add/edit contacts button. </li>
+    {% endif %}
+    {% if not has_locations %}
+    <li class="text-text-secondary dark:text-dark-text-secondary">Add Locations: use the manage locations button.</li>
+    {% endif %}
+</ul>
+{% endif %}
 <div class="mb-6 flex space-x-4">
-    <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
-    <a href="{% url 'view_skills' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
-    <a href="{% url 'view_workers' %}" class="bg-purple text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Edit/Add Workers</a>
-    <a href="{% url 'import_workers' %}" class="bg-indigo text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Contacts</a>
+    <a href="{% url 'create_event' %}" class="bg-primary  text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
+    <a href="{% url 'view_skills' %}" class="bg-secondary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
+    <a href="{% url 'view_workers' %}" class="bg-purple {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Add/Edit Contacts</a>
+    <a href="{% url 'import_workers' %}" class="bg-indigo {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Contacts</a>
     <a href="{% url 'steward_invite' %}" class="bg-teal text-dark-text-primary p-2 rounded hover:bg-teal-hover dark:bg-dark-teal dark:hover:bg-dark-teal-hover">Invite Steward</a>
-    <a href="{% url 'location_profiles' %}" class="bg-yellow text-dark-text-primary p-2 rounded hover:bg-yellow-hover dark:bg-dark-yellow dark:hover:bg-dark-yellow-hover">Manage Locations</a>
+    <a href="{% url 'location_profiles' %}" class="bg-yellow {% if not has_locations %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-yellow-hover dark:bg-dark-yellow dark:hover:bg-dark-yellow-hover">Manage Locations</a>
 </div>
 <div class="bg-card-bg p-6 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
     <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Upcoming Events</h2>

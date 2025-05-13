@@ -5,7 +5,8 @@
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirmation Submitted</h1>
-        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Thank you for responding to the request for <strong>{{ event.event_name }}</strong>.</p>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Thank you for responding</p>
+        <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary"><strong>{{ event.event_name }}</strong></h2>
         {% if available_call_times or confirmed_call_times %}
             {% if confirmed_call_times %}
                 <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Call Times</h2>
@@ -39,8 +40,10 @@
                 <p class="text-text-primary mb-4 dark:text-dark-text-primary">You will be notified by text when confirmed.</p>
 
             {% endif %}
+            {% if not user.is_authenticated %}
             <p class="text-text-primary mb-4 dark:text-dark-text-primary">You can register <a href="{{ registration_url }}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">here</a>.</p>
             Registration is not required or necessary.
+            {% endif %}
         {% else %}
             <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">Your availability response has been recorded. You will be notified when confirmed.</p>
         {% endif %}

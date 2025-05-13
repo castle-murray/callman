@@ -1,0 +1,20 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Confirm Time Change - CallMan{% endblock %}
+{% block content %}
+    <div class="max-w-md mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Time Change</h1>
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if messages %}
+            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Your confirmation has been processed.</p>
+        {% else %}
+            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please check the link or try again.</p>
+        {% endif %}
+        <a href="{% url 'user_profile' %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Go to User Profile</a>
+    </div>
+{% endblock %}

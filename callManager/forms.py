@@ -46,9 +46,8 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if company:
             self.fields['location_profile'].queryset = company.location_profiles.all()
-            print(f"EventForm initialized with {company.location_profiles.count()} location profiles")
+            self.fields['location_profile'].label_from_instance = lambda obj: obj.name
         else:
-            print("bacon")
             self.fields['location_profile'].queryset = LocationProfile.objects.none()
     def clean(self):
         cleaned_data = super().clean()
