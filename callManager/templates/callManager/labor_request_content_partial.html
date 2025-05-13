@@ -25,6 +25,15 @@
                             <input type="hidden" name="action" value="delete">
                             <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
                         </form>
+                        <!-- call filled button -->
+                        {% if confirmed_count >= labor_requirement.needed_labor %}
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="call_filled">
+                            <button type="submit" class="bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Call Filled</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </li>
             {% endfor %}
@@ -58,6 +67,15 @@
                             <input type="hidden" name="action" value="delete">
                             <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
                         </form>
+                        <!-- call filled button -->
+                        {% if confirmed_count >= labor_requirement.needed_labor %}
+                        <form method="post" class="inline ml-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ request.id }}">
+                            <input type="hidden" name="action" value="call_filled">
+                            <button type="submit" class="bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Call Filled</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </li>
             {% endfor %}

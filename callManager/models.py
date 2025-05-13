@@ -105,7 +105,6 @@ class LaborType(models.Model):
 # Event model for concerts or entertainment gigs
 class Event(models.Model):
     event_name = models.CharField(max_length=200)
-    event_location = models.CharField(max_length=200)
     start_date = models.DateField(null=True, blank=True )  # New start date
     end_date = models.DateField(null=True, blank=True )    # New end date
     is_single_day = models.BooleanField(default=False)  # New single-day flag
@@ -115,6 +114,7 @@ class Event(models.Model):
     created_by = models.ForeignKey('Manager', on_delete=models.SET_NULL, null=True, blank=True)
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
     steward = models.ForeignKey('Steward', on_delete=models.SET_NULL, null=True, blank=True)
+    canceled = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -199,7 +199,7 @@ class LaborRequest(models.Model):
         ('ncns', 'No Call No Show'),
     ]
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
-    labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE)
+    labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE, related_name='labor_requests')
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     availability_response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)
     confirmed = models.BooleanField(default=False)

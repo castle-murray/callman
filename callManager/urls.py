@@ -69,4 +69,5 @@ urlpatterns = [
     path('user-profile/', views.user_profile, name='user_profile'),
     path('user/register/', views.user_registration, name='user_registration'),
     path('labor-request/<int:request_id>/<str:action>/', views.labor_request_action, name='labor_request_action'),
+    path('cancel-event/<slug:slug>/', views.cancel_event, name='cancel_event'),
 ]

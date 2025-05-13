@@ -15,10 +15,17 @@ from .models import (
         Owner,
         Administrator,
         StewardInvitation,
+        LocationProfile,
         )
 
     
+@admin.register(LocationProfile)
+class LocationProfileAdmin(admin.ModelAdmin):
+    list_display = ('name', 'company')
+    list_filter = ('company',)
+    search_fields = ('name', 'company__name')
     
+
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone_number', 'email', 'meal_penalty_trigger_time', 'hour_round_up')
@@ -66,7 +73,7 @@ class MealBreakInline(admin.TabularInline):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('event_name', 'start_date', 'end_date', 'is_single_day', 'event_location')
+    list_display = ('event_name', 'start_date', 'end_date', 'is_single_day', 'location_profile', 'company')
     list_filter = ('is_single_day', 'start_date')
     search_fields = ('event_name', 'event_location')
 

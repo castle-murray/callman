@@ -318,7 +318,7 @@ def admin_dashboard(request):
         availability_response='no').count()
     labor_requirements = LaborRequirement.objects.select_related(
         'labor_type', 'call_time__event').annotate(
-        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+        confirmed_count=Count('labor_requests', filter=Q(labor_requests__confirmed=True)))
     unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
     current_date = timezone.now()
     start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -451,7 +451,7 @@ def admin_search_events(request):
     events = events.order_by('start_date').distinct()
     labor_requirements = LaborRequirement.objects.select_related(
         'labor_type', 'call_time__event').annotate(
-        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+        confirmed_count=Count('labor_requests', filter=Q(labor_requests__confirmed=True)))
     event_labor_needs = {}
     for event in events:
         event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
@@ -528,7 +528,7 @@ def manager_dashboard(request):
     labor_requirements = LaborRequirement.objects.filter(
         call_time__event__company=company).select_related(
         'labor_type', 'call_time__event').annotate(
-        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+        confirmed_count=Count('labor_requests', filter=Q(labor_requests__confirmed=True)))
     unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
     current_date = timezone.now()
     start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -570,6 +570,101 @@ def manager_dashboard(request):
         'stewards': stewards,
         'include_past': include_past}
     return render(request, 'callManager/manager_dashboard.html', context)
+
+
+@login_required
+def cancel_event(request, slug):
+    event = get_object_or_404(Event, slug=slug)
+    if request.method == "POST":
+        call_times = event.call_times.all()
+        message_body = f"Sorry, the event has been canceled: {event.event_name} on {event.start_date}"
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
+        for call_time in call_times:
+            labor_requirements = call_time.labor_requirements.all()
+            for labor_requirement in labor_requirements:
+                labor_requests = labor_requirement.labor_requests.all()
+                for labor_request in labor_requests:
+                    if labor_request.worker.sms_consent and not labor_request.worker.stop_sms and labor_request.worker.phone_number:
+                        if labor_request.confirmed or labor_request.availability_response == 'yes' or labor_request.availability_response == None:
+                            if settings.TWILIO_ENABLED == 'enabled' and client:
+                                try:
+                                    client.messages.create(
+                                        body=message_body,
+                                        from_=settings.TWILIO_PHONE_NUMBER,
+                                        to=str(labor_request.worker.phone_number))
+                                except TwilioRestException as e:
+                                    print(f"Failed to notify {labor_request.worker.name}: {str(e)}")
+                                finally:
+                                    log_sms(event.company)
+                            else:
+                                log_sms(event.company)
+                                print(message_body)
+        event.canceled = True
+        event.steward = None
+        event.save()
+
+    manager = request.user.manager
+    company = manager.company
+    yesterday = timezone.now().date() - timedelta(days=1)
+    search_query = request.GET.get('search', '').strip().lower()
+    include_past = request.GET.get('include_past', '') == 'on'
+    events = Event.objects.filter(company=company)
+    if not include_past:
+        events = events.filter(Q(start_date__gte=yesterday) | Q(end_date__gte=yesterday))
+    events = events.order_by('start_date').distinct()
+    total_events = events.count()
+    pending_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event__company=company,
+        availability_response__isnull=True).count()
+    declined_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time__event__company=company,
+        availability_response='no').count()
+    labor_requirements = LaborRequirement.objects.filter(
+        call_time__event__company=company).select_related(
+        'labor_type', 'call_time__event').annotate(
+        confirmed_count=Count('labor_requests', filter=Q(labor_requests__confirmed=True)))
+    unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in labor_requirements)
+    current_date = timezone.now()
+    start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (start_of_month + timedelta(days=32)).replace(day=1)
+    sent_messages = SentSMS.objects.filter(
+        company=company,
+        datetime_sent__gte=start_of_month,
+        datetime_sent__lt=next_month).count()
+    event_labor_needs = {}
+    stewards = Steward.objects.filter(company=company)
+    for event in events:
+        event_requirements = [lr for lr in labor_requirements if lr.call_time.event_id == event.id]
+        unfilled_requirements = [
+            lr for lr in event_requirements if lr.confirmed_count < lr.needed_labor]
+        unfilled_count = len(unfilled_requirements)
+        total_unfilled_spots = sum(max(0, lr.needed_labor - lr.confirmed_count) for lr in unfilled_requirements)
+        if unfilled_count > 3:
+            labor_needs_text = f"{unfilled_count} unfilled, {total_unfilled_spots} total labor needed"
+        elif unfilled_count > 0:
+            labor_needs_text = ", ".join(
+                f"{lr.labor_type.name}: {max(0, lr.needed_labor - lr.confirmed_count)} needed"
+                for lr in unfilled_requirements)
+        else:
+            labor_needs_text = "All calls filled"
+        event_labor_needs[event.id] = {
+            'unfilled_count': unfilled_count,
+            'total_unfilled_spots': total_unfilled_spots,
+            'labor_needs_text': labor_needs_text}
+    context = {
+        'company': company,
+        'events': events,
+        'total_events': total_events,
+        'pending_requests': pending_requests,
+        'sent_messages': sent_messages,
+        'declined': declined_requests,
+        'unfilled_spots': unfilled_spots,
+        'event_labor_needs': event_labor_needs,
+        'search_query': search_query,
+        'stewards': stewards,
+        'include_past': include_past}
+                    
+    return render(request, 'callManager/events_list_partial.html', context)
 
 
 @login_required
@@ -688,13 +783,13 @@ def search_events(request):
                 except ValueError:
                     pass
             else:
-                term_filter = Q(event_name__icontains=term) | Q(event_location__icontains=term)
+                term_filter = Q(event_name__icontains=term) | Q(location_profile__name__icontains=term)
             events = events.filter(term_filter)
     events = events.order_by('start_date').distinct()
     labor_requirements = LaborRequirement.objects.filter(
         call_time__event__company=company).select_related(
         'labor_type', 'call_time__event').annotate(
-        confirmed_count=Count('laborrequest', filter=Q(laborrequest__confirmed=True)))
+        confirmed_count=Count('labor_requests', filter=Q(labor_requests__confirmed=True)))
     stewards = Steward.objects.filter(company=company)
     event_labor_needs = {}
     for event in events:
@@ -1369,7 +1464,7 @@ def confirm_event_requests(request, slug, event_token):
         worker__phone_number=worker_phone).select_related(
         'labor_requirement__call_time',
         'labor_requirement__labor_type').annotate(
-        confirmed_count=Count('labor_requirement__laborrequest', filter=Q(labor_requirement__laborrequest__confirmed=True))).order_by(
+        confirmed_count=Count('labor_requirement__labor_requests', filter=Q(labor_requirement__labor_requests__confirmed=True))).order_by(
         'labor_requirement__call_time__date',
         'labor_requirement__call_time__time')
     confirmed_call_times = LaborRequest.objects.filter(
@@ -1562,11 +1657,33 @@ def labor_request_list(request, slug):
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
-            if request_id and action in ['confirm', 'decline', 'delete']:
+            if request_id and action in ['confirm', 'decline', 'delete', 'call_filled']:
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement=labor_requirement)
                 worker = labor_request.worker
+                call_time = labor_request.labor_requirement.call_time
+                if action == 'call_filled':
+                    if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                        message_body = (
+                                f"Sorry, the call has been filled:\n"
+                                f"{event.event_name} @ {event.location_profile.name} - {labor_requirement.labor_type.name} - {call_time.date.strftime('%B %d')} at {labor_requirement.call_time.time.strftime('%I %p')}."
+                        )
+                        if settings.TWILIO_ENABLED == 'enabled' and client:
+                            try:
+                                client.messages.create(
+                                    body=message_body,
+                                    from_=settings.TWILIO_PHONE_NUMBER,
+                                    to=str(worker.phone_number))
+                            except TwilioRestException as e:
+                                sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
+                            finally:
+                                log_sms(company)
+                        else:
+                            log_sms(company)
+                            print(message_body)
+                    labor_request.delete()
+                    messages.success(request, f"Call filled for {worker.name}.")
+
                 if action == 'confirm':
-                    call_time = labor_request.labor_requirement.call_time
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
                         message_body = (
                                 f"confirmed {labor_request.labor_requirement.labor_type}"
@@ -1951,7 +2068,7 @@ def call_time_request_list(request, slug):
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
             action = request.POST.get('action')
-            if request_id and action in ['confirm', 'decline', 'ncns', 'delete']:
+            if request_id and action in ['confirm', 'decline', 'ncns', 'delete', 'call_filled']:
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
                 worker = labor_request.worker
                 was_ncns = labor_request.response == 'ncns'
@@ -2411,8 +2528,8 @@ def send_clock_in_link(request, slug):
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     confirmed_workers = Worker.objects.filter(
-        laborrequest__labor_requirement__call_time__event=event,
-        laborrequest__confirmed=True).distinct()
+        labor_requests__labor_requirement__call_time__event=event,
+        labor_requests__confirmed=True).distinct()
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
     sms_errors = []
     for worker in confirmed_workers:
@@ -2561,8 +2678,8 @@ def worker_clock_in_out(request, token):
     one_hour_after = now + timedelta(hours=1)
     call_times = CallTime.objects.filter(
         event=event,
-        labor_requirements__laborrequest__worker=worker,
-        labor_requirements__laborrequest__confirmed=True).filter(
+        labor_requirements__labor_requests__worker=worker,
+        labor_requirements__labor_requests__confirmed=True).filter(
         Q(date=now.date(), time__range=(one_hour_before.time(), one_hour_after.time())) |
         Q(timeentry__worker=worker, timeentry__start_time__isnull=False, timeentry__end_time__isnull=True)
     ).exclude(
@@ -2781,10 +2898,17 @@ def labor_request_action(request, request_id, action):
             messages.error(request, "This request cannot be modified.")
             return redirect('user_profile')
         if action == 'confirm':
+            if labor_request.is_reserved or labor_request.labor_requirement.fcfs_positions > 0:
+                labor_request.confirmed = True
             labor_request.availability_response = 'yes'
             labor_request.save()
             messages.success(request, "Request confirmed successfully.")
         elif action == 'decline':
+            if labor_request.is_reserved:
+                labor_request.is_reserved = False
+                if labor_request.labor_requirement.fcfs_positions > 0:
+                    labor_request.labor_requirement.fcfs_positions += 1
+                    labor_request.labor_requirement.save()
             labor_request.availability_response = 'no'
             labor_request.save()
             messages.success(request, "Request declined successfully.")
