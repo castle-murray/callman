@@ -1562,7 +1562,7 @@ def confirm_event_requests(request, slug, event_token):
         start_dt = datetime.combine(call_time.date, call_time.time)
         end_dt = start_dt + timedelta(hours=4)
         event_name = quote(f"{event.event_name} - {call_time.name}")
-        location = quote(event.event_location or "TBD")
+        location = quote(event.location_profile.name or "TBD")
         details = quote(f"Position: {req.labor_requirement.labor_type.name}\nConfirmed for {worker.name}")
         gcal_url = (
             f"https://calendar.google.com/calendar/r/eventedit?"
