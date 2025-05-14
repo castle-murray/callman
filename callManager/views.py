@@ -501,7 +501,7 @@ def manager_dashboard(request):
     manager = request.user.manager
     has_skills = LaborType.objects.filter(company=manager.company).exists()
     has_locations = LocationProfile.objects.filter(company=manager.company).exists()
-    has_workers = Worker.objects.filter(companies=manager.company).exists()
+    has_workers = Worker.objects.filter(company=manager.company).exists()
     company = manager.company
     yesterday = timezone.now().date() - timedelta(days=1)
     search_query = request.GET.get('search', '').strip().lower()
@@ -694,7 +694,7 @@ def steward_invite(request):
     if request.method == "POST":
         worker_id = request.POST.get('worker_id')
         if worker_id:
-            worker = get_object_or_404(Worker, id=worker_id, companies=company)
+            worker = get_object_or_404(Worker, id=worker_id, company=company)
             invitation = StewardInvitation.objects.create(worker=worker, company=company)
             registration_url = request.build_absolute_uri(reverse('register_steward', args=[str(invitation.token)]))
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
@@ -716,7 +716,7 @@ def steward_invite(request):
             return redirect('manager_dashboard')
         else:
             messages.error(request, "Please select a worker.")
-    workers = Worker.objects.filter(companies=company).order_by('name')
+    workers = Worker.objects.filter(company=company).order_by('name')
     context = {
         'workers': workers,
         'search_query': '',
@@ -731,7 +731,7 @@ def steward_invite_search(request):
     manager = request.user.manager
     company = manager.company
     search_query = request.GET.get('search', '').strip()
-    workers = Worker.objects.filter(companies=company).order_by('name')
+    workers = Worker.objects.filter(company=company).order_by('name')
     if search_query:
         workers = workers.filter(Q(name__icontains=search_query) | Q(phone_number__icontains=search_query))
     context = {
@@ -1029,7 +1029,7 @@ def view_workers(request):
         return redirect('login')
     manager = request.user.manager
     company = manager.company
-    workers = Worker.objects.filter(companies=company).order_by('name')
+    workers = Worker.objects.filter(company=company).order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
@@ -1051,7 +1051,7 @@ def view_workers(request):
         if 'add_worker' in request.POST:
             form = WorkerForm(request.POST, company=manager.company)
             if form.is_valid():
-                if Worker.objects.filter(phone_number=form.cleaned_data['phone_number'], companies=manager.company).exists():
+                if Worker.objects.filter(phone_number=form.cleaned_data['phone_number'], company=manager.company).exists():
                     messages.error(request, "Worker with this phone number already exists.")
                     return redirect('view_workers')
                 worker = form.save(commit=False)
@@ -1106,7 +1106,7 @@ def search_workers(request):
     if not hasattr(request.user, 'manager'):
         return redirect('login')
     manager = request.user.manager
-    workers = Worker.objects.filter(companies=manager.company).distinct().order_by('name')
+    workers = Worker.objects.filter(company=manager.company).distinct().order_by('name')
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
@@ -1384,7 +1384,7 @@ def sms_webhook(request):
             elif 'stop' in body:
                 worker.sms_consent = False
                 worker.stop_sms = True
-                company = worker.companies.first()
+                company = worker.company
                 worker.save()
                 response = MessagingResponse()
                 response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
@@ -1862,7 +1862,7 @@ def labor_request_list(request, slug):
         available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
         confirmed_requests = labor_requests.filter(confirmed=True)
         declined_requests = labor_requests.filter(availability_response='no')
-        workers = Worker.objects.filter(companies=company).distinct()
+        workers = Worker.objects.filter(company=company).distinct()
         workers_list = list(workers)
         workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
         search_query = request.POST.get('search', request.GET.get('search', '')).strip()
@@ -1930,7 +1930,7 @@ def labor_request_list(request, slug):
     available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
     declined_requests = labor_requests.filter(availability_response='no')
-    workers = Worker.objects.filter(companies=company).distinct()
+    workers = Worker.objects.filter(company=company).distinct()
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
     search_query = request.GET.get('search', '').strip()
@@ -1999,7 +1999,7 @@ def fill_labor_request_list(request, slug):
     manager = request.user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
-    workers = Worker.objects.filter(companies=manager.company).distinct()
+    workers = Worker.objects.filter(company=manager.company).distinct()
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:

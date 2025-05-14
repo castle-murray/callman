@@ -14,7 +14,7 @@
         {% if workers %}
             <ul class="mb-4 space-y-2 text-text-tertiary dark:text-dark-text-tertiary">
                 {% for worker in workers %}
-                    <li>{{ worker.companies.all|join:", " }}</li>
+                    <li>{{ worker.company.name }}</li>
                 {% endfor %}
             </ul>
         {% else %}

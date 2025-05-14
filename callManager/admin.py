@@ -100,7 +100,7 @@ class LaborTypeAdmin(admin.ModelAdmin):
 @admin.register(Worker)
 class WorkerAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone_number', 'nocallnoshow')
-    list_filter = ('companies',)
+    list_filter = ('company',)
     search_fields = ('name', 'phone_number')
 
 @admin.register(Manager)

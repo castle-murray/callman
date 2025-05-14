@@ -231,7 +231,8 @@ class Worker(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='workers')
     phone_number = models.CharField(max_length=15)  # No unique constraint
     name = models.CharField(max_length=200, blank=True)
-    companies = models.ManyToManyField('Company', related_name='workers', blank=True)  # Managers will populate this
+    #companies = models.ManyToManyField('Company', related_name='workers', blank=True)  # Managers will populate this
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='workers', null=True, blank=True)
     labor_types = models.ManyToManyField('LaborType', blank=True)
     sms_consent = models.BooleanField(default=False)
     sent_consent_msg = models.BooleanField(default=False)
@@ -249,8 +250,8 @@ class Worker(models.Model):
         super().save(*args, **kwargs)
 
     def add_company(self, company):
-        if not self.companies.filter(id=company.id).exists():
-            self.companies.add(company)
+        if not self.company:
+            self.company = company
             self.save()
 
     def formatted_phone_number(self):
