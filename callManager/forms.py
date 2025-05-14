@@ -163,15 +163,34 @@ class WorkerForm(forms.ModelForm):
 class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
+class ManagerRegistrationForm(UserCreationForm):
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+        widgets = {
+            'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        }
+
 class WorkerRegistrationForm(UserCreationForm):
     phone_number = forms.CharField(
         label="Phone Number",
         widget=forms.HiddenInput()
     )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+    )
 
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2', 'phone_number']
+        fields = ['username', 'email', 'password1', 'password2', 'phone_number']
         widgets = {
             'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
@@ -180,7 +199,6 @@ class WorkerRegistrationForm(UserCreationForm):
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get('phone_number')
-        # Normalize phone number (e.g., remove spaces, dashes)
         phone_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
         if len(phone_number) == 10:
             phone_number = f"+1{phone_number}"
@@ -201,10 +219,25 @@ class SkillForm(forms.ModelForm):
 
 
 class OwnerRegistrationForm(UserCreationForm):
-    company_name = forms.CharField(max_length=200, required=True)
+    company_name = forms.CharField(
+        label="Company Name",
+        widget=forms.TextInput(attrs={'placeholder': 'Company Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+    )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+    )
+
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2', 'company_name']
+        fields = ['username', 'email', 'password1', 'password2', 'company_name']
+        widgets = {
+            'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'company_name': forms.TextInput(attrs={'placeholder': 'Company Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        }
 
 class CompanyForm(forms.ModelForm):
     name = forms.CharField(

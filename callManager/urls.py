@@ -73,4 +73,7 @@ urlpatterns = [
     path('auto-login/<uuid:token>/', views.auto_login, name='auto_login'),
     path('confirm-time-change/<uuid:token>/', views.confirm_time_change, name='confirm_time_change'),
     path('call-time-confirmations/<slug:slug>/', views.call_time_confirmations, name='call_time_confirmations'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
+    path('user/register/', views.user_registration, name='user_registration'),
 ]

@@ -429,3 +429,14 @@ class OneTimeLoginToken(models.Model):
 
     def __str__(self):
         return f"One-time login token for {self.user.username}"
+
+
+class PasswordResetToken(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Password reset token for {self.user.username}"

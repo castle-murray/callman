@@ -7,6 +7,7 @@ from .models import (
         LaborRequirement,
         LaborType,
         OneTimeLoginToken,
+        PasswordResetToken,
         Steward,
         TimeChangeConfirmation,
         Worker,
@@ -55,8 +56,9 @@ from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, SetPasswordForm
 from django.contrib.auth.views import LoginView
+from callManager.utils import send_custom_email
 
 # Twilio imports
 from twilio.rest import Client
@@ -408,17 +410,19 @@ def register_owner(request, token):
     if request.method == "POST":
         form = OwnerRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
             company = Company.objects.create(
                 name=form.cleaned_data['company_name'],
-                phone_number=invitation.phone)
+                # Add other required Company fields with defaults or from form if needed
+            )
             Owner.objects.create(user=user, company=company)
-            Manager.objects.create(user=user, company=company)
             invitation.used = True
             invitation.save()
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
             login(request, user)
-            messages.success(request, f"Registration successful. You are now an owner and manager of {company.name}.")
+            messages.success(request, "Registration successful. You are now an owner.")
             return redirect('manager_dashboard')
     else:
         form = OwnerRegistrationForm()
@@ -754,17 +758,17 @@ def register_steward(request, token):
             if already_registered.exists():
                 messages.error(request, "One or more workers with this phone number are already registered with a user account.")
                 return render(request, 'callManager/register_steward.html', {'form': form, 'invitation': invitation})
-            user = form.save()
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
             Steward.objects.create(user=user, company=invitation.company)
-            for worker in workers:
-                worker.user = user
-                worker.save()
+            workers.update(user=user)
             invitation.used = True
             invitation.save()
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
             login(request, user)
             messages.success(request, "Registration successful. You are now a steward.")
-            return redirect('steward_dashboard')
+            return redirect('user_profile')
     else:
         form = WorkerRegistrationForm(initial={'phone_number': invitation.worker.phone_number})
     context = {'form': form, 'invitation': invitation}
@@ -1700,8 +1704,17 @@ def user_registration(request):
             if already_registered.exists():
                 messages.error(request, "One or more workers with this phone number are already registered with a user account.")
                 return render(request, 'callManager/user_registration.html', {'form': form, 'phone_number': phone_number})
-            user = form.save()
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
             workers.update(user=user)
+            # Send welcome email
+            send_custom_email(
+                subject="Welcome to CallMan!",
+                to_email=user.email,
+                template_name='callManager/emails/welcome_email.html',
+                context={'user': user}
+            )
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
             login(request, user)
             messages.success(request, "Registration successful. You are now a worker.")
@@ -2822,9 +2835,11 @@ def owner_dashboard(request):
 def register_manager(request, token):
     invitation = get_object_or_404(ManagerInvitation, token=token, used=False)
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = ManagerRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
             Manager.objects.create(user=user, company=invitation.company)
             invitation.used = True
             invitation.save()
@@ -2832,7 +2847,8 @@ def register_manager(request, token):
             login(request, user)
             messages.success(request, "Registration successful. You are now a manager.")
             return redirect('manager_dashboard')
-    form = UserCreationForm()
+    else:
+        form = ManagerRegistrationForm()
     context = {'form': form, 'invitation': invitation}
     return render(request, 'callManager/register_manager.html', context)
 
@@ -3003,3 +3019,55 @@ def auto_login(request, token):
     except OneTimeLoginToken.DoesNotExist:
         messages.error(request, "Invalid or expired login token.")
         return redirect('login')
+
+
+def forgot_password(request):
+    if request.method == "POST":
+        email = request.POST.get('email', '').strip()
+        user = User.objects.filter(email=email).first()
+        if user:
+            # Create a password reset token
+            token = PasswordResetToken.objects.create(
+                user=user,
+                expires_at=timezone.now() + timedelta(hours=1)
+            )
+            reset_url = request.build_absolute_uri(reverse('reset_password', args=[str(token.token)]))
+            email_success = send_custom_email(
+                subject="CallMan Password Reset",
+                to_email=user.email,
+                template_name='callManager/emails/password_reset_email.html',
+                context={'reset_url': reset_url, 'user': user}
+            )
+            if email_success:
+                messages.success(request, "A password reset link has been sent to your email.")
+            else:
+                messages.error(request, "Failed to send reset link. Please try again.")
+        else:
+            messages.error(request, "No user found with this email address.")
+        return render(request, 'callManager/forgot_password.html')
+    return render(request, 'callManager/forgot_password.html')
+
+
+def reset_password(request, token):
+    try:
+        reset_token = PasswordResetToken.objects.get(
+            token=token,
+            expires_at__gt=timezone.now(),
+            used=False
+        )
+        if request.method == "POST":
+            form = SetPasswordForm(user=reset_token.user, data=request.POST)
+            if form.is_valid():
+                form.save()
+                reset_token.used = True
+                reset_token.save()
+                user = authenticate(username=reset_token.user.username, password=form.cleaned_data['new_password1'])
+                login(request, user)
+                messages.success(request, "Your password has been reset successfully.")
+                return redirect('manager_dashboard')
+        else:
+            form = SetPasswordForm(user=reset_token.user)
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, "Invalid or expired password reset link.")
+        form = None
+    return render(request, 'callManager/reset_password.html', {'form': form})
