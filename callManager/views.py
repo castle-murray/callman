@@ -2216,7 +2216,6 @@ def call_time_request_list(request, slug):
 def call_time_tracking(request, slug):
     manager = request.user.manager
     company = manager.company
-    minimum_hours = labor_requirement.minimum_hours or call_time.minimum_hours or event.location_profile.minimum_hours or company.minimum_hours
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -2228,6 +2227,7 @@ def call_time_tracking(request, slug):
         request_id = request.POST.get('request_id')
         action = request.POST.get('action')
         labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
+        minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
         worker = labor_request.worker
         if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
             time_entry, created = TimeEntry.objects.get_or_create(
