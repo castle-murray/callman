@@ -749,6 +749,26 @@ select {
   outline: 1px auto -webkit-focus-ring-color;
 }
 
+.dark [type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.dark [type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.dark [type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.dark [type="week"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.dark [type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
 .container {
   width: 100%;
 }

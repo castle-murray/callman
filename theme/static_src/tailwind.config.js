@@ -137,5 +137,25 @@ module.exports = {
         require('@tailwindcss/forms'),
         require('@tailwindcss/typography'),
         require('@tailwindcss/aspect-ratio'),
+
+            function({ addBase }) {
+        addBase({
+            '.dark [type="date"]::-webkit-calendar-picker-indicator': {
+                filter: 'invert(1)'
+            },
+            '.dark [type="datetime-local"]::-webkit-calendar-picker-indicator': {
+                filter: 'invert(1)'
+            },
+            '.dark [type="time"]::-webkit-calendar-picker-indicator': {
+                filter: 'invert(1)'
+            },
+            '.dark [type="week"]::-webkit-calendar-picker-indicator': {
+                filter: 'invert(1)'
+            },
+            '.dark [type="month"]::-webkit-calendar-picker-indicator': {
+                filter: 'invert(1)'
+            }
+        });
+    }
     ],
 }
