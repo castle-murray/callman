@@ -165,29 +165,23 @@ class WorkerForm(forms.ModelForm):
 class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
-class ManagerRegistrationForm(UserCreationForm):
-    email = forms.EmailField(
-        label="Email",
-        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
-    )
-
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2']
-        widgets = {
-            'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
-            'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
-            'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
-        }
 
 class WorkerRegistrationForm(UserCreationForm):
     phone_number = forms.CharField(
         label="Phone Number",
-        widget=forms.HiddenInput()
+        widget=forms.HiddenInput(),
+        error_messages={
+            'required': 'Phone number is required.',
+            'invalid': 'Please provide a valid phone number.'
+        }
     )
     email = forms.EmailField(
         label="Email",
-        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        error_messages={
+            'required': 'Email address is required.',
+            'invalid': 'Please enter a valid email address.'
+        }
     )
 
     class Meta:
@@ -198,6 +192,32 @@ class WorkerRegistrationForm(UserCreationForm):
             'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
         }
+        error_messages = {
+            'username': {
+                'required': 'Username is required.',
+                'unique': 'This username is already taken.',
+                'invalid': 'Please enter a valid username.'
+            },
+            'password2': {
+                'required': 'Please confirm your password.',
+                'password_mismatch': 'Passwords do not match.'
+            }
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise ValidationError("This email address is already in use.")
+        return email
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get('password1')
+        if password1:
+            try:
+                validate_password(password1, self.instance)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password1
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get('phone_number')
@@ -207,18 +227,8 @@ class WorkerRegistrationForm(UserCreationForm):
         elif len(phone_number) == 11 and phone_number.startswith('1'):
             phone_number = f"+{phone_number}"
         elif len(phone_number) < 10:
-            raise forms.ValidationError("Please provide a valid phone number.")
+            raise ValidationError("Please provide a valid phone number.")
         return phone_number
-
-
-class SkillForm(forms.ModelForm):
-    class Meta:
-        model = LaborType
-        fields = ['name']
-        widgets = {
-            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
-        }
-
 
 class OwnerRegistrationForm(UserCreationForm):
     company_name = forms.CharField(
@@ -272,6 +282,60 @@ class OwnerRegistrationForm(UserCreationForm):
                 raise ValidationError(e.messages)
         return password1
 
+class ManagerRegistrationForm(UserCreationForm):
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        error_messages={
+            'required': 'Email address is required.',
+            'invalid': 'Please enter a valid email address.'
+        }
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+        widgets = {
+            'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        }
+        error_messages = {
+            'username': {
+                'required': 'Username is required.',
+                'unique': 'This username is already taken.',
+                'invalid': 'Please enter a valid username.'
+            },
+            'password2': {
+                'required': 'Please confirm your password.',
+                'password_mismatch': 'Passwords do not match.'
+            }
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise ValidationError("This email address is already in use.")
+        return email
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get('password1')
+        if password1:
+            try:
+                validate_password(password1, self.instance)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password1
+
+
+class SkillForm(forms.ModelForm):
+    class Meta:
+        model = LaborType
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+        }
+
 
 class CompanyForm(forms.ModelForm):
     name = forms.CharField(
@@ -298,13 +362,12 @@ class CompanyForm(forms.ModelForm):
     website = forms.URLField(
         label="Website",
         widget=forms.URLInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-
     class Meta:
         model = Company
         fields = [ 'name', 'address', 'city', 'state', 'zip_code', 'phone_number', 'email', 'website',]
 
-class CompanyHoursForm(forms.ModelForm):
 
+class CompanyHoursForm(forms.ModelForm):
     minimum_hours = forms.IntegerField(
         label="Minimum Call Time Hours",
         widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
@@ -317,6 +380,7 @@ class CompanyHoursForm(forms.ModelForm):
     class Meta:
         model = Company
         fields = ['minimum_hours', 'meal_penalty_trigger_time', 'hour_round_up']
+
 
 class LocationProfileForm(forms.ModelForm):
     name = forms.CharField(
