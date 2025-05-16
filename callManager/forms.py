@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import Event, CallTime, LaborRequirement, LaborType, Worker, Company, LocationProfile
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 
 class LaborTypeForm(forms.ModelForm):
     class Meta:
@@ -221,11 +223,18 @@ class SkillForm(forms.ModelForm):
 class OwnerRegistrationForm(UserCreationForm):
     company_name = forms.CharField(
         label="Company Name",
-        widget=forms.TextInput(attrs={'placeholder': 'Company Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+        widget=forms.TextInput(attrs={'placeholder': 'Company Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        error_messages={
+            'required': 'Company name is required.'
+        }
     )
     email = forms.EmailField(
         label="Email",
-        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'})
+        widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        error_messages={
+            'required': 'Email address is required.',
+            'invalid': 'Please enter a valid email address.'
+        }
     )
 
     class Meta:
@@ -233,22 +242,41 @@ class OwnerRegistrationForm(UserCreationForm):
         fields = ['username', 'email', 'password1', 'password2', 'company_name']
         widgets = {
             'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
-            'email': forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
-            'company_name': forms.TextInput(attrs={'placeholder': 'Company Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
         }
+        error_messages = {
+            'username': {
+                'required': 'Username is required.',
+                'unique': 'This username is already taken.',
+                'invalid': 'Please enter a valid username.'
+            },
+            'password2': {
+                'required': 'Please confirm your password.',
+                'password_mismatch': 'Passwords do not match.'
+            }
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise ValidationError("This email address is already in use.")
+        return email
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get('password1')
+        if password1:
+            try:
+                validate_password(password1, self.instance)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password1
+
 
 class CompanyForm(forms.ModelForm):
     name = forms.CharField(
         label="Company Name",
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-    meal_penalty_trigger_time = forms.IntegerField(
-        label="Meal Penalty Trigger Time (Hours)",
-        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-    hour_round_up = forms.IntegerField(
-        label="Minutes to round to next half hour",
-        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     address = forms.CharField(
         label="Address",
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
@@ -257,6 +285,9 @@ class CompanyForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     state = forms.CharField(
         label="State",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    zip_code= forms.CharField(
+        label="Zip Code",
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     phone_number = forms.CharField(
         label="Phone Number",
@@ -267,17 +298,25 @@ class CompanyForm(forms.ModelForm):
     website = forms.URLField(
         label="Website",
         widget=forms.URLInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
-    minimum_hours = forms.IntegerField(
-        label="Minimum Call Time Hours",
-        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 
     class Meta:
         model = Company
-        fields = [
-            'name', 'meal_penalty_trigger_time', 'hour_round_up', 'address',
-            'city', 'state', 'phone_number', 'email', 'website',
-            'minimum_hours']
+        fields = [ 'name', 'address', 'city', 'state', 'zip_code', 'phone_number', 'email', 'website',]
 
+class CompanyHoursForm(forms.ModelForm):
+
+    minimum_hours = forms.IntegerField(
+        label="Minimum Call Time Hours",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    meal_penalty_trigger_time = forms.IntegerField(
+        label="Meal Penalty Trigger Time (Hours)",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    hour_round_up = forms.IntegerField(
+        label="Minutes to round to next half hour",
+        widget=forms.NumberInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    class Meta:
+        model = Company
+        fields = ['minimum_hours', 'meal_penalty_trigger_time', 'hour_round_up']
 
 class LocationProfileForm(forms.ModelForm):
     name = forms.CharField(

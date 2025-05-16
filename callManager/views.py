@@ -27,6 +27,7 @@ from .models import (
 #forms
 from .forms import (
         CallTimeForm,
+        CompanyHoursForm,
         LaborTypeForm,
         LaborRequirementForm,
         EventForm,
@@ -2828,7 +2829,8 @@ def owner_dashboard(request):
             else:
                 messages.error(request, "Failed to update company information.")
     form = CompanyForm(instance=company)
-    context = {'form': form, 'company': company}
+    time_form = CompanyHoursForm(instance=company)
+    context = {'form': form, 'company': company, 'time_form': time_form}
     return render(request, 'callManager/owner_dashboard.html', context)
 
 
