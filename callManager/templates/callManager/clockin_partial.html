@@ -1,0 +1,18 @@
+<td class="p-2">
+{% if time_entry.start_time %}
+<span class="text-text-primary dark:text-dark-text-primary cursor-pointer" 
+      hx-get="{% url 'call_time_tracking_edit' call_time.slug %}?request_id={{ labor_request.id }}&field=start_time" 
+      hx-target="#time-entry-{{ time_entry.id }}-start_time">
+    {{ time_entry.start_time|date:"H:i" }}
+</span>
+
+{% else %}
+<button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover"
+        hx-post="{% url 'htmx_clockin_partial' labor_request.id %}"
+        hx-target="closest td" 
+        hx-swap="outerHTML"
+        hx-trigger="click"
+        hx-header="X-CSRFToken: {{ csrf_token }}">
+        Sign In</button>
+{% endif %}
+</td>

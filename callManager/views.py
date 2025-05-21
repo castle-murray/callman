@@ -67,9 +67,10 @@ from twilio.base.exceptions import TwilioRestException
 
 # repotlab imports for PDF generation
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import Table, TableStyle, Paragraph, SimpleDocTemplate
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import PageBreak, Table, TableStyle, Paragraph, SimpleDocTemplate, Table, TableStyle, Spacer, KeepTogether
 from reportlab.lib import colors
+from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet
 
 # other imports
@@ -1345,92 +1346,136 @@ def sms_webhook(request):
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
-        try:
-            worker = Worker.objects.get(phone_number=from_number)
-            if 'yes' in body:
+        workers = Worker.objects.filter(phone_number=from_number)
+        
+        if not workers.exists():
+            response = MessagingResponse()
+            response.message("Number not recognized. Please contact your Stewrd")
+            return HttpResponse(str(response), content_type='text/xml')
+
+        # Check if any worker has stopped SMS
+        if any(worker.stop_sms for worker in workers):
+            response = MessagingResponse()
+            response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
+            return HttpResponse(str(response), content_type='text/xml')
+
+        response = MessagingResponse()
+        if body == 'yes' or body == 'y':
+            for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-                queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
-                if queued_requests.exists():
-                    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                    # Group requests by event
-                    events_to_notify = {}
-                    for req in queued_requests:
-                        event = req.labor_requirement.call_time.event
-                        if event.slug not in events_to_notify:
-                            events_to_notify[event.slug] = {'event': event, 'requests': []}
-                        events_to_notify[event.slug]['requests'].append(req)
-                    # Send one message per event
-                    for event_slug, data in events_to_notify.items():
-                        event = data['event']
-                        company = event.company
-                        log_sms(company)
-                        requests = data['requests']
-                        token = str(uuid.uuid4())  # Unique token per event
-                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        message_body = (
-                                f"call confirmation: {event.event_name} "
-                            f"on {event.start_date}: {confirmation_url}"
+            
+            # Process queued labor requests for all workers
+            queued_requests = LaborRequest.objects.filter(
+                worker__in=workers, requested=True, sms_sent=False
+            ).select_related('labor_requirement__call_time__event', 'worker')
+            
+            if queued_requests.exists():
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                # Group requests by event and company
+                events_to_notify = {}
+                for req in queued_requests:
+                    event = req.labor_requirement.call_time.event
+                    company = event.company
+                    key = (event.slug, company.id)
+                    if key not in events_to_notify:
+                        events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
+                    events_to_notify[key]['requests'].append(req)
+                
+                # Send one message per event
+                for key, data in events_to_notify.items():
+                    event = data['event']
+                    company = data['company']
+                    requests = data['requests']
+                    token = str(uuid.uuid4())  # Unique token per event
+                    confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                    message_body = (
+                        f"Call confirmation: {event.event_name} "
+                        f"on {event.start_date}: {confirmation_url}"
+                    )
+                    try:
+                        client.messages.create(
+                            body=message_body,
+                            from_=settings.TWILIO_PHONE_NUMBER,
+                            to=str(from_number)
                         )
-                        client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                        log_sms(company)
                         # Update all requests for this event with the same token
                         for req in requests:
                             req.sms_sent = True
                             req.event_token = token
                             req.save()
-                response = MessagingResponse()
-                response.message("Thank you! You’ll now receive job requests.")
-            elif 'no' in body:
-                worker.sms_consent = False
-                worker.save()
-                response = MessagingResponse()
-                response.message("You’ve opted out of job request messages.")
-            elif 'stop' in body:
+                    except TwilioRestException as e:
+                        print(f"Failed to send SMS to {from_number}: {str(e)}")
+            
+            response.message("Thank you! You’ll now receive job requests.")
+        
+        elif body == 'stop':
+            for worker in workers:
                 worker.sms_consent = False
                 worker.stop_sms = True
-                company = worker.company
                 worker.save()
-                response = MessagingResponse()
-                response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
-            elif 'start' in body:
+            response.message("You’ve opted out of messages. Reply 'START' to resume.")
+        
+        elif body == 'start':
+            for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-                queued_requests = LaborRequest.objects.filter(worker=worker, requested=True, sms_sent=False).select_related('labor_requirement__call_time__event')
-                if queued_requests.exists():
-                    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                    # Group requests by event
-                    events_to_notify = {}
-                    for req in queued_requests:
-                        event = req.labor_requirement.call_time.event
-                        if event.slug not in events_to_notify:
-                            events_to_notify[event.slug] = {'event': event, 'requests': []}
-                        events_to_notify[event.slug]['requests'].append(req)
-                    # Send one message per event
-                    for event_slug, data in events_to_notify.items():
-                        event = data['event']
-                        requests = data['requests']
-                        token = str(uuid.uuid4())  # Unique token per event
-                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        message_body = (
-                            f"call confirmation:  {event.event_name} "
-                            f"on {event.start_date}: {confirmation_url}"
+            
+            # Process queued labor requests for all workers
+            queued_requests = LaborRequest.objects.filter(
+                worker__in=workers, requested=True, sms_sent=False
+            ).select_related('labor_requirement__call_time__event', 'worker')
+            
+            if queued_requests.exists():
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                # Group requests by event and company
+                events_to_notify = {}
+                for req in queued_requests:
+                    event = req.labor_requirement.call_time.event
+                    company = event.company
+                    key = (event.slug, company.id)
+                    if key not in events_to_notify:
+                        events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
+                    events_to_notify[key]['requests'].append(req)
+                
+                # Send one message per event
+                for key, data in events_to_notify.items():
+                    event = data['event']
+                    company = data['company']
+                    requests = data['requests']
+                    token = str(uuid.uuid4())  # Unique token per event
+                    confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                    message_body = (
+                        f"Call confirmation: {event.event_name} "
+                        f"on {event.start_date}: {confirmation_url}"
+                    )
+                    try:
+                        client.messages.create(
+                            body=message_body,
+                            from_=settings.TWILIO_PHONE_NUMBER,
+                            to=str(from_number)
                         )
-                        client.messages.create(body=message_body, from_=settings.TWILIO_PHONE_NUMBER, to=str(worker.phone_number))
+                        log_sms(company)
                         # Update all requests for this event with the same token
                         for req in requests:
                             req.sms_sent = True
                             req.event_token = token
                             req.save()
-                response = MessagingResponse()
-                response.message("Welcome back! You’ll now receive job requests.")
+                    except TwilioRestException as e:
+                        print(f"Failed to send SMS to {from_number}: {str(e)}")
+            
+            response.message("Welcome back! You’ll now receive job requests.")
+        
+        else:
+            # Catchall response based on sms_consent
+            if any(not worker.sms_consent for worker in workers):
+                response.message("Response not recognized. Please reply 'Yes' or 'Y' to consent to SMS notifications, or 'STOP' to unsubscribe.")
             else:
-                response = MessagingResponse()
-                response.message("Please reply 'Yes' to consent, 'No' to opt out, or 'STOP' to unsubscribe.")
-        except Worker.DoesNotExist:
-            response = MessagingResponse()
-            response.message("Number not recognized. Please contact support.")
+                response.message("This is an automated system. No one is reading your response. Reply 'STOP' to unsubscribe.")
+        
         return HttpResponse(str(response), content_type='text/xml')
     return HttpResponse(status=400)
 
@@ -2229,19 +2274,19 @@ def call_time_tracking(request, slug):
         labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
         minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
         worker = labor_request.worker
-        if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
+        if action in [ 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
             time_entry, created = TimeEntry.objects.get_or_create(
                 labor_request=labor_request,
                 worker=worker,
                 call_time=call_time,
                 defaults={'start_time': datetime.combine(call_time.date, call_time.time)})
             was_ncns = worker.nocallnoshow > 0 and labor_request.availability_response == 'no'
-            if action == 'sign_in' and not time_entry.start_time:
-                now = datetime.now()
-                time_entry.start_time = now
-                time_entry.save()
-                messages.success(request, f"Signed in {worker.name}")
-            elif action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
+#            if action == 'sign_in' and not time_entry.start_time:
+#                now = datetime.now()
+#                time_entry.start_time = now
+#                time_entry.save()
+#                messages.success(request, f"Signed in {worker.name}")
+            if action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
                 end_time = datetime.now()
                 if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
                     end_time = time_entry.start_time + timedelta(hours=minimum_hours)
@@ -2349,7 +2394,6 @@ def call_time_tracking(request, slug):
                     messages.error(request, f"Invalid date or time format")
             elif action == 'delete_meal_break':
                 meal_break_id = request.POST.get('meal_break_id')
-
                 meal_break = get_object_or_404(MealBreak, id=meal_break_id, time_entry=time_entry)
                 print(meal_break)
                 meal_break.delete()
@@ -2377,6 +2421,121 @@ def call_time_tracking(request, slug):
         'hours': hours,
         'minutes': minutes}
     return render(request, 'callManager/call_time_tracking.html', context)
+
+@login_required
+def htmx_clockin_partial(request, id):
+    labor_request = get_object_or_404(LaborRequest, id=id)
+    call_time = labor_request.labor_requirement.call_time
+    start_time = call_time.time
+    date = call_time.date
+    time_entry, created = TimeEntry.objects.get_or_create(
+        labor_request=labor_request,
+        worker=labor_request.worker,
+        call_time=labor_request.labor_requirement.call_time,
+        defaults={'start_time': datetime.combine(labor_request.labor_requirement.call_time.date, labor_request.labor_requirement.call_time.time)})
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'sign_in' and not time_entry.start_time:
+            time_entry.start_time = datetime.combine(date, start_time)
+            time_entry.save()
+            messages.success(request, f"Signed in at {time_entry.start_time.strftime('%I:%M %p')}.")
+    context = {
+        'time_entry': time_entry,
+        'call_time': call_time,
+        'labor_request': labor_request
+    }
+    return render(request, 'callManager/clockin_partial.html', context)
+
+@login_required
+def htmx_time_sheet_row(request, id):
+    labor_request = get_object_or_404(LaborRequest, id=id)
+    worker = labor_request.worker
+    call_time = labor_request.labor_requirement.call_time
+    labor_requirement = labor_request.labor_requirement
+    minimum_hours = labor_requirement.minimum_hours
+    round_up = call_time.event.location_profile.hour_round_up or company.hour_round_up
+    company = call_time.event.company
+    start_time = call_time.time
+    date = call_time.date
+    time_entry, created = TimeEntry.objects.get_or_create(
+        labor_request=labor_request,
+        worker=labor_request.worker,
+        call_time=labor_request.labor_requirement.call_time,
+        defaults={'start_time': datetime.combine(labor_request.labor_requirement.call_time.date, labor_request.labor_requirement.call_time.time)})
+    meal_breaks = time_entry.meal_breaks.all()
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'sign_in' and not time_entry.start_time:
+            time_entry.start_time = datetime.combine(date, start_time)
+            time_entry.save()
+            messages.success(request, f"Signed in at {time_entry.start_time.strftime('%I:%M %p')}.")
+        elif action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
+            if not time_entry.start_time:
+                time_entry.start_time = datetime.combine(date, start_time)
+                time_entry.save()
+            end_time = datetime.now()
+            if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
+                end_time = time_entry.start_time + timedelta(hours=minimum_hours)
+            minutes = end_time.minute
+            if minutes > 30 + round_up:
+                end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            elif minutes > round_up:
+                end_time = end_time.replace(minute=30, second=0, microsecond=0)
+            else:
+                end_time = end_time.replace(minute=0, second=0, microsecond=0)
+            time_entry.end_time = end_time
+            time_entry.save()
+            messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")
+        elif action == 'add_meal_break':
+            break_start = datetime.now()
+            if break_start.minute > 30 + round_up:
+                break_start = break_start.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            elif break_start.minute > round_up:
+                break_start = break_start.replace(minute=30, second=0, microsecond=0)
+            else:
+                break_start = break_start.replace(minute=0, second=0, microsecond=0)
+            break_type = request.POST.get('break_type', 'paid')
+            duration = timedelta(hours=1) if break_type == 'unpaid' else timedelta(minutes=30)
+            meal_break = MealBreak.objects.create(
+                time_entry=time_entry,
+                break_time=break_start,
+                break_type=break_type,
+                duration=duration)
+            messages.success(request, f"Added {break_type} meal break for {labor_request.worker.name}")
+        elif action == 'update_meal_break':
+            meal_break_id = request.POST.get('meal_break_id')
+            meal_break = get_object_or_404(MealBreak, id=meal_break_id, time_entry=time_entry)
+            break_time = datetime.now()
+            if break_time.minute > 30 + round_up:
+                break_time = break_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            elif break_time.minute > round_up:
+                break_time = break_time.replace(minute=30, second=0, microsecond=0)
+            else:
+                break_time = break_time.replace(minute=0, second=0, microsecond=0)
+            meal_break.break_time = break_time
+            meal_break.save()
+            messages.success(request, f"Updated meal break for {labor_request.worker.name}")
+        elif action == 'ncns':
+            labor_request.confirmed = False
+            labor_request.availability_response = 'no'
+            labor_request.save()
+            worker.nocallnoshow += 1
+            worker.save()
+            return HttpResponse(" ")
+        elif action == 'call_out':
+            labor_request.confirmed = False
+            labor_request.availability_response = 'no'
+            labor_request.save()
+            labor_request.delete()
+            return HttpResponse(" ")
+    context = {
+        'time_entry': time_entry,
+        'meal_breaks': meal_breaks,
+        'call_time': call_time,
+        'worker': labor_request.worker,
+        'labor_request': labor_request
+    }
+    return render(request, 'callManager/time_sheet_row_partial.html', context)
 
 
 @login_required
@@ -2446,9 +2605,11 @@ def delete_meal_break(request, meal_break_id):
         print("Deleted meal break")
     return HttpResponse("")
 
+
 @login_required
 def call_time_report(request, slug):
     manager = request.user.manager
+    company = manager.company
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -2461,20 +2622,28 @@ def call_time_report(request, slug):
     format_type = request.GET.get('format', 'html')
     if format_type == 'pdf':
         buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=0.25*inch, bottomMargin=0, leftMargin=0.5*inch, rightMargin=0.5*inch)
         styles = getSampleStyleSheet()
         elements = []
-        elements.append(Paragraph(f"Event: {call_time.event.event_name}", styles['Heading1']))
-        elements.append(Paragraph(f"Call Time: {call_time.name} at {call_time.time} on {call_time.date}", styles['Heading2']))
-        data = [['Name', 'Labor Type', 'Sign In', 'Sign Out', 'Meal Breaks', 'Normal Hours', 'Meal Penalty Hours', 'Total Hours']]
+
+        # Header content (to be repeated on each page)
+        def create_header():
+            return KeepTogether([
+                Paragraph(f"{company.name}", styles['Heading1']),
+                Paragraph(f"{call_time.event.event_name}: {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d, %Y')}", styles['Heading2']),
+                Spacer(1, 0.2*inch)
+            ])
+
+        # Table headers
+        headers = ['Name', 'Labor Type', 'Sign In', 'Sign Out', 'Meal Breaks', 'Hours', 'MP', 'Total Hours']
+        table_data = []
         for req in confirmed_requests:
             time_entry = req.time_entries.first()
             if time_entry and time_entry.meal_breaks.exists():
-                paid_count = time_entry.meal_breaks.filter(break_type='paid').count()
-                unpaid_count = time_entry.meal_breaks.filter(break_type='unpaid').count()
-                meal_breaks = f"{paid_count} Paid, {unpaid_count} Unpaid"
-                if paid_count == 0 and unpaid_count == 0:
-                    meal_breaks = "None"
+                for meal_break in time_entry.meal_breaks.all():
+                    meal_breaks = f"{meal_break.break_time.strftime('%I:%M %p')} ({meal_break.break_type.capitalize()})"
+                    break
+                meal_breaks = f"{meal_breaks}"
             else:
                 meal_breaks = "None"
             row = [
@@ -2485,10 +2654,31 @@ def call_time_report(request, slug):
                 meal_breaks,
                 f"{time_entry.normal_hours:.2f}" if time_entry else "0.00",
                 f"{time_entry.meal_penalty_hours:.2f}" if time_entry else "0.00",
-                f"{time_entry.total_hours_worked:.2f}" if time_entry else "0.00"]
-            data.append(row)
-        table = Table(data, colWidths=[100, 80, 80, 80, 120, 60, 80, 60])
-        table.setStyle(TableStyle([
+                f"{time_entry.total_hours_worked:.2f}" if time_entry else "0.00"
+            ]
+            table_data.append(row)
+
+        # Calculate column widths based on content
+        c = canvas.Canvas(buffer, pagesize=landscape(letter))
+        font_name = 'Helvetica'
+        font_size = 10
+        padding = 10  # Padding in points for each cell
+        max_widths = [c.stringWidth(header, font_name, font_size) for header in headers]
+        for row in table_data:
+            for i, cell in enumerate(row):
+                cell_width = c.stringWidth(str(cell), font_name, font_size)
+                max_widths[i] = max(max_widths[i], cell_width)
+        
+        # Add padding and scale to fit page
+        total_width = sum(max_widths) + 2 * padding * len(max_widths)
+        page_width = landscape(letter)[0] - doc.leftMargin - doc.rightMargin
+        if total_width > page_width:
+            scale_factor = page_width / total_width
+            max_widths = [w * scale_factor for w in max_widths]
+        col_widths = [w + 2 * padding for w in max_widths]
+
+        # Table styling
+        table_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -2496,9 +2686,28 @@ def call_time_report(request, slug):
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
-        elements.append(table)
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=30, bottomMargin=30)
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ])
+
+        # Calculate rows per page
+        page_height = landscape(letter)[1]
+        header_height = 1.5 * inch
+        signature_height = 1.0 * inch
+        available_height = page_height - header_height - signature_height - doc.topMargin - doc.bottomMargin
+        row_height = 0.3 * inch
+        rows_per_page = int(available_height // row_height)
+
+        # Split data into pages
+        data = [headers]
+        for i in range(0, len(table_data), rows_per_page):
+            elements.append(create_header())  # Add header to each page
+            page_data = data + table_data[i:i + rows_per_page]
+            table = Table(page_data, colWidths=col_widths)
+            table.setStyle(table_style)
+            elements.append(table)
+            if i + rows_per_page < len(table_data):
+                elements.append(PageBreak())
+
         doc.build(elements)
         buffer.seek(0)
         return FileResponse(buffer, as_attachment=True, filename=f"call_time_report_{slug}.pdf")
@@ -2506,7 +2715,8 @@ def call_time_report(request, slug):
         'call_time': call_time,
         'confirmed_requests': confirmed_requests,
         'labor_types': labor_types,
-        'selected_labor_type': labor_type_filter}
+        'selected_labor_type': labor_type_filter
+    }
     return render(request, 'callManager/call_time_report.html', context)
 
 

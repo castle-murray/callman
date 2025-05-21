@@ -76,4 +76,6 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
     path('user/register/', views.user_registration, name='user_registration'),
+    path('call/track/htmx-clockin-partial/<int:id>/', views.htmx_clockin_partial, name='htmx_clockin_partial'),
+    path('call/track/htmx-time-sheet-row/<int:id>/', views.htmx_time_sheet_row, name='htmx_time_sheet_row'),
 ]

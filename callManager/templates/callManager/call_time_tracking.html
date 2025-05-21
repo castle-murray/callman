@@ -3,7 +3,10 @@
 {% block title %}Time Sheet - CallMan{% endblock %}
 
 {% block content %}
+<div class="flex justify-between">
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Time Sheet -{{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h1>
+    <a href="{% url 'event_detail' call_time.event.slug %}" class="text-2xl inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+</div>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <!-- Filter Dropdown -->
         <div class="mb-6">
@@ -39,86 +42,7 @@
                 </thead>
                 <tbody>
                     {% for labor_request in confirmed_requests %}
-                        {% with time_entry=labor_request.time_entries.first %}
-                        <tr class="border-b dark:border-dark-border">
-                            <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.worker.name|default:"Unnamed Worker" }}</td>
-                            <td class="p-2 text-text-primary dark:text-dark-text-primary">{{ labor_request.labor_requirement.labor_type.name }}</td>
-                            <td class="p-2" id="time-entry-{{ time_entry.id }}-start_time">
-                                {% if time_entry.start_time %}
-                                    <span class="text-text-primary dark:text-dark-text-primary cursor-pointer" 
-                                          hx-get="{% url 'call_time_tracking_edit' call_time.slug %}?request_id={{ labor_request.id }}&field=start_time" 
-                                          hx-target="#time-entry-{{ time_entry.id }}-start_time">
-                                        {{ time_entry.start_time|date:"H:i" }}
-                                    </span>
-                                {% else %}
-                                    <form method="post" class="inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-                                        <input type="hidden" name="action" value="sign_in">
-                                        <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Sign In</button>
-                                    </form>
-                                {% endif %}
-                            </td>
-                            <td class="p-2" id="time-entry-{{ time_entry.id }}-end_time">
-                                {% if time_entry.end_time %}
-                                    <span class="text-text-primary dark:text-dark-text-primary cursor-pointer" 
-                                          hx-get="{% url 'call_time_tracking_edit' call_time.slug %}?request_id={{ labor_request.id }}&field=end_time" 
-                                          hx-target="#time-entry-{{ time_entry.id }}-end_time">
-                                        {{ time_entry.end_time|date:"H:i" }}
-                                    </span>
-                                {% else %}
-                                    <form method="post" class="inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-                                        <input type="hidden" name="action" value="sign_out">
-                                        <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover" {% if not time_entry.start_time %}disabled{% endif %}>Sign Out</button>
-                                    </form>
-                                {% endif %}
-                            </td>
-                            <td class="p-2">
-                                {% if time_entry.meal_breaks.all %}
-                                    {% for meal_break in time_entry.meal_breaks.all %}
-                                        <div id="meal-break-{{ meal_break.id }}">
-                                            <span class="text-text-primary dark:text-dark-text-primary cursor-pointer" 
-                                                  hx-get="{% url 'call_time_tracking_meal_edit' call_time.slug %}?meal_break_id={{ meal_break.id }}" 
-                                                  hx-target="#meal-break-{{ meal_break.id }}"
-                                                hx-swap="innerHTML">
-                                                {{ meal_break.break_time|date:"H:i" }} ({{ meal_break.break_type|capfirst }})
-                                            </span>
-                                        </div>
-                                    {% endfor %}
-                                {% endif %}
-                                {% if time_entry.start_time %}
-                                    <form method="post" class="inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-                                        <input type="hidden" name="action" value="add_meal_break">
-                                        <select name="break_type" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
-                                            <option value="paid">Paid 30</option>
-                                            <option value="unpaid">Unpaid 1hr</option>
-                                        </select>
-                                        <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Meal</button>
-                                    </form>
-                                {% endif %}
-                            </td>
-                            <td class="p-2">
-                                {% if not time_entry.start_time %}
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-                                    <input type="hidden" name="action" value="ncns">
-                                    <button type="submit" class="bg-purple text-dark-text-primary px-2 py-1 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">NCNS</button>
-                                </form>
-                                <form method="post" class="inline ml-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-                                    <input type="hidden" name="action" value="call_out">
-                                    <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Call Out</button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endwith %}
+                        {% include 'callManager/time_sheet_row_partial.html' with labor_request=labor_request %}
                     {% endfor %}
                 </tbody>
             </table>
