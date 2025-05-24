@@ -1354,7 +1354,6 @@ def sms_webhook(request):
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
         workers = Worker.objects.filter(phone_number=from_number)
-        logger.debug(f"Received SMS from {from_number}: {body}")
         
         if not workers.exists():
             response = MessagingResponse()
@@ -1368,7 +1367,7 @@ def sms_webhook(request):
             return HttpResponse(str(response), content_type='text/xml')
 
         response = MessagingResponse()
-        if 'yes' in body:
+        if body.startswith('yes') or body == 'y':
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
