@@ -85,6 +85,11 @@ from user_agents import parse
 import pytz
 import io
 
+import logging
+
+# Create a logger instance
+logger = logging.getLogger('callManager')
+
 
 def index(request):
     return render(request, 'callManager/index.html')
@@ -1348,7 +1353,7 @@ def sms_webhook(request):
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
         workers = Worker.objects.filter(phone_number=from_number)
-        print(f"Received SMS from {from_number}: {body}")
+        logger.debug(f"Received SMS from {from_number}: {body}")
         
         if not workers.exists():
             response = MessagingResponse()
