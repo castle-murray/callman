@@ -1360,7 +1360,7 @@ def sms_webhook(request):
             return HttpResponse(str(response), content_type='text/xml')
 
         response = MessagingResponse()
-        if body == 'yes' or body == 'y':
+        if body.startswith('yes'):
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
