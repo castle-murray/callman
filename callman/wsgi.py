@@ -16,5 +16,3 @@ load_dotenv()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'callman.settings')
 
 application = get_wsgi_application()
-bind = "127.0.0.1:8000"
-workers = 3
