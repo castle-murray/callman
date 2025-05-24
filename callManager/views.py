@@ -64,6 +64,7 @@ from callManager.utils import send_custom_email
 # Twilio imports
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
+from twilio.twiml.messaging_response import MessagingResponse
 
 # repotlab imports for PDF generation
 from reportlab.pdfgen import canvas
