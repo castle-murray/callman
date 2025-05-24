@@ -1344,9 +1344,11 @@ def delete_labor_requirement(request, slug):
 @csrf_exempt
 def sms_webhook(request):
     if request.method == "POST":
+        
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
         workers = Worker.objects.filter(phone_number=from_number)
+        print(f"Received SMS from {from_number}: {body}")
         
         if not workers.exists():
             response = MessagingResponse()
