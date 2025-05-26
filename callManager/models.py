@@ -199,7 +199,7 @@ class LaborRequest(models.Model):
         ('no', 'No'),
         ('ncns', 'No Call No Show'),
     ]
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='labor_requests')
     labor_requirement = models.ForeignKey('LaborRequirement', on_delete=models.CASCADE, related_name='labor_requests')
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     availability_response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)

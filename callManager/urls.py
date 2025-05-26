@@ -60,7 +60,7 @@ urlpatterns = [
     path('steward/invite/search/', views.steward_invite_search, name='steward_invite_search'),
     path('call/delete_meal_break/<int:meal_break_id>/', views.delete_meal_break, name='delete_meal_break'),
     path('worker/delete/<slug:slug>/', views.delete_worker, name='delete_worker'),
-    path('get-messages/', views.fetch_messages, name='get_messages'),
+    path('get-messages/', views.get_messages, name='get_messages'),
     path('location-profiles/', views.location_profiles, name='location_profiles'),
     path('location-profiles/create/', views.create_location_profile, name='create_location_profile'),
     path('location-profiles/edit/<int:pk>/', views.edit_location_profile, name='edit_location_profile'),
@@ -76,6 +76,5 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
     path('user/register/', views.user_registration, name='user_registration'),
-    path('call/track/htmx-clockin-partial/<int:id>/', views.htmx_clockin_partial, name='htmx_clockin_partial'),
     path('call/track/htmx-time-sheet-row/<int:id>/', views.htmx_time_sheet_row, name='htmx_time_sheet_row'),
 ]

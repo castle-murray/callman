@@ -18,11 +18,6 @@
             </form>
         </div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <p class="text-text-primary mt-2 dark:text-dark-text-primary">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
 
         <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Workers</h2>
         {% if confirmed_requests %}

@@ -43,6 +43,7 @@ from .forms import (
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.http import base64
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET, require_POST
 from django.db.models import Sum, Q, Case, When, IntegerField, Count
 from datetime import datetime, time, timedelta
 from django.conf import settings
@@ -51,7 +52,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
-from django.contrib.messages import get_messages
+from django.contrib.messages import get_messages as django_get_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import FileResponse
 from django.db.models.functions import TruncDate, TruncMonth
@@ -98,17 +99,6 @@ def index(request):
 def custom_404(request, exception):
     return render(request, 'callManager/404.html', status=404)
 
-def fetch_messages(request):
-    storage = get_messages(request)
-    messages = [msg for msg in storage]
-    context = {
-        'messages': messages,
-        'error_message': request.session.pop('error_message', None),
-        'success_message': request.session.pop('success_message', None),
-    }
-    for message in messages:
-        storage.used = True
-    return render(request, 'callManager/partial_messages.html', context)
 
 def log_sms(company):
     """logs the SMS sent to the SentSMS model"""
@@ -1350,34 +1340,28 @@ def delete_labor_requirement(request, slug):
 @csrf_exempt
 def sms_webhook(request):
     if request.method == "POST":
-        
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
         workers = Worker.objects.filter(phone_number=from_number)
-        
         if not workers.exists():
             response = MessagingResponse()
             response.message("Number not recognized. Please contact your Stewrd")
             return HttpResponse(str(response), content_type='text/xml')
-
         # Check if any worker has stopped SMS
         if any(worker.stop_sms for worker in workers):
             response = MessagingResponse()
             response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
             return HttpResponse(str(response), content_type='text/xml')
-
         response = MessagingResponse()
         if body.startswith('yes') or body == 'y':
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-            
             # Process queued labor requests for all workers
             queued_requests = LaborRequest.objects.filter(
                 worker__in=workers, requested=True, sms_sent=False
             ).select_related('labor_requirement__call_time__event', 'worker')
-            
             if queued_requests.exists():
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
                 # Group requests by event and company
@@ -1389,7 +1373,6 @@ def sms_webhook(request):
                     if key not in events_to_notify:
                         events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
                     events_to_notify[key]['requests'].append(req)
-                
                 # Send one message per event
                 for key, data in events_to_notify.items():
                     event = data['event']
@@ -1415,27 +1398,22 @@ def sms_webhook(request):
                             req.save()
                     except TwilioRestException as e:
                         print(f"Failed to send SMS to {from_number}: {str(e)}")
-            
             response.message("Thank you! You’ll now receive job requests.")
-        
         elif body == 'stop':
             for worker in workers:
                 worker.sms_consent = False
                 worker.stop_sms = True
                 worker.save()
             response.message("You’ve opted out of messages. Reply 'START' to resume.")
-        
         elif body == 'start':
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-            
             # Process queued labor requests for all workers
             queued_requests = LaborRequest.objects.filter(
                 worker__in=workers, requested=True, sms_sent=False
             ).select_related('labor_requirement__call_time__event', 'worker')
-            
             if queued_requests.exists():
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
                 # Group requests by event and company
@@ -1447,7 +1425,6 @@ def sms_webhook(request):
                     if key not in events_to_notify:
                         events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
                     events_to_notify[key]['requests'].append(req)
-                
                 # Send one message per event
                 for key, data in events_to_notify.items():
                     event = data['event']
@@ -1473,16 +1450,13 @@ def sms_webhook(request):
                             req.save()
                     except TwilioRestException as e:
                         print(f"Failed to send SMS to {from_number}: {str(e)}")
-            
             response.message("Welcome back! You’ll now receive job requests.")
-        
         else:
             # Catchall response based on sms_consent
             if any(not worker.sms_consent for worker in workers):
                 response.message("Response not recognized. Please reply 'Yes' or 'Y' to consent to SMS notifications, or 'STOP' to unsubscribe.")
             else:
                 response.message("This is an automated system. No one is reading your response. Reply 'STOP' to unsubscribe.")
-        
         return HttpResponse(str(response), content_type='text/xml')
     return HttpResponse(status=400)
 
@@ -1819,7 +1793,6 @@ def labor_request_list(request, slug):
                             print(message_body)
                     labor_request.delete()
                     messages.success(request, f"Call filled for {worker.name}.")
-
                 if action == 'confirm':
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
                         message_body = (
@@ -2246,6 +2219,7 @@ def call_time_request_list(request, slug):
                     messages.success(request, f"Request marked as {action.capitalize()} successfully.")
         return redirect('call_time_request_list', slug=slug)
     pending_requests = labor_requests.filter(availability_response__isnull=True)
+    available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
     declined_requests = labor_requests.filter(availability_response='no')
     ncns_requests = labor_requests.filter(availability_response='ncns')
@@ -2254,6 +2228,7 @@ def call_time_request_list(request, slug):
     context = {
         'call_time': call_time,
         'pending_requests': pending_requests,
+        'available_requests': available_requests,
         'confirmed_requests': confirmed_requests,
         'declined_requests': declined_requests,
         'ncns_requests': ncns_requests,
@@ -2429,29 +2404,6 @@ def call_time_tracking(request, slug):
         'minutes': minutes}
     return render(request, 'callManager/call_time_tracking.html', context)
 
-@login_required
-def htmx_clockin_partial(request, id):
-    labor_request = get_object_or_404(LaborRequest, id=id)
-    call_time = labor_request.labor_requirement.call_time
-    start_time = call_time.time
-    date = call_time.date
-    time_entry, created = TimeEntry.objects.get_or_create(
-        labor_request=labor_request,
-        worker=labor_request.worker,
-        call_time=labor_request.labor_requirement.call_time,
-        defaults={'start_time': datetime.combine(labor_request.labor_requirement.call_time.date, labor_request.labor_requirement.call_time.time)})
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'sign_in' and not time_entry.start_time:
-            time_entry.start_time = datetime.combine(date, start_time)
-            time_entry.save()
-            messages.success(request, f"Signed in at {time_entry.start_time.strftime('%I:%M %p')}.")
-    context = {
-        'time_entry': time_entry,
-        'call_time': call_time,
-        'labor_request': labor_request
-    }
-    return render(request, 'callManager/clockin_partial.html', context)
 
 @login_required
 def htmx_time_sheet_row(request, id):
@@ -2494,6 +2446,7 @@ def htmx_time_sheet_row(request, id):
             time_entry.save()
             messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")
         elif action == 'add_meal_break':
+            break_type = request.POST.get('break_type', 'paid')
             break_start = datetime.now()
             if break_start.minute > 30 + round_up:
                 break_start = break_start.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
@@ -2563,6 +2516,7 @@ def call_time_tracking_edit(request, slug):
     }
     return render(request, 'callManager/time_entry_edit_partial.html', context)
 
+
 @login_required
 def call_time_tracking_display(request, slug):
     call_time = get_object_or_404(CallTime, slug=slug)
@@ -2575,6 +2529,7 @@ def call_time_tracking_display(request, slug):
         'field': field
     }
     return render(request, 'callManager/time_entry_display_partial.html', context)
+
 
 @login_required
 def call_time_tracking_meal_edit(request, slug):
@@ -2593,6 +2548,7 @@ def call_time_tracking_meal_edit(request, slug):
     }
     return render(request, 'callManager/meal_break_edit_partial.html', context)
 
+
 @login_required
 def call_time_tracking_meal_display(request, slug):
     call_time = get_object_or_404(CallTime, slug=slug)
@@ -2603,6 +2559,7 @@ def call_time_tracking_meal_display(request, slug):
         'meal_break': meal_break
     }
     return render(request, 'callManager/meal_break_display_partial.html', context)
+
 
 @login_required
 def delete_meal_break(request, meal_break_id):
@@ -2632,7 +2589,6 @@ def call_time_report(request, slug):
         doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=0.25*inch, bottomMargin=0, leftMargin=0.5*inch, rightMargin=0.5*inch)
         styles = getSampleStyleSheet()
         elements = []
-
         # Header content (to be repeated on each page)
         def create_header():
             return KeepTogether([
@@ -2640,7 +2596,6 @@ def call_time_report(request, slug):
                 Paragraph(f"{call_time.event.event_name}: {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d, %Y')}", styles['Heading2']),
                 Spacer(1, 0.2*inch)
             ])
-
         # Table headers
         headers = ['Name', 'Labor Type', 'Sign In', 'Sign Out', 'Meal Breaks', 'Hours', 'MP', 'Total Hours']
         table_data = []
@@ -2664,7 +2619,6 @@ def call_time_report(request, slug):
                 f"{time_entry.total_hours_worked:.2f}" if time_entry else "0.00"
             ]
             table_data.append(row)
-
         # Calculate column widths based on content
         c = canvas.Canvas(buffer, pagesize=landscape(letter))
         font_name = 'Helvetica'
@@ -2675,7 +2629,6 @@ def call_time_report(request, slug):
             for i, cell in enumerate(row):
                 cell_width = c.stringWidth(str(cell), font_name, font_size)
                 max_widths[i] = max(max_widths[i], cell_width)
-        
         # Add padding and scale to fit page
         total_width = sum(max_widths) + 2 * padding * len(max_widths)
         page_width = landscape(letter)[0] - doc.leftMargin - doc.rightMargin
@@ -2683,7 +2636,6 @@ def call_time_report(request, slug):
             scale_factor = page_width / total_width
             max_widths = [w * scale_factor for w in max_widths]
         col_widths = [w + 2 * padding for w in max_widths]
-
         # Table styling
         table_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -2695,7 +2647,6 @@ def call_time_report(request, slug):
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ])
-
         # Calculate rows per page
         page_height = landscape(letter)[1]
         header_height = 1.5 * inch
@@ -2703,7 +2654,6 @@ def call_time_report(request, slug):
         available_height = page_height - header_height - signature_height - doc.topMargin - doc.bottomMargin
         row_height = 0.3 * inch
         rows_per_page = int(available_height // row_height)
-
         # Split data into pages
         data = [headers]
         for i in range(0, len(table_data), rows_per_page):
@@ -2714,7 +2664,6 @@ def call_time_report(request, slug):
             elements.append(table)
             if i + rows_per_page < len(table_data):
                 elements.append(PageBreak())
-
         doc.build(elements)
         buffer.seek(0)
         return FileResponse(buffer, as_attachment=True, filename=f"call_time_report_{slug}.pdf")
@@ -2868,6 +2817,7 @@ def send_clock_in_link(request, slug):
         messages.success(request, "Clock-in QR code links sent to workers.")
     return redirect('event_detail', slug=event.slug)
 
+
 def display_qr_code(request, slug, worker_slug):
     event = get_object_or_404(Event, slug=slug)
     worker = get_object_or_404(Worker, slug=worker_slug)
@@ -2901,8 +2851,10 @@ def scan_qr_code(request, slug):
     context = {'event': event}
     return render(request, 'callManager/scan_qr_code.html', context)
 
+
 @login_required
 def manager_display_qr_code(request, slug, worker_slug):
+    """QR code for managers to use to clock in workers."""
     manager = request.user.manager
     event = get_object_or_404(Event, slug=slug, company=manager.company)
     worker = get_object_or_404(Worker, slug=worker_slug)
@@ -2943,7 +2895,6 @@ def worker_clock_in_out(request, token):
     print(f"Using Referer: {referer}")
     if request.method == "POST":
         call_time_id = request.POST.get('call_time_id')
-        
         action = request.POST.get('action')
         call_time = get_object_or_404(CallTime, id=call_time_id, event=event)
         labor_request = get_object_or_404(LaborRequest, worker=worker, labor_requirement__call_time=call_time, confirmed=True)
@@ -2989,6 +2940,7 @@ def worker_clock_in_out(request, token):
         timeentry__start_time__isnull=False,
         timeentry__end_time__isnull=False
     ).distinct()
+    print(one_hour_before.time(), one_hour_after.time())
     call_time_status = []
     for call_time in call_times:
         is_signed_in = TimeEntry.objects.filter(
@@ -3102,11 +3054,13 @@ def generate_signin_qr(request, slug):
         return render(request, 'callManager/signin_qr.html', context)
     return render(request, 'callManager/signin_qr.html', {'event': event})
 
+
 def signin_station(request, token):
     scanner = get_object_or_404(TemporaryScanner, token=token, expires_at__gt=timezone.now())
     user = scanner.user
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     return render(request, 'callManager/signin_scanner.html', {'event': scanner.event})
+
 
 @login_required
 def location_profiles(request):
@@ -3194,6 +3148,7 @@ def user_profile(request):
     context = {'labor_requests': labor_requests, 'workers': workers}
     return render(request, 'callManager/user_profile.html', context)
 
+
 @login_required
 def labor_request_action(request, request_id, action):
     if not request.user.workers.exists():
@@ -3223,6 +3178,7 @@ def labor_request_action(request, request_id, action):
         return redirect('user_profile')
     messages.error(request, "Invalid request method.")
     return redirect('user_profile')
+
 
 def auto_login(request, token):
     try:
@@ -3290,3 +3246,15 @@ def reset_password(request, token):
         messages.error(request, "Invalid or expired password reset link.")
         form = None
     return render(request, 'callManager/reset_password.html', {'form': form})
+
+
+@require_GET
+def get_messages(request):
+    """Return only the messages partial for HTMX requests"""
+    # Get messages from the request
+    sleep(0.5)
+    messages_list = django_get_messages(request)
+    response = render(request, 'callManager/floating_messages_partial.html', {'messages': messages_list})
+    # Add a custom header to identify this response
+    response['X-Messages-Response'] = 'true'
+    return response

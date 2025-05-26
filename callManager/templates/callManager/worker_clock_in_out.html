@@ -10,11 +10,6 @@
 <body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
     <div class="max-w-2xl w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Clock In/Out for {{ worker.name }} - {{ event.event_name }}</h1>
-        {% if messages %}
-            {% for message in messages %}
-                <p class="text-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %} mb-4 dark:text-dark-{% if message.tags == 'success' %}text-green{% else %}text-red{% endif %}">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
         {% if no_call_times_message %}
             <p class="text-text-red mb-4 dark:text-dark-text-red">{{ no_call_times_message }}</p>
             <script>

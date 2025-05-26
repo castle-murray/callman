@@ -195,43 +195,86 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 USE_TZ = False
 TIME_ZONE = 'America/New_York'  # Fallback, though Manager.timezone will override
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} - {name} - {levelname} - {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '/home/autorigger/callman/logs/django_debug.log',
-            'formatter': 'verbose',
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-    },
-    'loggers': {
-        'callManager': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'django': {
-            'handlers': ['file'],
-            'level': 'WARNING',
-            'propagate': True,
-        },
-    },
-}
 
+if os.environ.get('DJANGO_ENV') == 'production':
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{asctime} - {name} - {levelname} - {message}',
+                'style': '{',
+            },
+            'simple': {
+                'format': '{levelname} {message}',
+                'style': '{',
+            },
+        },
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': '/home/autorigger/callman/logs/django_debug.log',
+                'formatter': 'verbose',
+            },
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple',
+            },
+        },
+        'loggers': {
+            'callManager': {
+                'handlers': ['file', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+            'django': {
+                'handlers': ['file'],
+                'level': 'WARNING',
+                'propagate': True,
+            },
+        },
+    }
+
+#else:
+#
+#    LOGGING = {
+#        'version': 1,
+#        'disable_existing_loggers': False,
+#        'formatters': {
+#            'verbose': {
+#                'format': '{asctime} - {name} - {levelname} - {message}',
+#                'style': '{',
+#            },
+#            'simple': {
+#                'format': '{levelname} {message}',
+#                'style': '{',
+#            },
+#        },
+#        'handlers': {
+#            'file': {
+#                'level': 'DEBUG',
+#                'class': 'logging.FileHandler',
+#                'filename': '/home/sean/projects/callman/callman/logs/django_debug.log',
+#                'formatter': 'verbose',
+#            },
+#            'console': {
+#                'level': 'INFO',
+#                'class': 'logging.StreamHandler',
+#                'formatter': 'simple',
+#            },
+#        },
+#        'loggers': {
+#            'callManager': {
+#                'handlers': ['file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': True,
+#            },
+#            'django': {
+#                'handlers': ['file'],
+#                'level': 'WARNING',
+#                'propagate': True,
+#            },
+#        },
+#    }

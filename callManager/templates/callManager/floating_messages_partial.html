@@ -1,0 +1,12 @@
+{% if messages %}
+<div id="floating-messages" class="fixed top-4 left-4 z-50 space-y-2 max-w-md">
+    {% for message in messages %}
+    <div class="message bg-card-bg dark:bg-dark-card-bg p-3 rounded-md shadow-md border-l-4 
+                {% if message.tags == 'success' %}border-green-500{% elif message.tags == 'error' or message.tags == 'danger' %}border-red-500
+                {% elif message.tags == 'warning' %}border-yellow-500{% else %}border-blue-500{% endif %} 
+                transition-opacity duration-500 opacity-100">
+        <p class="text-text-tertiary dark:text-dark-text-tertiary font-medium">{{ message }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

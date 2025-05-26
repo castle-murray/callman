@@ -16,6 +16,10 @@
         {% block extra_head %}{% endblock %}
     </head>
     <body class="bg-body-bg min-h-screen flex flex-col text-text-primary dark:bg-dark-body-bg dark:text-dark-text-tertiary" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+        <div id="messages-container" 
+             hx-get="{% url 'get_messages' %}" 
+             hx-trigger="load once, refreshMessages from:body" 
+             hx-swap="innerHTML"></div>
         <header class="bg-card-bg shadow dark:bg-dark-header-bg dark:shadow-dark-shadow">
             <nav class="container mx-auto p-4">
                 <div class="flex justify-between items-center">
@@ -111,6 +115,83 @@
                     sunIcon.classList.remove('hidden');
                     moonIcon.classList.add('hidden');
                 }
+            });
+            // Add this to your JavaScript in base.html
+            let messageRefreshTimeout = null;
+            function debouncedMessageRefresh() {
+                // Clear any existing timeout
+                if (messageRefreshTimeout) {
+                    clearTimeout(messageRefreshTimeout);
+                }
+                
+                // Set a new timeout
+                messageRefreshTimeout = setTimeout(function() {
+                    console.log("Dispatching refreshMessages event");
+                    document.body.dispatchEvent(new Event('refreshMessages'));
+                    messageRefreshTimeout = null;
+                }, 1000); // 1000ms debounce time
+            }
+
+            // Replace your existing htmx:afterSwap handler with this
+            document.body.addEventListener('htmx:afterSwap', function(event) {
+                // Don't trigger if the swap was for the messages container itself
+                if (!event.detail.target.closest('#messages-container')) {
+                    debouncedMessageRefresh();
+                }
+            });
+
+            // Add this handler for form submissions
+            document.body.addEventListener('htmx:beforeRequest', function(event) {
+                // Check if this is a form submission (POST request)
+                if (event.detail.verb === 'post') {
+                    // Flag this as a request that should refresh messages
+                    event.detail.shouldRefreshMessages = true;
+                }
+            });
+
+            document.body.addEventListener('htmx:afterRequest', function(event) {
+                // Only refresh messages for requests we flagged earlier
+                if (event.detail.shouldRefreshMessages) {
+                    debouncedMessageRefresh();
+                }
+            });
+
+            // Ensure message refresh works after page load
+            document.addEventListener('DOMContentLoaded', function() {
+                // Check for messages on page load
+                const messagesContainer = document.getElementById('messages-container');
+                if (messagesContainer) {
+                    // Trigger a refresh after a short delay to ensure page is fully loaded
+                    setTimeout(function() {
+                        debouncedMessageRefresh();
+                    }, 500);
+                }
+            });
+            // Message auto-dismissal
+            document.body.addEventListener('htmx:afterOnLoad', function() {
+                console.log("HTMX afterOnLoad triggered - checking for messages");
+                const messages = document.querySelectorAll('.message');
+                console.log(`Found ${messages.length} messages`);
+                
+                messages.forEach(message => {
+                    // Clear any existing timeouts for this message
+                    if (message.dataset.timeoutId) {
+                        clearTimeout(parseInt(message.dataset.timeoutId));
+                    }
+                    
+                    // Set new timeout
+                    const timeoutId = setTimeout(() => {
+                        console.log("Fading out message");
+                        message.style.opacity = '0';
+                        setTimeout(() => {
+                            console.log("Removing message");
+                            message.remove();
+                        }, 500);
+                    }, 5000); // 5 second timeout
+                    
+                    // Store timeout ID on the element
+                    message.dataset.timeoutId = timeoutId.toString();
+                });
             });
         </script>
 

@@ -13,9 +13,6 @@
             <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Labor</button>
             <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
-        {% if message %}
-            <p class="mt-4 text-text-red dark:text-dark-text-red">{{ message }}</p>
-        {% endif %}
         {% if not labor_types %}
             <p class="mt-4 text-text-secondary dark:text-dark-text-secondary">No labor types defined yet. <a href="{% url 'create_labor_type' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Create one</a>.</p>
         {% endif %}

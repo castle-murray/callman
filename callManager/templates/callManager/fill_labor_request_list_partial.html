@@ -1,20 +1,23 @@
 {% load callman_tags %}
 <div id="fill-list">
     {% if workers %}
+    <div class="flex justify-between items-center">
         <div class="mb-4 flex items-center">
-            <label for="per_page" class="mr-2 text-text-tertiary dark:text-dark-text-tertiary">Items per page:</label>
+            <label for="per_page" class="mr-4 text-text-tertiary dark:text-dark-text-tertiary">Items per page:</label>
             <select name="per_page" id="per_page" 
                     hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1&search={{ search_query|urlencode }}" 
                     hx-target="#fill-list" 
                     hx-swap="outerHTML" 
                     hx-include="[name='search']" 
-                    class="p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                    class="p-2 pr-8 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
                 <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
                 <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
                 <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
                 <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
             </select>
         </div>
+        <a href="{% url 'view_workers' %}" class="bg-success text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-success dark:hover:bg-dark-primary-hover">Add New Worker</a>
+    </div>
         <ul class="space-y-2 mb-4">
             {% for worker in workers %}
                 {% with worker_data=worker_conflicts|get_item:worker.id %}

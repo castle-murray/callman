@@ -3,13 +3,6 @@
 {% block content %}
     <div class="max-w-md mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Register as Worker</h1>
-        {% if messages %}
-            <div class="mb-4 space-y-2">
-                {% for message in messages %}
-                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">Join {{ invitation.company.name }} as a worker.</p>
         <form method="post" class="flex flex-col gap-4">
             {% csrf_token %}

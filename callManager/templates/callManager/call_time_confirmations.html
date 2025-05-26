@@ -3,13 +3,6 @@
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirmations for {{ call_time.name }} ({{ call_time.event.event_name }})</h1>
-        {% if messages %}
-            <div class="mb-4 space-y-2">
-                {% for message in messages %}
-                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
         <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Confirmed</h2>
         {% if confirmed_requests %}
             <ul class="mb-6 space-y-2 text-text-green dark:text-dark-text-green">

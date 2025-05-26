@@ -23,7 +23,4 @@
     <form action="{% url 'event_detail' labor_requirement.call_time.event.id %}">
         <button type="submit" class="mt-4 bg-danger text-dark-text-primary p-2 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Close</button>
     </form>
-    {% if message %}
-        <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
-    {% endif %}
 </div>

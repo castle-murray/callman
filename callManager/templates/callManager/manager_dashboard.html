@@ -3,13 +3,6 @@
 {% block title %}Manager Dashboard - {{ company.name }}{% endblock %}
 {% block content %}
 <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">{{ company.name }} Dashboard</h1>
-{% if messages %}
-<div class="mt-4">
-    {% for message in messages %}
-    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% elif message.tags == 'warning' %}text-text-yellow dark:text-dark-text-yellow{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
-    {% endfor %}
-</div>
-{% endif %}
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Total Events</h2>

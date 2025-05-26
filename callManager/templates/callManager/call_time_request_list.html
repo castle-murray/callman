@@ -4,11 +4,6 @@
 
 {% block content %}
     <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Requests for {{ call_time.name }} at {{ call_time.time }} on {{ call_time.date }}</h1>
-    {% if messages %}
-    {% for message in messages %}
-    <p class="text-text-green mt-2 dark:text-dark-text-green">{{ message }}</p>
-    {% endfor %}
-    {% endif %}
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <!-- Filter Dropdown -->
         <div class="mb-6">
@@ -54,6 +49,40 @@
             </ul>
         {% else %}
             <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No pending requests.</p>
+        {% endif %}
+
+        <!-- Add this section for available requests -->
+        <h2 class="text-xl font-semibold mb-2 text-available dark:text-dark-text-available">Available Requests</h2>
+        {% if available_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in available_requests %}
+                    <li class="flex items-center justify-between text-available dark:text-dark-text-available">
+                        {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }}) {% if request.worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ request.worker.nocallnoshow }} NCNS</span>{% endif %} - {{ request.labor_requirement.labor_type.name }}
+                        <div>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                <input type="hidden" name="action" value="confirm">
+                                <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Confirm</button>
+                            </form>
+                            <form method="post" class="inline ml-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                <input type="hidden" name="action" value="decline">
+                                <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Decline</button>
+                            </form>
+                            <form method="post" class="inline ml-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" class="bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No available requests.</p>
         {% endif %}
 
         <h2 class="text-xl font-semibold mb-2 text-text-green dark:text-dark-text-green">Confirmed Requests</h2>
