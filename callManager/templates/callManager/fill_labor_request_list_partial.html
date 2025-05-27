@@ -16,7 +16,11 @@
                 <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
             </select>
         </div>
-        <a href="{% url 'view_workers' %}" class="bg-success text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-success dark:hover:bg-dark-primary-hover">Add New Worker</a>
+        <button type="button" 
+            hx-get="{% url 'htmx_add_worker' labor_requirement.slug %}" 
+            hx-target="#fill-list" 
+            hx-swap="innerHTML"
+            class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ease-in-out">Add Worker</button>
     </div>
         <ul class="space-y-2 mb-4">
             {% for worker in workers %}

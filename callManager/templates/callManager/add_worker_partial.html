@@ -1,0 +1,15 @@
+<div id="add-worker-form">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_worker"> 
+        <div class="flex items-center mb-2">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+        </div>
+        <div class="flex items-center mb-2">
+            {{ form.phone_number.label_tag }}
+            {{ form.phone_number }}
+        </div>
+        <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Add</button>
+    </form>
+</div>

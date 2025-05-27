@@ -54,16 +54,21 @@
         {% endfor %}
         {% endif %}
         {% if time_entry.start_time %}
-        <form method="post" class="inline">
-            {% csrf_token %}
-            <input type="hidden" name="request_id" value="{{ labor_request.id }}">
-            <input type="hidden" name="action" value="add_meal_break">
-            <select name="break_type" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
-                <option value="paid">Paid 30</option>
-                <option value="unpaid">Unpaid 1hr</option>
-            </select>
-            <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Meal</button>
-        </form>
+        <div class="flex items-center space-x-2">
+                <select id="break-type-{{ labor_request.id }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
+                    <option value="paid">Paid 30</option>
+                    <option value="unpaid">Unpaid 1hr</option>
+                </select>
+                <button class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+                        hx-post="{% url 'htmx_time_sheet_row' labor_request.id %}"
+                        hx-vals='js:{"action": "add_meal_break", "break_type": document.getElementById("break-type-{{ labor_request.id }}").value}'
+                        hx-target="closest tr" 
+                        hx-swap="outerHTML"
+                        hx-trigger="click"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                    Meal
+                </button>
+            </div>
         {% endif %}
     </td>
     <td class="p-2">

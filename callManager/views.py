@@ -32,6 +32,7 @@ from .forms import (
         LaborRequirementForm,
         EventForm,
         WorkerForm,
+        WorkerFormLite,
         WorkerImportForm,
         WorkerRegistrationForm,
         SkillForm,
@@ -1763,7 +1764,36 @@ def labor_request_list(request, slug):
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     event = labor_requirement.call_time.event
     company = event.company
+    workers = Worker.objects.filter(company=company).distinct()
     if request.method == "POST":
+        if 'action' in request.POST and request.POST['action'] == 'add_worker':
+            add_worker_form = WorkerFormLite(request.POST)
+            if add_worker_form.is_valid():
+                if add_worker_form.clean_phone_number in workers.values_list('phone_number', flat=True):
+                    messages.error(request, "Worker with this phone number already exists.")
+                worker = add_worker_form.save(commit=False)
+                worker.company = company
+                worker.save()
+                messages.success(request, "Worker added successfully.")
+                labor_request, created = LaborRequest.objects.get_or_create(
+                    worker=worker,
+                    labor_requirement=labor_requirement,
+                    defaults={
+                        'requested': True,
+                        'sms_sent': False,
+                        'is_reserved': False,
+                        'event_token': uuid.uuid4()
+                    }
+                )
+                if labor_requirement.labor_type not in worker.labor_types.all():
+                    worker.labor_types.add(labor_requirement.labor_type)
+                if not created and not labor_request.sms_sent:
+                    labor_request.requested = True
+                    labor_request.is_reserved = is_reserved
+                    labor_request.event_token = uuid.uuid4()
+                    labor_request.save()
+                messages.success(request, f"{worker.name} queued for request.")
+            
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
         if 'request_id' in request.POST:
             request_id = request.POST.get('request_id')
@@ -2031,6 +2061,14 @@ def labor_request_list(request, slug):
         'per_page': per_page
     }
     return render(request, 'callManager/labor_request_list.html', context)
+
+
+@login_required
+def htmx_add_worker(request, labor_requirement_slug):
+    form = WorkerFormLite(request.POST)
+    labor_requirement = get_object_or_404(LaborRequirement, slug=labor_requirement_slug)
+    return render(request, 'callManager/add_worker_partial.html', {'form': form, 'labor_requirement_slug': labor_requirement.slug})
+        
 
 
 @login_required
@@ -2446,7 +2484,6 @@ def htmx_time_sheet_row(request, id):
             time_entry.save()
             messages.success(request, f"Signed out at {time_entry.end_time.strftime('%I:%M %p')}.")
         elif action == 'add_meal_break':
-            break_type = request.POST.get('break_type', 'paid')
             break_start = datetime.now()
             if break_start.minute > 30 + round_up:
                 break_start = break_start.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
@@ -3258,3 +3295,4 @@ def get_messages(request):
     # Add a custom header to identify this response
     response['X-Messages-Response'] = 'true'
     return response
+

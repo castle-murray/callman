@@ -162,6 +162,36 @@ class WorkerForm(forms.ModelForm):
         return phone_number
 
 
+class WorkerFormLite(forms.ModelForm):
+    class Meta:
+        model = Worker
+        fields = ['name', 'phone_number']
+        widgets = {
+            'name': forms.TextInput(attrs={'autofocus': 'autofocus', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+            'phone_number': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        company = kwargs.pop('company', None)
+        super().__init__(*args, **kwargs)
+        if company:
+            self.fields['labor_types'].queryset = LaborType.objects.filter(company=company)
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if phone_number:
+            phone_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+            if len(phone_number) == 10:
+                phone_number = f"+1{phone_number}"
+            elif len(phone_number) == 11 and phone_number.startswith('1'):
+                phone_number = f"+{phone_number}"
+            elif len(phone_number) < 10:
+                raise forms.ValidationError("Please provide a valid phone number.")
+        if phone_number and len(phone_number) > 15:
+            raise forms.ValidationError("Phone number must be 15 characters or less.")
+        return phone_number
+
+
 class WorkerImportForm(forms.Form):
     file = forms.FileField(label="Upload a CSV file with contacts", widget=forms.FileInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
 

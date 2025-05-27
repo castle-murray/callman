@@ -77,4 +77,5 @@ urlpatterns = [
     path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
     path('user/register/', views.user_registration, name='user_registration'),
     path('call/track/htmx-time-sheet-row/<int:id>/', views.htmx_time_sheet_row, name='htmx_time_sheet_row'),
+    path('htmx-add-worker/<slug:labor_requirement_slug>/', views.htmx_add_worker, name='htmx_add_worker'),
 ]
