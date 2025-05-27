@@ -803,12 +803,20 @@ select {
   }
 }
 
+.pointer-events-none {
+  pointer-events: none;
+}
+
 .static {
   position: static;
 }
 
 .fixed {
   position: fixed;
+}
+
+.inset-0 {
+  inset: 0px;
 }
 
 .left-4 {
