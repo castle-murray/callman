@@ -94,11 +94,20 @@ import logging
 logger = logging.getLogger('callManager')
 
 
-def index(request):
-    return render(request, 'callManager/index.html')
-
 def custom_404(request, exception):
     return render(request, 'callManager/404.html', status=404)
+
+def custom_500(request):
+    return render(request, 'callManager/500.html', status=500)
+
+def custom_403(request, exception):
+    return render(request, 'callManager/403.html', status=403)
+
+def custom_400(request, exception):
+    return render(request, 'callManager/400.html', status=400)
+
+def index(request):
+    return render(request, 'callManager/index.html')
 
 
 def log_sms(company):
@@ -419,7 +428,10 @@ def register_owner(request, token):
             Owner.objects.create(user=user, company=company)
             invitation.used = True
             invitation.save()
+
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
+            if user is not None:
+                manager = Manager.objects.create(user=user, company=company)
             login(request, user)
             messages.success(request, "Registration successful. You are now an owner.")
             return redirect('manager_dashboard')
@@ -1523,9 +1535,9 @@ def import_workers(request):
                                     continue
                             worker, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
+                                company=manager.company,
                                 defaults={'name': current_name.strip() if current_name else None})
                             if created:
-                                worker.add_company(manager.company)
                                 imported += 1
                         current_name = None
                         current_phone = None

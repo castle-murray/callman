@@ -1,14 +1,23 @@
 # /home/autorigger/callman/gunicorn.conf.py
 
-import os
+from pathlib import Path
+import os 
+
+cwd = Path(os.getcwd())
+
+logdir = cwd.parent.parent / 'logs'
+
 
 # Logging configuration
-loglevel = 'info'  # Options: debug, info, warning, error, critical
-errorlog = '/home/autorigger/callman/logs/gunicorn_error.log'  # Error logs
-accesslog = '/home/autorigger/callman/logs/gunicorn_access.log'  # Access logs
+if os.environ.get('DEBUG'):
+    loglevel = 'debug'
+else:
+    loglevel = 'info'
+accesslog = logdir / 'access.log'
+errorlog = logdir / 'error.log'
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
 # Ensure log directory exists
-log_dir = '/home/autorigger/callman/logs'
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+
+if not logdir.exists():
+    logdir.mkdir(parents=True)

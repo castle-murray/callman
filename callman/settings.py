@@ -24,7 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-*xv&h_8$1p2+klqa+2sz#&dj3*(z3cs2i&y6)0k#9pg*bs3biu'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if os.environ.get('DEBUG') == 'True':
+    DEBUG = True
+else:
+    DEBUG = False
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = ['https://callman.autorigger.com']
@@ -278,3 +281,4 @@ if os.environ.get('DJANGO_ENV') == 'production':
 #            },
 #        },
 #    }
+print("burgers")

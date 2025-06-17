@@ -1,9 +1,9 @@
 {% extends 'callManager/base.html' %}
-{% block title %}Page Not Found - CallMan{% endblock %}
+{% block title %}Bad Request - CallMan{% endblock %}
 {% block content %}
     <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow text-center">
-        <h1 class="text-3xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">404 - Page Not Found</h1>
-        <p class="text-text-primary mb-4 dark:text-dark-text-primary">The page you're looking for doesn't exist.</p>
+        <h1 class="text-3xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">400 - Bad Request</h1>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Your request was invalid. Please check and try again.</p>
         <a href="{% url 'manager_dashboard' %}" class="inline-block bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Go to Dashboard</a>
     </div>
 {% endblock %}

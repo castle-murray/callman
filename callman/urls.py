@@ -5,6 +5,9 @@ from django.contrib.auth import views as auth_views
 from callManager import views
 
 handler404 = 'callManager.views.custom_404'
+handler500 = 'callManager.views.custom_500'
+handler403 = 'callManager.views.custom_403'
+handler400 = 'callManager.views.custom_400'
 
 urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='callManager/login.html'), name='login'),
