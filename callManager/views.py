@@ -2215,6 +2215,7 @@ def worker_fill_partial(request, slug, worker_id):
 @login_required
 def call_time_request_list(request, slug):
     manager = request.user.manager
+    company = manager.company
     call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -2237,7 +2238,7 @@ def call_time_request_list(request, slug):
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
                         message_body = (
                                 f"confirmed {labor_request.labor_requirement.labor_type}"
-                                f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                                f" for {Event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
                         )
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
@@ -2252,6 +2253,8 @@ def call_time_request_list(request, slug):
                         else:
                             log_sms(company)
                             print(message_body)
+                        labor_request.confirmed = True
+                        labor_request.save()
                 if action == 'ncns':
                     worker.nocallnoshow += 1
                     worker.save()

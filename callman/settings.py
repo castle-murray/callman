@@ -281,4 +281,3 @@ if os.environ.get('DJANGO_ENV') == 'production':
 #            },
 #        },
 #    }
-print("burgers")
