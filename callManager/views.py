@@ -2231,7 +2231,7 @@ def call_time_request_list(request, slug):
             if request_id and action in ['confirm', 'decline', 'ncns', 'delete', 'call_filled']:
                 labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
                 worker = labor_request.worker
-                was_ncns = labor_request.response == 'ncns'
+                was_ncns = labor_request.availability_response == 'ncns'
                 if action == 'confirm':
                     call_time = labor_request.labor_requirement.call_time
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
