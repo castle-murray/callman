@@ -198,7 +198,7 @@ def event_detail(request, slug):
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
                     elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = "Reply 'Yes.' to receive job request messages from CallMan. Reply 'No.' or 'STOP' to opt out."
+                        consent_body = f"Reply 'Yes.' to receive job request messages from {company.name}. Reply 'No.' or 'STOP' to opt out."
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -280,7 +280,6 @@ def edit_event(request, slug):
             return redirect('manager_dashboard')
     else:
         form = EventForm(instance=event, company=company)
-
     context = {
         'company': company,
         'form': form,
@@ -428,7 +427,6 @@ def register_owner(request, token):
             Owner.objects.create(user=user, company=company)
             invitation.used = True
             invitation.save()
-
             user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
             if user is not None:
                 manager = Manager.objects.create(user=user, company=company)
@@ -601,7 +599,6 @@ def manager_dashboard(request):
         'has_locations': has_locations,
         'has_workers': has_workers,
         'include_past': include_past}
-
     return render(request, 'callManager/manager_dashboard.html', context)
 
 
@@ -635,7 +632,6 @@ def cancel_event(request, slug):
         event.canceled = True
         event.steward = None
         event.save()
-
     manager = request.user.manager
     company = manager.company
     yesterday = timezone.now().date() - timedelta(days=1)
@@ -3311,3 +3307,48 @@ def get_messages(request):
     response['X-Messages-Response'] = 'true'
     return response
 
+@login_required
+def copy_call_time(request, slug):
+    manager = request.user.manager
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    event = call_time.event
+    if request.method == "POST":
+        form = CallTimeForm(request.POST, event=event)
+        if form.is_valid():
+            new_call_time = form.save(commit=False)
+            new_call_time.event = event
+            new_call_time.slug = None  # Generate new slug
+            new_call_time.original_date = new_call_time.date
+            new_call_time.original_time = new_call_time.time
+            new_call_time.save()
+            # Copy labor requirements
+            for labor_requirement in call_time.labor_requirements.all():
+                new_labor_requirement = LaborRequirement.objects.create(
+                    call_time=new_call_time,
+                    labor_type=labor_requirement.labor_type,
+                    needed_labor=labor_requirement.needed_labor,
+                    minimum_hours=labor_requirement.minimum_hours,
+                    fcfs_positions=labor_requirement.fcfs_positions
+                )
+                # Copy labor requests as "requested" without response data
+                for labor_request in labor_requirement.labor_requests.all():
+                    LaborRequest.objects.create(
+                        worker=labor_request.worker,
+                        labor_requirement=new_labor_requirement,
+                        token=uuid.uuid4(),  # Generate new unique token
+                        requested=True,
+                        sms_sent=False,
+                        is_reserved=labor_request.is_reserved
+                    )
+            messages.success(request, f"Call time '{call_time.name}' copied successfully.")
+            return redirect('event_detail', slug=event.slug)
+    else:
+        form = CallTimeForm(initial={
+            'name': call_time.name,
+            'date': call_time.date,
+            'time': call_time.time,
+            'minimum_hours': call_time.minimum_hours,
+            'message': call_time.message
+        }, event=event)
+    context = {'form': form, 'call_time': call_time, 'event': event}
+    return render(request, 'callManager/copy_call_time.html', context)
