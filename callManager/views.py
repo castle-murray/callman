@@ -2296,9 +2296,13 @@ def call_time_request_list(request, slug):
 
 @login_required
 def call_time_tracking(request, slug):
-    manager = request.user.manager
-    company = manager.company
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    if hasattr(request.user 'administrator'):
+        call_time = get_object_or_404(CallTime, slug=slug)
+        company = call_time.event.company
+    else:
+        manager = request.user.manager
+        company = manager.company
+        call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
         confirmed=True).select_related('worker', 'labor_requirement__labor_type')
