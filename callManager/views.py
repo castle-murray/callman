@@ -2296,7 +2296,7 @@ def call_time_request_list(request, slug):
 
 @login_required
 def call_time_tracking(request, slug):
-    if hasattr(request.user 'administrator'):
+    if hasattr(request.user, 'administrator'):
         call_time = get_object_or_404(CallTime, slug=slug)
         company = call_time.event.company
     else:
