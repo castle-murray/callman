@@ -135,9 +135,15 @@ def confirm_assignment(request, token):
 @login_required
 def event_detail(request, slug):
     """event detail page for managers"""
-    manager = request.user.manager
-    company = manager.company
-    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    if not hasattr(request.user, 'manager') or not hasattr(request.user, 'administrator'):
+        return redirect('home')
+    if hasattr(request.user, 'administrator'):
+        event = get_object_or_404(Event, slug=slug)
+        company = event.company
+    else:
+        manager = request.user.manager
+        company = manager.company
+        event = get_object_or_404(Event, slug=slug, company=manager.company)
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
         if call_time.original_time != call_time.time or call_time.original_date != call_time.date:
