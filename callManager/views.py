@@ -135,6 +135,8 @@ def confirm_assignment(request, token):
 @login_required
 def event_detail(request, slug):
     """event detail page for managers"""
+    if not hasattr(request.user, 'administrator') and not hasattr(request.user, 'manager'):
+        return redirect('login')
     if hasattr(request.user, 'administrator'):
         event = get_object_or_404(Event, slug=slug)
         company = event.company
@@ -2214,9 +2216,15 @@ def worker_fill_partial(request, slug, worker_id):
 
 @login_required
 def call_time_request_list(request, slug):
-    manager = request.user.manager
-    company = manager.company
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    if not hasattr(request.user, 'administrator') and not hasattr(request.user, 'manager'):
+        return redirect('login')
+    if hasattr(request.user, 'administrator'):
+        call_time = get_object_or_404(CallTime, slug=slug) 
+        company = call_time.event.company
+    else:
+        manager = request.user.manager
+        company = manager.company
+        call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
         requested=True
@@ -2294,9 +2302,15 @@ def call_time_request_list(request, slug):
 
 @login_required
 def call_time_tracking(request, slug):
-    manager = request.user.manager
-    company = manager.company
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    if not hasattr(request.user, 'administrator') and not hasattr(request.user, 'manager'):
+        return redirect('login')
+    if hasattr(request.user, 'administrator'):
+        call_time = get_object_or_404(CallTime, slug=slug) 
+        company = call_time.event.company
+    else:
+        manager = request.user.manager
+        company = manager.company
+        call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
         confirmed=True).select_related('worker', 'labor_requirement__labor_type')
