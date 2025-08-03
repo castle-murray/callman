@@ -1,0 +1,47 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Workers Report - {{ company.name }}{% endblock %}
+{% block content %}
+    <div class="max-w-4xl mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Workers Report for {{ company.name }}</h1>
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <p class="{% if message.tags == 'success' %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Selected Events</h2>
+        <ul class="mb-4 space-y-2 text-text-tertiary dark:text-dark-text-tertiary">
+            {% for event in events %}
+                <li>{{ event.event_name }} ({{ event.start_date }}{% if not event.is_single_day %} - {{ event.end_date }}{% endif %})</li>
+            {% endfor %}
+        </ul>
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Workers</h2>
+        {% if report_data %}
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200 dark:bg-dark-gray">
+                        <th class="p-2 text-left text-text-primary dark:text-dark-text-primary">Event</th>
+                        <th class="p-2 text-left text-text-primary dark:text-dark-text-primary">Call Time</th>
+                        <th class="p-2 text-left text-text-primary dark:text-dark-text-primary">Worker</th>
+                        <th class="p-2 text-left text-text-primary dark:text-dark-text-primary">Labor Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_data %}
+                        <tr class="border-b dark:border-dark-border">
+                            <td class="p-2 text-text-tertiary dark:text-dark-text-tertiary">{{ row.event }}</td>
+                            <td class="p-2 text-text-tertiary dark:text-dark-text-tertiary">{{ row.call_time }}</td>
+                            <td class="p-2 text-text-tertiary dark:text-dark-text-tertiary">{{ row.worker }}</td>
+                            <td class="p-2 text-text-tertiary dark:text-dark-text-tertiary">{{ row.labor_type }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{% url 'event_workers_report' %}?format=pdf&event_ids={{ event_ids }}" class="mt-4 inline-block bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Download PDF</a>
+        {% else %}
+            <p class="text-text-secondary dark:text-dark-text-secondary">No workers found for the selected events.</p>
+        {% endif %}
+        <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Dashboard</a>
+    </div>
+{% endblock %}
