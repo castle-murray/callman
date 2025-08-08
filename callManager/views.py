@@ -80,6 +80,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 import qrcode
 from io import BytesIO, TextIOWrapper
 import re
+import random
+import string
 import uuid
 from urllib.parse import urlencode, quote
 from user_agents import parse
@@ -132,22 +134,32 @@ def confirm_assignment(request, token):
     return render(request, 'callManager/confirmation_form.html', {'assignment': assignment})
 
 
+def generate_short_token(length=6):
+    """Generate a random alphanumeric token of specified length."""
+    characters = string.ascii_letters + string.digits  # a-z, A-Z, 0-9
+    return ''.join(random.choice(characters) for _ in range(length))
+
 @login_required
 def event_detail(request, slug):
-    """event detail page for managers"""
+    """Event detail page for managers and administrators"""
     event = get_object_or_404(Event, slug=slug)
     company = event.company
     user = request.user
     
     if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
+    
     if hasattr(user, 'manager'):
-        if user.manager.company == company:
-            manager = user.manager
-        elif hasattr(user, 'administrator'):
-            manager = company.manager.first()
-        else:
+        if user.manager.company != company:
             return redirect('manager_dashboard')
+        manager = user.manager
+    elif hasattr(user, 'administrator'):
+        manager = company.manager.first()  # Get first manager or None
+        if not manager:
+            manager = None
+    else:
+        return redirect('manager_dashboard')
+    
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
         if call_time.original_time != call_time.time or call_time.original_date != call_time.date:
@@ -188,19 +200,20 @@ def event_detail(request, slug):
             'labor_requirement': lr
         }
     if request.method == "POST" and 'send_messages' in request.POST:
+        if not user.administrator and event.company != manager.company:
+            messages.error(request, "You do not have permission to send messages for this event.")
+            return redirect('event_detail', slug=slug)
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
             worker_tokens = {}
-            # Group requests by worker
             workers_to_notify = {}
             for labor_request in queued_requests:
                 worker = labor_request.worker
                 if worker.id not in workers_to_notify:
                     workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
                 workers_to_notify[worker.id]['requests'].append(labor_request)
-            # Send one message per worker
             for worker_id, data in workers_to_notify.items():
                 worker = data['worker']
                 requests = data['requests']
@@ -208,7 +221,9 @@ def event_detail(request, slug):
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
                     elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = f"This is {manager.user.first_name} with {company.name}. We're using Callman to send out job.. Reply 'Yes.' to receive job requests. Reply 'No.' or 'STOP' to opt out."
+                        consent_body = f"""This is {manager.user.first_name} with {company.name_short}.\n
+                        We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n
+                        Reply 'No.' or 'STOP' to opt out."""
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -227,10 +242,13 @@ def event_detail(request, slug):
                             worker.sent_consent_msg = True
                             worker.save()
                     elif worker.sms_consent:
-                        token = worker_tokens.get(worker.id, str(uuid.uuid4()))
+                        token = worker_tokens.get(worker.id, generate_short_token())
                         worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
+                        if event.is_single_day:
+                            message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
+                        else:
+                            message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -242,10 +260,13 @@ def event_detail(request, slug):
                                 sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
                             finally:
                                 log_sms(company)
+                                if len(message_body) > 144:
+                                    log_sms(company)
                         else:
                             log_sms(company)
+                            if len(message_body) > 144:
+                                log_sms(company)
                             print(message_body)
-                        # Mark all requests as sent with the same token
                         for labor_request in requests:
                             labor_request.sms_sent = True
                             labor_request.event_token = token
@@ -260,12 +281,12 @@ def event_detail(request, slug):
         else:
             message = "No queued requests to send."
         context = {
-                'company': company,
-                'event': event,
-                'call_times': call_times,
-                'labor_counts': labor_counts,
-                'message': message
-                }
+            'company': company,
+            'event': event,
+            'call_times': call_times,
+            'labor_counts': labor_counts,
+            'message': message
+        }
         return render(request, 'callManager/event_detail.html', context)
     context = {
         'company': company,
@@ -392,7 +413,7 @@ def admin_dashboard(request):
             invitation = OwnerInvitation.objects.create(phone=phone)
             registration_url = request.build_absolute_uri(reverse('register_owner', args=[str(invitation.token)]))
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
-            message_body = f'You are invited to become an owner. Register: {registration_url}'
+            message_body = f'You are invited to join Callman. Use the following link to register:\n{registration_url}'
             if settings.TWILIO_ENABLED == 'enabled' and client:
                 try:
                     client.messages.create(
@@ -406,7 +427,7 @@ def admin_dashboard(request):
             else:
                 log_sms(request.user.manager.company)
                 print(message_body)
-                messages.success(request, f"Invitation printed for {phone}.")
+                messages.success(request, f"Invitation sent for {phone}.")
         else:
             messages.error(request, "Please provide a valid phone number.") 
     context = {
@@ -430,9 +451,14 @@ def register_owner(request, token):
         if form.is_valid():
             user = form.save(commit=False)
             user.email = form.cleaned_data['email']
+            user.first_name = form.cleaned_data['first_name']
+            user.phone_number = invitation.phone
             user.save()
             company = Company.objects.create(
                 name=form.cleaned_data['company_name'],
+                name_short=form.cleaned_data['company_short_name'],
+                email=form.cleaned_data['email'], 
+                phone_number=invitation.phone,
                 # Add other required Company fields with defaults or from form if needed
             )
             Owner.objects.create(user=user, company=company)
@@ -442,7 +468,7 @@ def register_owner(request, token):
             if user is not None:
                 manager = Manager.objects.create(user=user, company=company)
             login(request, user)
-            messages.success(request, "Registration successful. You are now an owner.")
+            messages.success(request, "Registration successful. Welcome to Callman.")
             return redirect('manager_dashboard')
     else:
         form = OwnerRegistrationForm()
@@ -3081,6 +3107,8 @@ def register_manager(request, token):
         if form.is_valid():
             user = form.save(commit=False)
             user.email = form.cleaned_data['email']
+            user.first_name = form.cleaned_data['first_name']
+            user.phone_number = invitation.phone
             user.save()
             Manager.objects.create(user=user, company=invitation.company)
             invitation.used = True

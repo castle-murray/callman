@@ -268,6 +268,15 @@ class OwnerRegistrationForm(UserCreationForm):
             'required': 'Company name is required.'
         }
     )
+    company_short_name = forms.CharField(
+        label="Company Short Name",
+        max_length=5,
+        widget=forms.TextInput(attrs={'placeholder': 'Company abbreviation', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+        error_messages={
+            'required': 'Company name abbreviation is required.',
+            'max_length': 'Short name cannot exceed 5 characters.'
+        }
+    )
     email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(attrs={'placeholder': 'Email', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
@@ -279,9 +288,10 @@ class OwnerRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2', 'company_name']
+        fields = ['username', 'first_name', 'email', 'password1', 'password2', 'company_name', 'company_short_name']
         widgets = {
             'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'first_name': forms.TextInput(attrs={'placeholder': 'First Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
         }
@@ -290,6 +300,9 @@ class OwnerRegistrationForm(UserCreationForm):
                 'required': 'Username is required.',
                 'unique': 'This username is already taken.',
                 'invalid': 'Please enter a valid username.'
+            },
+            'first_name': {
+                'required': 'Your first name is required',
             },
             'password2': {
                 'required': 'Please confirm your password.',
@@ -324,9 +337,10 @@ class ManagerRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['username', 'first_name', 'email', 'password1', 'password2']
         widgets = {
             'username': forms.TextInput(attrs={'placeholder': 'Username', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
+            'first_name': forms.TextInput(attrs={'placeholder': 'First Name', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password1': forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
             'password2': forms.PasswordInput(attrs={'placeholder': 'Confirm Password', 'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary'}),
         }

@@ -13,6 +13,12 @@
                 {% endif %}
             </div>
             <div>
+                <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" placeholder="First Name" required class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                {% if form.first_name.errors %}
+                    <p class="text-text-red dark:text-dark-text-red text-sm mt-1">{{ form.first_name.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+            <div>
                 <input type="email" name="email" value="{{ form.email.value|default:'' }}" placeholder="Email" required class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
                 {% if form.email.errors %}
                     <p class="text-text-red dark:text-dark-text-red text-sm mt-1">{{ form.email.errors|join:", " }}</p>
@@ -34,6 +40,12 @@
                 <input type="text" name="company_name" value="{{ form.company_name.value|default:'' }}" placeholder="Company Name" required class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
                 {% if form.company_name.errors %}
                     <p class="text-text-red dark:text-dark-text-red text-sm mt-1">{{ form.company_name.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <input type="text" name="company_short_name" value="{{ form.company_short_name.value|default:'' }}" placeholder="Company short name (abbreviation)" required class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                {% if form.company_short_name.errors %}
+                    <p class="text-text-red dark:text-dark-text-red text-sm mt-1">{{ form.company_short_name.errors|join:", " }}</p>
                 {% endif %}
             </div>
             <button type="submit" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Register</button>

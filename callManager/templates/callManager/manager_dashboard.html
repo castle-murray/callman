@@ -28,7 +28,7 @@
     <li class="text-text-secondary dark:text-dark-text-secondary">Add Skills: use the add/edit skills button.</li>
     {% endif %}
     {% if not has_workers %}
-    <li class="text-text-secondary dark:text-dark-text-secondary">Add Contacts: use the import contacts button to get the contacts off your phone or add them manually using the add/edit contacts button. </li>
+    <li class="text-text-secondary dark:text-dark-text-secondary">Add Contacts: use the import contacts button to get the contacts off your phone or add them manually using the add/edit contacts button.</li>
     {% endif %}
     {% if not has_locations %}
     <li class="text-text-secondary dark:text-dark-text-secondary">Add Locations: use the manage locations button.</li>
@@ -36,7 +36,7 @@
 </ul>
 {% endif %}
 <div class="mb-6 flex space-x-4">
-    <a href="{% url 'create_event' %}" class="bg-primary  text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
+    <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
     <a href="{% url 'view_skills' %}" class="bg-secondary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
     <a href="{% url 'view_workers' %}" class="bg-purple {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Add/Edit Contacts</a>
     <a href="{% url 'import_workers' %}" class="bg-indigo {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Contacts</a>
@@ -52,8 +52,12 @@
             <span class="ml-2">Include Past Shows</span>
         </label>
     </form>
-    <div id="events-list">
-        {% include 'callManager/events_list_partial.html' %}
-    </div>
+    <form method="post" action="{% url 'event_workers_report' %}" class="mb-4" id="report-form">
+        {% csrf_token %}
+        <div id="events-list">
+            {% include 'callManager/events_list_partial.html' %}
+        </div>
+        <button type="submit" class="mt-4 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Generate Workers Report</button>
+    </form>
 </div>
 {% endblock %}

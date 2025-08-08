@@ -29,13 +29,13 @@ class LocationProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number', 'email', 'meal_penalty_trigger_time', 'hour_round_up')
+    list_display = ('name', 'name_short', 'phone_number', 'email', 'meal_penalty_trigger_time', 'hour_round_up')
     list_filter = ('state', 'city')
     search_fields = ('name', 'email', 'phone_number')
     fieldsets = (
         (None, {
 
-            'fields': ('name', 'address', 'city', 'state', 'phone_number', 'email', 'website','time_tracking')
+            'fields': ('name', 'name_short', 'address', 'city', 'state', 'phone_number', 'email', 'website','time_tracking')
         }),
         ('Time Settings', {
             'fields': ('meal_penalty_trigger_time', 'hour_round_up')
@@ -99,7 +99,7 @@ class LaborTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Worker)
 class WorkerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number', 'nocallnoshow')
+    list_display = ('name', 'phone_number', 'nocallnoshow','company')
     list_filter = ('company',)
     search_fields = ('name', 'phone_number')
 
