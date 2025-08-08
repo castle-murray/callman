@@ -135,15 +135,19 @@ def confirm_assignment(request, token):
 @login_required
 def event_detail(request, slug):
     """event detail page for managers"""
-    if not hasattr(request.user, 'administrator') and not hasattr(request.user, 'manager'):
+    event = get_object_or_404(Event, slug=slug)
+    company = event.company
+    user = request.user
+    
+    if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
-    if hasattr(request.user, 'administrator'):
-        event = get_object_or_404(Event, slug=slug)
-        company = event.company
-    else:
-        manager = request.user.manager
-        company = manager.company
-        event = get_object_or_404(Event, slug=slug, company=manager.company)
+    if hasattr(user, 'manager'):
+        if user.manager.company == company:
+            manager = user.manager
+        elif hasattr(user, 'administrator'):
+            manager = company.manager.first()
+        else:
+            return redirect('manager_dashboard')
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
         if call_time.original_time != call_time.time or call_time.original_date != call_time.date:
@@ -204,7 +208,7 @@ def event_detail(request, slug):
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
                     elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = f"Reply 'Yes.' to receive job request messages from {company.name}. Reply 'No.' or 'STOP' to opt out."
+                        consent_body = f"This is {manager.user.first_name} with {company.name}. We're using Callman to send out job.. Reply 'Yes.' to receive job requests. Reply 'No.' or 'STOP' to opt out."
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -226,7 +230,7 @@ def event_detail(request, slug):
                         token = worker_tokens.get(worker.id, str(uuid.uuid4()))
                         worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        message_body = f"{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
+                        message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -278,11 +282,12 @@ def edit_event(request, slug):
         return redirect('login')
     manager = request.user.manager
     company = manager.company
-    event = get_object_or_404(Event, slug=slug, company=manager.company)
+    event = get_object_or_404(Event, slug=slug, company=company)
     if request.method == "POST":
-        form = EventForm(request.POST, instance=event)
+        form = EventForm(request.POST, instance=event, company=company)
         if form.is_valid():
             form.save()
+            messages.success(request, f"Event '{event.event_name}' updated successfully.")
             return redirect('manager_dashboard')
     else:
         form = EventForm(instance=event, company=company)
@@ -3370,3 +3375,113 @@ def copy_call_time(request, slug):
         }, event=event)
     context = {'form': form, 'call_time': call_time, 'event': event}
     return render(request, 'callManager/copy_call_time.html', context)
+
+
+
+@login_required
+def event_workers_report(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    # Handle event_ids from POST (form submission) or GET (PDF download)
+    event_ids = request.POST.getlist('event_ids') or request.GET.get('event_ids', '').split(',')
+    event_ids = [id for id in event_ids if id]  # Remove empty strings
+    print(f"Received event_ids: {event_ids}")  # Debug POST/GET data
+    if not event_ids:
+        messages.error(request, "No events selected.")
+        return redirect('manager_dashboard')
+    events = Event.objects.filter(id__in=event_ids, company=company)
+    if not events.exists():
+        messages.error(request, "No valid events found.")
+        return redirect('manager_dashboard')
+    
+    # Gather workers by event and call time
+    report_data = []
+    for event in events.order_by('start_date'):
+        for call_time in event.call_times.all().order_by('date', 'time'):
+            labor_requests = LaborRequest.objects.filter(
+                labor_requirement__call_time=call_time,
+                confirmed=True
+            ).select_related('worker', 'labor_requirement__labor_type')
+            for req in labor_requests:
+                time_entry = req.time_entries.first() if hasattr(req, 'time_entries') and req.time_entries.exists() else None
+                report_data.append({
+                    'event': event.event_name,
+                    'call_time': f"{call_time.name} ({call_time.date} at {call_time.time.strftime('%I:%M %p')})",
+                    'worker': req.worker.name or "Unnamed Worker",
+                    'labor_type': req.labor_requirement.labor_type.name,
+                    'sign_in': time_entry.start_time.strftime('%I:%M %p') if time_entry and time_entry.start_time else '-',
+                    'sign_out': time_entry.end_time.strftime('%I:%M %p') if time_entry and time_entry.end_time else '-',
+                    'meal_breaks': time_entry.meal_breaks.count() if time_entry and hasattr(time_entry, 'meal_breaks') else '-',
+                    'total_hours': f"{time_entry.total_hours_worked:.2f}" if time_entry and time_entry.total_hours_worked is not None else '-'
+                })
+
+    format_type = request.GET.get('format', 'html')
+    if format_type == 'pdf':
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=0.5*inch, bottomMargin=1.5*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
+        styles = getSampleStyleSheet()
+        elements = []
+        elements.append(Paragraph(f"Workers Report for {company.name}", styles['Heading1']))
+        elements.append(Spacer(1, 0.2*inch))
+
+        # Group data by event for PDF
+        event_groups = {}
+        for row in report_data:
+            event_name = row['event']
+            if event_name not in event_groups:
+                event_groups[event_name] = []
+            event_groups[event_name].append(row)
+
+        # Calculate rows per page
+        page_width = landscape(letter)[0] - doc.leftMargin - doc.rightMargin  # 10 inches
+        colWidths = [130, 180, 130, 90, 70, 70, 70, 70]  # Adjusted to fit 10 inches
+        page_height = landscape(letter)[1]
+        header_height = 1.0 * inch
+        signature_height = 1.0 * inch
+        event_header_height = 0.5 * inch
+        row_height = 0.3 * inch
+        rows_per_page = int((page_height - header_height - signature_height - event_header_height) // row_height)
+
+        # Generate tables for each event
+        for event_name, rows in event_groups.items():
+            elements.append(Paragraph(f"Event: {event_name}", styles['Heading2']))
+            elements.append(Spacer(1, 0.1*inch))
+            data = [['Event', 'Call Time', 'Worker', 'Labor Type', 'Sign In', 'Sign Out', 'Meal Breaks', 'Total Hours']]
+            for row in rows:
+                data.append([row['event'], row['call_time'], row['worker'], row['labor_type'], row['sign_in'], row['sign_out'], row['meal_breaks'], row['total_hours']])
+            
+            # Split event data into pages
+            for i in range(0, len(data) - 1, rows_per_page):
+                page_data = data[:1] + data[i + 1:i + 1 + rows_per_page]
+                table = Table(page_data, colWidths=colWidths)
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(table)
+                elements.append(Spacer(1, 0.5*inch))
+                elements.append(Paragraph("Signature: _______________________________", styles['Normal']))
+                if i + rows_per_page < len(data) - 1 or event_name != list(event_groups.keys())[-1]:
+                    elements.append(PageBreak())
+        
+        doc.build(elements)
+        buffer.seek(0)
+        response = FileResponse(buffer, as_attachment=True, filename=f"workers_report_{company.name}.pdf")
+        response['Content-Type'] = 'application/pdf'
+        return response
+    
+    context = {
+        'company': company,
+        'events': events,
+        'report_data': report_data,
+        'event_ids': ','.join(event_ids)  # Pass event_ids for PDF link
+    }
+    return render(request, 'callManager/event_workers_report.html', context)
