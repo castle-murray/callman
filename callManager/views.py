@@ -145,7 +145,6 @@ def event_detail(request, slug):
     event = get_object_or_404(Event, slug=slug)
     company = event.company
     user = request.user
-    
     if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
     
@@ -156,7 +155,8 @@ def event_detail(request, slug):
     elif hasattr(user, 'administrator'):
         manager = company.manager.first()  # Get first manager or None
         if not manager:
-            manager = None
+            return redirect('admin_dashboard')
+
     else:
         return redirect('manager_dashboard')
     
@@ -221,7 +221,7 @@ def event_detail(request, slug):
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
                     elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = f"""This is {manager.user.first_name} with {company.name_short}.\n
+                        consent_body = f"""This is {manager.user.first_name} with {company.name}.\n
                         We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n
                         Reply 'No.' or 'STOP' to opt out."""
                         if settings.TWILIO_ENABLED == 'enabled' and client:

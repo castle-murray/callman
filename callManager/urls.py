@@ -79,4 +79,5 @@ urlpatterns = [
     path('call/track/htmx-time-sheet-row/<int:id>/', views.htmx_time_sheet_row, name='htmx_time_sheet_row'),
     path('htmx-add-worker/<slug:labor_requirement_slug>/', views.htmx_add_worker, name='htmx_add_worker'),
     path('call-time/<slug:slug>/copy/', views.copy_call_time, name='copy_call_time'),
+    path('event-workers-report/', views.event_workers_report, name='event_workers_report'),
 ]
