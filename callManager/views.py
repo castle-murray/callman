@@ -1385,6 +1385,7 @@ def delete_labor_requirement(request, slug):
 
 @csrf_exempt
 def sms_webhook(request):
+    stop_list = ['stop','optout', 'cancel','end', 'quit', 'unsubscribe', 'revoke', 'stopall'
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
@@ -1445,12 +1446,12 @@ def sms_webhook(request):
                     except TwilioRestException as e:
                         print(f"Failed to send SMS to {from_number}: {str(e)}")
             response.message("Thank you! You’ll now receive job requests.")
-        elif body == 'stop':
+        elif body in stop_list:
             for worker in workers:
                 worker.sms_consent = False
                 worker.stop_sms = True
                 worker.save()
-            response.message("You’ve opted out of messages. Reply 'START' to resume.")
+            response.message("You have successfully been unsubscribed. You will not receive any more messages from this number. Reply START to resubscribe.")
         elif body == 'start':
             for worker in workers:
                 worker.sms_consent = True
