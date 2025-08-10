@@ -1385,7 +1385,7 @@ def delete_labor_requirement(request, slug):
 
 @csrf_exempt
 def sms_webhook(request):
-    stop_list = ['stop','optout', 'cancel','end', 'quit', 'unsubscribe', 'revoke', 'stopall'
+    stop_list = ['stop','optout', 'cancel','end', 'quit', 'unsubscribe', 'revoke', 'stopall']
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
