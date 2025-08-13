@@ -200,7 +200,7 @@ def event_detail(request, slug):
             'labor_requirement': lr
         }
     if request.method == "POST" and 'send_messages' in request.POST:
-        if not user.administrator and event.company != manager.company:
+        if not hasattr(user, 'administrator') and event.company != manager.company:
             messages.error(request, "You do not have permission to send messages for this event.")
             return redirect('event_detail', slug=slug)
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
