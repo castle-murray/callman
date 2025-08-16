@@ -154,8 +154,6 @@ def event_detail(request, slug):
         manager = user.manager
     elif hasattr(user, 'administrator'):
         manager = company.manager.first()  # Get first manager or None
-        if not manager:
-            return redirect('admin_dashboard')
 
     else:
         return redirect('manager_dashboard')
@@ -269,7 +267,7 @@ def event_detail(request, slug):
                             print(message_body)
                         for labor_request in requests:
                             labor_request.sms_sent = True
-                            labor_request.event_token = token
+                            labor_request.token_short = token
                             labor_request.save()
                     else:
                         sms_errors.append(f"{worker.name} (awaiting consent)")
@@ -1389,6 +1387,7 @@ def sms_webhook(request):
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
+        print(from_number)
         workers = Worker.objects.filter(phone_number=from_number)
         if not workers.exists():
             response = MessagingResponse()
@@ -1425,26 +1424,30 @@ def sms_webhook(request):
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
-                    token = str(uuid.uuid4())  # Unique token per event
+                    token = generate_short_token()  # Unique token per event
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                     message_body = (
                         f"Call confirmation: {event.event_name} "
                         f"on {event.start_date}: {confirmation_url}"
                     )
-                    try:
-                        client.messages.create(
-                            body=message_body,
-                            from_=settings.TWILIO_PHONE_NUMBER,
-                            to=str(from_number)
-                        )
+                    if settings.TWILIO_ENABLED == 'enabled' and client:
+                        try:
+                            client.messages.create(
+                                body=message_body,
+                                from_=settings.TWILIO_PHONE_NUMBER,
+                                to=str(from_number)
+                            )
+                            log_sms(company)
+                            # Update all requests for this event with the same token
+                            for req in requests:
+                                req.sms_sent = True
+                                req.token_short = token
+                                req.save()
+                        except TwilioRestException as e:
+                            print(f"Failed to send SMS to {from_number}: {str(e)}")
+                    else:
                         log_sms(company)
-                        # Update all requests for this event with the same token
-                        for req in requests:
-                            req.sms_sent = True
-                            req.event_token = token
-                            req.save()
-                    except TwilioRestException as e:
-                        print(f"Failed to send SMS to {from_number}: {str(e)}")
+                        print(message_body)
             response.message("Thank you! You’ll now receive job requests.")
         elif body in stop_list:
             for worker in workers:
@@ -1477,7 +1480,7 @@ def sms_webhook(request):
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
-                    token = str(uuid.uuid4())  # Unique token per event
+                    token = generate_short_token()  # Unique token per event
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                     message_body = (
                         f"Call confirmation: {event.event_name} "
@@ -1493,7 +1496,7 @@ def sms_webhook(request):
                         # Update all requests for this event with the same token
                         for req in requests:
                             req.sms_sent = True
-                            req.event_token = token
+                            req.token_short = token
                             req.save()
                     except TwilioRestException as e:
                         print(f"Failed to send SMS to {from_number}: {str(e)}")
@@ -1597,10 +1600,16 @@ def import_workers(request):
 def confirm_event_requests(request, slug, event_token):
     event = get_object_or_404(Event, slug=slug)
     company = event.company
-    first_request = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event,
-        event_token=event_token,
-        worker__phone_number__isnull=False).select_related('worker').first()
+    if len(event_token) > 6:
+        first_request = LaborRequest.objects.filter(
+            labor_requirement__call_time__event=event,
+            event_token=event_token,
+            worker__phone_number__isnull=False).select_related('worker').first()
+    else:
+        first_request = LaborRequest.objects.filter(
+            labor_requirement__call_time__event=event,
+            token_short=event_token,
+            worker__phone_number__isnull=False).select_related('worker').first()
     if not first_request:
         context = {'message': 'No requests found for this link.'}
         return render(request, 'callManager/confirm_error.html', context)
@@ -1828,7 +1837,7 @@ def labor_request_list(request, slug):
                         'requested': True,
                         'sms_sent': False,
                         'is_reserved': False,
-                        'event_token': uuid.uuid4()
+                        'token_short': generate_short_token()
                     }
                 )
                 if labor_requirement.labor_type not in worker.labor_types.all():
@@ -1836,7 +1845,7 @@ def labor_request_list(request, slug):
                 if not created and not labor_request.sms_sent:
                     labor_request.requested = True
                     labor_request.is_reserved = is_reserved
-                    labor_request.event_token = uuid.uuid4()
+                    labor_request.token_short = generate_short_token()
                     labor_request.save()
                 messages.success(request, f"{worker.name} queued for request.")
             
@@ -1951,7 +1960,7 @@ def labor_request_list(request, slug):
                         'requested': True,
                         'sms_sent': False,
                         'is_reserved': is_reserved,
-                        'event_token': uuid.uuid4()
+                        'token_short': generate_short_token(),
                     }
                 )
                 if labor_requirement.labor_type not in worker.labor_types.all():
@@ -1959,7 +1968,7 @@ def labor_request_list(request, slug):
                 if not created and not labor_request.sms_sent:
                     labor_request.requested = True
                     labor_request.is_reserved = is_reserved
-                    labor_request.event_token = uuid.uuid4()
+                    labor_request.token_short = generate_short_token()
                     labor_request.save()
                 messages.success(request, f"{worker.name} queued for request.")
         elif 'fcfs_positions' in request.POST:
@@ -3387,7 +3396,7 @@ def copy_call_time(request, slug):
                     LaborRequest.objects.create(
                         worker=labor_request.worker,
                         labor_requirement=new_labor_requirement,
-                        token=uuid.uuid4(),  # Generate new unique token
+                        token_short=generate_short_token(), 
                         requested=True,
                         sms_sent=False,
                         is_reserved=labor_request.is_reserved
