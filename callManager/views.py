@@ -219,9 +219,7 @@ def event_detail(request, slug):
                     if worker.stop_sms:
                         sms_errors.append(f"{worker.name} (opted out via STOP)")
                     elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = f"""This is {manager.user.first_name} with {company.name}.\n
-                        We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n
-                        Reply 'No.' or 'STOP' to opt out."""
+                        consent_body = f"This is {manager.user.first_name} with {company.name}.\n We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n Reply 'No.' or 'STOP' to opt out."
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
