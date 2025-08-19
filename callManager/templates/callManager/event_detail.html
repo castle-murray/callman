@@ -60,10 +60,13 @@
             {% for labor in call_time.labor_requirements.all %}
             {% with counts=labor_counts|get_item:labor.id %}
             <li class="flex justify-between items-center text-text-tertiary dark:text-dark-text-tertiary">
-                <span>
-                    • <a href="{% url 'labor_request_list' labor.slug %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
+                <span class="mt-2">
+                    • 
                         {{ labor.labor_type.name }} - {{ counts.display_text }}
+                    <a href="{% url 'labor_request_list' labor.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
+                        Fill Call
                     </a>
+
                 </span>
                 <div class="space-x-2">
                         {% if user.manager %}
