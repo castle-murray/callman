@@ -61,8 +61,9 @@
             {% with counts=labor_counts|get_item:labor.id %}
             <li class="flex justify-between items-center text-text-tertiary dark:text-dark-text-tertiary">
                 <span class="mt-2">
-                    • 
+                    • <a href="{% url 'labor_request_list' labor.slug %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">
                         {{ labor.labor_type.name }} - {{ counts.display_text }}
+                    </a>
                     <a href="{% url 'labor_request_list' labor.slug %}" class="ml-2 inline-block bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
                         Fill Call
                     </a>
