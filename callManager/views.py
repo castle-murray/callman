@@ -154,7 +154,6 @@ def event_detail(request, slug):
         manager = user.manager
     elif hasattr(user, 'administrator'):
         manager = company.manager.first()  # Get first manager or None
-
     else:
         return redirect('manager_dashboard')
     
@@ -238,7 +237,7 @@ def event_detail(request, slug):
                             worker.sent_consent_msg = True
                             worker.save()
                     elif worker.sms_consent:
-                        token = worker_tokens.get(worker.id, generate_short_token())
+                        token = worker_tokens.get(worker.id, uuid.uuid4())
                         worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                         if event.is_single_day:
@@ -1279,7 +1278,7 @@ def edit_call_time(request, slug):
                                 reverse('confirm_time_change', args=[str(confirmation.token)])
                             )
                             message_body = (
-                                f"{company.name}: {call_time.event.event_name} {call_time.name} time changed. "
+                                f"{company.name_short}: {call_time.event.event_name} {call_time.name} time changed. "
                                 f"Now: {updated_call_time.date.strftime('%B %d')} at {updated_call_time.time.strftime('%I:%M %p')}. "
                                 f"Confirm: {confirm_url}"
                             )
@@ -1389,7 +1388,7 @@ def sms_webhook(request):
         workers = Worker.objects.filter(phone_number=from_number)
         if not workers.exists():
             response = MessagingResponse()
-            response.message("Number not recognized. Please contact your Stewrd")
+            response.message("Number not recognized. Please contact your Steward")
             return HttpResponse(str(response), content_type='text/xml')
         # Check if any worker has stopped SMS
         if any(worker.stop_sms for worker in workers):
@@ -1411,6 +1410,7 @@ def sms_webhook(request):
                 # Group requests by event and company
                 events_to_notify = {}
                 for req in queued_requests:
+                    token = req.token_short
                     event = req.labor_requirement.call_time.event
                     company = event.company
                     key = (event.slug, company.id)
@@ -1422,7 +1422,7 @@ def sms_webhook(request):
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
-                    token = generate_short_token()  # Unique token per event
+                    token = requests[0].token_short  # Unique token per event
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                     message_body = (
                         f"Call confirmation: {event.event_name} "
@@ -1478,7 +1478,8 @@ def sms_webhook(request):
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
-                    token = generate_short_token()  # Unique token per event
+                    token = requests[0].token_short  # Unique token per event
+                    print(token)
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                     message_body = (
                         f"Call confirmation: {event.event_name} "
