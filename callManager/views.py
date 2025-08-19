@@ -237,7 +237,7 @@ def event_detail(request, slug):
                             worker.sent_consent_msg = True
                             worker.save()
                     elif worker.sms_consent:
-                        token = worker_tokens.get(worker.id, uuid.uuid4())
+                        token = worker_tokens.get(worker.id, generate_short_token())
                         worker_tokens[worker.id] = token
                         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                         if event.is_single_day:
