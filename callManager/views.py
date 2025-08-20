@@ -214,62 +214,18 @@ def event_detail(request, slug):
             for worker_id, data in workers_to_notify.items():
                 worker = data['worker']
                 requests = data['requests']
-                if worker.phone_number:
-                    if worker.stop_sms:
-                        sms_errors.append(f"{worker.name} (opted out via STOP)")
-                    elif not worker.sms_consent and not worker.sent_consent_msg:
-                        consent_body = f"This is {manager.user.first_name} with {company.name}.\n We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n Reply 'No.' or 'STOP' to opt out."
-                        if settings.TWILIO_ENABLED == 'enabled' and client:
-                            try:
-                                client.messages.create(
-                                    body=consent_body,
-                                    from_=settings.TWILIO_PHONE_NUMBER,
-                                    to=str(worker.phone_number)
-                                )
-                                worker.sent_consent_msg = True
-                                worker.save()
-                            except TwilioRestException as e:
-                                sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
-                            finally:
-                                log_sms(company)
-                        else:
-                            log_sms(company)
-                            worker.sent_consent_msg = True
-                            worker.save()
-                    elif worker.sms_consent:
-                        token = worker_tokens.get(worker.id, generate_short_token())
-                        worker_tokens[worker.id] = token
-                        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                        if event.is_single_day:
-                            message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
-                        else:
-                            message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
-                        if settings.TWILIO_ENABLED == 'enabled' and client:
-                            try:
-                                client.messages.create(
-                                    body=message_body,
-                                    from_=settings.TWILIO_PHONE_NUMBER,
-                                    to=str(worker.phone_number)
-                                )
-                            except TwilioRestException as e:
-                                sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
-                            finally:
-                                log_sms(company)
-                                if len(message_body) > 144:
-                                    log_sms(company)
-                        else:
-                            log_sms(company)
-                            if len(message_body) > 144:
-                                log_sms(company)
-                            print(message_body)
-                        for labor_request in requests:
-                            labor_request.sms_sent = True
-                            labor_request.token_short = token
-                            labor_request.save()
-                    else:
-                        sms_errors.append(f"{worker.name} (awaiting consent)")
+                token = worker_tokens.get(worker.id, generate_short_token())
+                worker_tokens[worker.id] = token
+                confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                if event.is_single_day:
+                    message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
                 else:
-                    sms_errors.append(f"{worker.name} (no phone)")
+                    message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
+                send_message(message_body, worker, manager, company)
+                for labor_request in requests:
+                    labor_request.sms_sent = True
+                    labor_request.token_short = token
+                    labor_request.save()
             message = f"Messages processed for {len(workers_to_notify)} workers."
             if sms_errors:
                 message += f" Errors: {', '.join(sms_errors)}."
@@ -290,6 +246,58 @@ def event_detail(request, slug):
         'labor_counts': labor_counts
     }
     return render(request, 'callManager/event_detail.html', context)
+
+def send_message(message_body, worker, manager, company):
+    sms_errors = []
+    message_length = len(message_body)
+    if not worker.phone_number:
+        messages.error(f"{worker.name} has no phone number")
+        return
+    if worker.stop_sms:
+        sms_errors.append(f"{worker.name} (opted out via STOP)")
+    elif not worker.sms_consent and not worker.sent_consent_msg:
+        consent_body = f"This is {manager.user.first_name} with {company.name}.\n We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n Reply 'No.' or 'STOP' to opt out."
+        if settings.TWILIO_ENABLED == 'enabled' and client:
+            try:
+                client.messages.create(
+                    body=consent_body,
+                    from_=settings.TWILIO_PHONE_NUMBER,
+                    to=str(worker.phone_number)
+                )
+                worker.sent_consent_msg = True
+                worker.save()
+            except TwilioRestException as e:
+                sms_errors.append(f"Consent SMS failed for {worker.name}: {str(e)}")
+            finally:
+                log_sms(company)
+        else:
+            log_sms(company)
+            worker.sent_consent_msg = True
+            worker.save()
+    elif worker.sms_consent:
+        if settings.TWILIO_ENABLED == 'enabled' and client:
+            try:
+                client.messages.create(
+                    body=message_body,
+                    from_=settings.TWILIO_PHONE_NUMBER,
+                    to=str(worker.phone_number)
+                )
+            except TwilioRestException as e:
+                sms_errors.append(f"SMS failed for {worker.name}: {str(e)}")
+            finally:
+                log_sms(company)
+                while message_length > 144:
+                    log_sms(company)
+                    message_length -= 144
+        else:
+            log_sms(company)
+            while message_length > 144:
+                log_sms(company)
+                message_length -= 144
+            print(message_body)
+    else:
+        sms_errors.append(f"{worker.name} (awaiting consent)")
+    return sms_errors
 
 
 @login_required
@@ -1879,10 +1887,20 @@ def labor_request_list(request, slug):
                     messages.success(request, f"Call filled for {worker.name}.")
                 if action == 'confirm':
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
-                        message_body = (
-                                f"confirmed {labor_request.labor_requirement.labor_type}"
-                                f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
-                        )
+                        if labor_request.sms_sent:
+                            message_body = (
+                                    f"confirmed {labor_request.labor_requirement.labor_type}"
+                                    f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                            )
+                        else:
+                            token = labor_request.token_short
+                            confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                            message_body = (
+                                    f"confirmed {labor_request.labor_requirement.labor_type}\n"
+                                    f"for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}\n"
+                                    f"Details: {confirmation_url}"
+                            )
+                        msglen = len(message_body)
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -1894,8 +1912,13 @@ def labor_request_list(request, slug):
                             finally:
                                 log_sms(company)
                         else:
+                            charges = 1
+                            while msglen > 144:
+                                charges += 1
+                                msglen -= 144
                             log_sms(company)
                             print(message_body)
+                            print(charges, msglen)
                     if labor_request.availability_response in [None, 'no']:  # Allow confirm from pending or declined
                         labor_request.availability_response = 'yes'
                         labor_request.responded_at = timezone.now()
@@ -2269,6 +2292,7 @@ def call_time_request_list(request, slug):
         labor_requirement__call_time=call_time,
         requested=True
     ).select_related('worker', 'labor_requirement__labor_type')
+    event = call_time.event
     labor_type_filter = request.GET.get('labor_type', 'All')
     if labor_type_filter != 'All':
         labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
@@ -2284,10 +2308,20 @@ def call_time_request_list(request, slug):
                 if action == 'confirm':
                     call_time = labor_request.labor_requirement.call_time
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
-                        message_body = (
-                                f"confirmed {labor_request.labor_requirement.labor_type}"
-                                f" for {Event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
-                        )
+                        if labor_request.sms_sent:
+                            message_body = (
+                                    f"confirmed {labor_request.labor_requirement.labor_type}"
+                                    f" for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}"
+                            )
+                        else:
+                            token = labor_request.token_short
+                            confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                            message_body = (
+                                    f"confirmed {labor_request.labor_requirement.labor_type}\n"
+                                    f"for {event.event_name} - {call_time.name} at {call_time.time.strftime('%I:%M %p')} on {call_time.date.strftime('%B %d')}\n"
+                                    f"Details in the link: {confirmation_url}"
+                            )
+                        msglen = len(message_body)
                         if settings.TWILIO_ENABLED == 'enabled' and client:
                             try:
                                 client.messages.create(
@@ -2297,10 +2331,16 @@ def call_time_request_list(request, slug):
                             except TwilioRestException as e:
                                 sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                             finally:
+
                                 log_sms(company)
                         else:
+                            charges = 1
+                            while msglen > 144:
+                                charges += 1
+                                msglen -= 144
                             log_sms(company)
                             print(message_body)
+                            print(charges, msglen)
                         labor_request.confirmed = True
                         labor_request.save()
                 if action == 'ncns':

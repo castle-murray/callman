@@ -885,16 +885,16 @@ select {
   margin-top: 0.25rem;
 }
 
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
 .mt-4 {
   margin-top: 1rem;
 }
 
 .mt-6 {
   margin-top: 1.5rem;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
 }
 
 .block {
@@ -1238,7 +1238,7 @@ select {
 }
 
 .bg-filled-event-gradient {
-  background-image: linear-gradient(to right, #f7fafc, #d1fae5);
+  background-image: linear-gradient(to right, #abf5cf, #d1fae5);
 }
 
 .p-1 {
@@ -1779,7 +1779,7 @@ select {
 }
 
 .dark\:bg-dark-filled-event-gradient:is(.dark *) {
-  background-image: linear-gradient(to right, #1a202c, #185235);
+  background-image: linear-gradient(to right, #185235, #134029);
 }
 
 .dark\:text-blue-400:is(.dark *) {

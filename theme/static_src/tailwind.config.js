@@ -119,10 +119,12 @@ module.exports = {
                 'dark-shadow': '#374151',     // gray-700
                 'dark-text-available': '#06b6d4', // Cyan for available requests
                 'dark-bg-available': '#0891b2', // Darker Cyan for available requests
+                'filled_event': '#d1fae5',
+                'dark_filled_event': '#185235',
             },
             backgroundImage: {
-                'filled-event-gradient': 'linear-gradient(to right, #f7fafc, #d1fae5)',
-                'dark-filled-event-gradient': 'linear-gradient(to right, #1a202c, #185235)',
+                'filled-event-gradient': 'linear-gradient(to right, #abf5cf, #d1fae5)',
+                'dark-filled-event-gradient': 'linear-gradient(to right, #185235, #134029)',
                 'cancelled-event-gradient': 'linear-gradient(to right, #f7fafc, #fca5a5)',
                 'dark-cancelled-event-gradient': 'linear-gradient(to right, #1a202c, #7f1d1d)',
             },
