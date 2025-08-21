@@ -148,14 +148,18 @@ def event_detail(request, slug):
     if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
     
-    if hasattr(user, 'manager'):
+    elif not hasattr(user, 'administrator') and hasattr(user, 'manager'):
         if user.manager.company != company:
-            return redirect('manager_dashboard')
-        manager = user.manager
+            return redirect('login')
+        else:
+            manager = user.manager
     elif hasattr(user, 'administrator'):
-        manager = company.manager.first()  # Get first manager or None
+        if user.manager.company == company:
+            manager = user.manager
+        else:
+            manager = company.managers.first()  # Get first manager or None
     else:
-        return redirect('manager_dashboard')
+        return redirect('login')
     
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
