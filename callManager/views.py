@@ -1825,8 +1825,14 @@ def registration_success(request):
 
 @login_required
 def labor_request_list(request, slug):
-    manager = request.user.manager
-    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    if hasattr(request.user, 'administrator'):
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
+        manager = labor_requirement.call_time.event.company.managers.first()
+    elif not hasattr(request.user, 'manager'):
+        return redirect('login')
+    else:
+        manager = request.user.manager
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     event = labor_requirement.call_time.event
     company = event.company
@@ -2154,8 +2160,14 @@ def htmx_add_worker(request, labor_requirement_slug):
 
 @login_required
 def fill_labor_request_list(request, slug):
-    manager = request.user.manager
-    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    if hasattr(request.user, 'administrator'):
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
+        manager = labor_requirement.call_time.event.company.managers.first()
+    elif not hasattr(request.user, 'manager'):
+        return redirect('login')
+    else:
+        manager = request.user.manager
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     workers = Worker.objects.filter(company=manager.company).distinct()
     search_query = request.GET.get('search', '').strip()
