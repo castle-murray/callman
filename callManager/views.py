@@ -1425,18 +1425,16 @@ def sms_webhook(request):
             
             print(queued_requests)
             if queued_requests.exists():
-                # Group requests by event and company
+                # Group requests by event only
                 events_to_notify = {}
                 for req in queued_requests:
                     event = req.labor_requirement.call_time.event
-                    company = event.company
-                    key = (event.slug, company.id)
-                    if key not in events_to_notify:
-                        events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
-                    events_to_notify[key]['requests'].append(req)
+                    if event.id not in events_to_notify:
+                        events_to_notify[event.id] = {'event': event, 'company': event.company, 'requests': []}
+                    events_to_notify[event.id]['requests'].append(req)
                 
                 # Send one message per event
-                for key, data in events_to_notify.items():
+                for event_id, data in events_to_notify.items():
                     event = data['event']
                     company = data['company']
                     requests = data['requests']

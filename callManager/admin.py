@@ -17,6 +17,7 @@ from .models import (
         StewardInvitation,
         LocationProfile,
         TimeChangeConfirmation,
+        ManagerInvitation
         )
 
     
@@ -63,6 +64,9 @@ class AdministratorAdmin(admin.ModelAdmin):
 class StewardInvitationAdmin(admin.ModelAdmin):
     list_display = ('company', 'worker')
 
+@admin.register(ManagerInvitation)
+class ManagerInvitationAdmin(admin.ModelAdmin):
+    list_display = ('company',)
 
 # Inline for MealBreak in TimeEntryAdmin
 class MealBreakInline(admin.TabularInline):
