@@ -37,6 +37,7 @@ from .forms import (
         WorkerRegistrationForm,
         SkillForm,
         OwnerRegistrationForm,
+        ManagerRegistrationForm,
         CompanyForm,
         LocationProfileForm,
         )
@@ -147,20 +148,19 @@ def event_detail(request, slug):
     user = request.user
     if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
-    
     elif not hasattr(user, 'administrator') and hasattr(user, 'manager'):
         if user.manager.company != company:
             return redirect('login')
         else:
             manager = user.manager
     elif hasattr(user, 'administrator'):
-        if user.manager.company == company:
+        if hasattr(user, 'manager') and user.manager.company == company:
             manager = user.manager
         else:
             manager = company.managers.first()  # Get first manager or None
     else:
         return redirect('login')
-    
+   
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
         if call_time.original_time != call_time.time or call_time.original_date != call_time.date:
@@ -207,7 +207,6 @@ def event_detail(request, slug):
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
-            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
             worker_tokens = {}
             workers_to_notify = {}
             for labor_request in queued_requests:
@@ -218,14 +217,16 @@ def event_detail(request, slug):
             for worker_id, data in workers_to_notify.items():
                 worker = data['worker']
                 requests = data['requests']
-                token = worker_tokens.get(worker.id, generate_short_token())
-                worker_tokens[worker.id] = token
+                # Use existing token_short if available, otherwise generate new
+                token = next((req.token_short for req in requests if req.token_short), generate_short_token())
                 confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                 if event.is_single_day:
-                    message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
+                    message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
                 else:
-                    message_body = f"This is {manager.user.first_name}/{company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
-                send_message(message_body, worker, manager, company)
+                    message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
+                if len(message_body) > 144:
+                    message_body = message_body[:141] + "..."
+                sms_errors.extend(send_message(message_body, worker, manager, company))
                 for labor_request in requests:
                     labor_request.sms_sent = True
                     labor_request.token_short = token
@@ -252,15 +253,13 @@ def event_detail(request, slug):
     return render(request, 'callManager/event_detail.html', context)
 
 def send_message(message_body, worker, manager, company):
+    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
     sms_errors = []
     message_length = len(message_body)
-    if not worker.phone_number:
-        messages.error(f"{worker.name} has no phone number")
-        return
     if worker.stop_sms:
         sms_errors.append(f"{worker.name} (opted out via STOP)")
     elif not worker.sms_consent and not worker.sent_consent_msg:
-        consent_body = f"This is {manager.user.first_name} with {company.name}.\n We're using Callman to send out gigs. Reply 'Yes.' to receive job requests\n Reply 'No.' or 'STOP' to opt out."
+        consent_body = f"This is {manager.user.first_name} with {company.name}.\nWe're using Callman to send out gigs. Reply 'Yes.' to receive job requests\nReply 'No.' or 'STOP' to opt out."
         if settings.TWILIO_ENABLED == 'enabled' and client:
             try:
                 client.messages.create(
@@ -278,6 +277,7 @@ def send_message(message_body, worker, manager, company):
             log_sms(company)
             worker.sent_consent_msg = True
             worker.save()
+            print(consent_body)
     elif worker.sms_consent:
         if settings.TWILIO_ENABLED == 'enabled' and client:
             try:
@@ -1392,72 +1392,69 @@ def delete_labor_requirement(request, slug):
 
 @csrf_exempt
 def sms_webhook(request):
-    stop_list = ['stop','optout', 'cancel','end', 'quit', 'unsubscribe', 'revoke', 'stopall']
+    stop_list = ['stop', 'optout', 'cancel', 'end', 'quit', 'unsubscribe', 'revoke', 'stopall']
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
-        print(from_number)
+        print(f"Received SMS from {from_number}: {body}")
         workers = Worker.objects.filter(phone_number=from_number)
         if not workers.exists():
             response = MessagingResponse()
             response.message("Number not recognized. Please contact your Steward")
             return HttpResponse(str(response), content_type='text/xml')
+        
         # Check if any worker has stopped SMS
         if any(worker.stop_sms for worker in workers):
             response = MessagingResponse()
             response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
             return HttpResponse(str(response), content_type='text/xml')
+        
         response = MessagingResponse()
-        if body.startswith('yes') or body == 'y':
+        if body.startswith('yes') or body == 'y' or body == 'start':
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
+            
             # Process queued labor requests for all workers
             queued_requests = LaborRequest.objects.filter(
-                worker__in=workers, requested=True, sms_sent=False
-            ).select_related('labor_requirement__call_time__event', 'worker')
+                worker__in=workers,
+                requested=True,
+                sms_sent=False
+            ).select_related('worker', 'labor_requirement__call_time__event', 'labor_requirement__call_time__event__company')
+            
+            print(queued_requests)
             if queued_requests.exists():
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
                 # Group requests by event and company
                 events_to_notify = {}
                 for req in queued_requests:
-                    token = req.token_short
                     event = req.labor_requirement.call_time.event
                     company = event.company
                     key = (event.slug, company.id)
                     if key not in events_to_notify:
                         events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
                     events_to_notify[key]['requests'].append(req)
+                
                 # Send one message per event
                 for key, data in events_to_notify.items():
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
-                    token = requests[0].token_short  # Unique token per event
+                    # Use existing token_short if available, otherwise generate new
+                    token = next((req.token_short for req in requests if req.token_short), generate_short_token())
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
                     message_body = (
-                        f"Call confirmation: {event.event_name} "
+                        f"This is {company.name}: Confirm availability for {event.event_name} "
                         f"on {event.start_date}: {confirmation_url}"
                     )
-                    if settings.TWILIO_ENABLED == 'enabled' and client:
-                        try:
-                            client.messages.create(
-                                body=message_body,
-                                from_=settings.TWILIO_PHONE_NUMBER,
-                                to=str(from_number)
-                            )
-                            log_sms(company)
-                            # Update all requests for this event with the same token
-                            for req in requests:
-                                req.sms_sent = True
-                                req.token_short = token
-                                req.save()
-                        except TwilioRestException as e:
-                            print(f"Failed to send SMS to {from_number}: {str(e)}")
-                    else:
-                        log_sms(company)
-                        print(message_body)
+                    sms_errors = send_message(message_body, requests[0].worker, None, company)
+                    if not sms_errors:
+                        # Update all requests for this event with the same token
+                        for req in requests:
+                            req.sms_sent = True
+                            req.token_short = token
+                            req.save()
+            
             response.message("Thank you! You’ll now receive job requests.")
         elif body in stop_list:
             for worker in workers:
@@ -1465,53 +1462,6 @@ def sms_webhook(request):
                 worker.stop_sms = True
                 worker.save()
             response.message("You have successfully been unsubscribed. You will not receive any more messages from this number. Reply START to resubscribe.")
-        elif body == 'start':
-            for worker in workers:
-                worker.sms_consent = True
-                worker.stop_sms = False
-                worker.save()
-            # Process queued labor requests for all workers
-            queued_requests = LaborRequest.objects.filter(
-                worker__in=workers, requested=True, sms_sent=False
-            ).select_related('labor_requirement__call_time__event', 'worker')
-            if queued_requests.exists():
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                # Group requests by event and company
-                events_to_notify = {}
-                for req in queued_requests:
-                    event = req.labor_requirement.call_time.event
-                    company = event.company
-                    key = (event.slug, company.id)
-                    if key not in events_to_notify:
-                        events_to_notify[key] = {'event': event, 'company': company, 'requests': []}
-                    events_to_notify[key]['requests'].append(req)
-                # Send one message per event
-                for key, data in events_to_notify.items():
-                    event = data['event']
-                    company = data['company']
-                    requests = data['requests']
-                    token = requests[0].token_short  # Unique token per event
-                    print(token)
-                    confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                    message_body = (
-                        f"Call confirmation: {event.event_name} "
-                        f"on {event.start_date}: {confirmation_url}"
-                    )
-                    try:
-                        client.messages.create(
-                            body=message_body,
-                            from_=settings.TWILIO_PHONE_NUMBER,
-                            to=str(from_number)
-                        )
-                        log_sms(company)
-                        # Update all requests for this event with the same token
-                        for req in requests:
-                            req.sms_sent = True
-                            req.token_short = token
-                            req.save()
-                    except TwilioRestException as e:
-                        print(f"Failed to send SMS to {from_number}: {str(e)}")
-            response.message("Welcome back! You’ll now receive job requests.")
         else:
             # Catchall response based on sms_consent
             if any(not worker.sms_consent for worker in workers):
@@ -3132,7 +3082,7 @@ def owner_dashboard(request):
         if 'phone' in request.POST:
             phone = request.POST.get('phone')
             if phone:
-                invitation = ManagerInvitation.objects.create(company=company)
+                invitation = ManagerInvitation.objects.create(company=company, phone=phone)
                 registration_url = request.build_absolute_uri(reverse('register_manager', args=[str(invitation.token)]))
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
                 message_body = f'You are invited to become a manager for {company.name}. Register: {registration_url}'

@@ -58,6 +58,7 @@ class ManagerInvitation(models.Model):
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='invitations')
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
+    phone = models.CharField(max_length=15, null=True, blank=True)
     def __str__(self):
         return f"Invitation for {self.company.name} ({self.token})"
 
