@@ -6,7 +6,15 @@
                 <li class="flex items-center justify-between text-text-yellow dark:text-dark-text-yellow">
                     <div>
                     {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number|default:"No phone" }})
-                    <span class="ml-2 text-text-available dark:text-dark-text-available">{% if request.sms_sent %}Sent{% elif request.worker.sent_consent_msg and not request.worker.sms_consent %}Pending Consent{% else %}Not Sent{% endif %}</span>
+                    {% if request.worker.stop_sms %}
+                        <span class="ml-2 text-text-red dark:text-dark-text-red">BLOCKED</span>
+                    {% elif request.sms_sent %}
+                        <span class="ml-2 text-text-available dark:text-dark-text-available">Sent</span>
+                    {% elif request.worker.sent_consent_msg and not request.worker.sms_consent %}
+                        <span class="ml-2 text-text-available dark:text-dark-text-available">Pending Consent</span>
+                    {% else %}
+                        <span class="ml-2 text-text-available dark:text-dark-text-available">Not Sent</span>
+                    {% endif %}
                     {% if request.is_reserved %}<span class="ml-2 text-text-secondary dark:text-dark-text-secondary">(Reserved)</span>{% endif %}
                     </div>
                     <div>
