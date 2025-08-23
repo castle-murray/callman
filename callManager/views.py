@@ -40,6 +40,7 @@ from .forms import (
         ManagerRegistrationForm,
         CompanyForm,
         LocationProfileForm,
+        AddWorkerForm
         )
 # Django imports
 from django.shortcuts import render, get_object_or_404, redirect
@@ -306,11 +307,23 @@ def send_message(message_body, worker, manager, company):
 
 @login_required
 def edit_event(request, slug):
-    if not hasattr(request.user, 'manager'):
+    event = get_object_or_404(Event, slug=slug)
+    company = event.company
+    user = request.user
+    if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
         return redirect('login')
-    manager = request.user.manager
-    company = manager.company
-    event = get_object_or_404(Event, slug=slug, company=company)
+    elif not hasattr(user, 'administrator') and hasattr(user, 'manager'):
+        if user.manager.company != company:
+            return redirect('login')
+        else:
+            manager = user.manager
+    elif hasattr(user, 'administrator'):
+        if hasattr(user, 'manager') and user.manager.company == company:
+            manager = user.manager
+        else:
+            manager = company.managers.first()  # Get first manager or None
+    else:
+        return redirect('login')
     if request.method == "POST":
         form = EventForm(request.POST, instance=event, company=company)
         if form.is_valid():
@@ -3526,3 +3539,41 @@ def event_workers_report(request):
         'event_ids': ','.join(event_ids)  # Pass event_ids for PDF link
     }
     return render(request, 'callManager/event_workers_report.html', context)
+
+
+def add_worker(request):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return redirect('login')
+    manager = user.manager
+    company = manager.company
+    if request.method == "POST":
+        form = WorkerForm(request.POST)
+        if form.is_valid():
+            worker = form.save(commit=False)
+            worker.save()
+            consent_body = f"This is {user.first_name} with {company.name_short}. Reply 'Yes.' to receive jobs through CallMan. Reply 'No.' or 'STOP' to opt out."
+            if settings.TWILIO_ENABLED == 'enabled':
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                try:
+                    client.messages.create(
+                        body=consent_body,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=str(worker.phone_number)
+                    )
+                    worker.sent_consent_msg = True
+                    worker.save()
+                    log_sms(company)
+                    messages.success(request, f"Worker '{worker.name}' added and consent message sent.")
+                except TwilioRestException as e:
+                    messages.error(request, f"Failed to send consent message: {str(e)}")
+            else:
+                log_sms(company)
+                print(consent_body)
+                worker.sent_consent_msg = True
+                worker.save()
+                messages.success(request, f"Worker '{worker.name}' added (SMS disabled).")
+            return redirect('add_worker')  # Stay on the page for more entries
+    else:
+        form = WorkerForm()
+    return render(request, 'callManager/add_worker.html', {'form': form})
