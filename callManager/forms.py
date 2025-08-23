@@ -38,7 +38,7 @@ class EventForm(forms.ModelForm):
     location_profile = forms.ModelChoiceField(
         label="Location Profile",
         queryset=LocationProfile.objects.none(),
-        required=False,
+        required=True,
         widget=forms.Select(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     event_description = forms.CharField(
         label="Event Description",
@@ -432,6 +432,7 @@ class LocationProfileForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     address = forms.CharField(
         label="Address",
+        required=False,
         widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
     minimum_hours = forms.IntegerField(
         label="Minimum Call Time Hours",
@@ -448,3 +449,42 @@ class LocationProfileForm(forms.ModelForm):
     class Meta:
         model = LocationProfile
         fields = ['name', 'address', 'minimum_hours', 'meal_penalty_trigger_time', 'hour_round_up']
+
+class AddWorkerForm(forms.ModelForm):
+    phone_number = forms.CharField(
+        label="Phone Number",
+        widget=forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border', 'placeholder': 'Phone Number'}),
+        error_messages={
+            'required': 'Phone number is required.',
+            'invalid': 'Please provide a valid phone number.'
+        }
+    )
+
+    class Meta:
+        model = Worker
+        fields = ['name', 'phone_number']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border', 'placeholder': 'Name'}),
+        }
+        error_messages = {
+            'name': {
+                'required': 'Name is required.',
+            }
+        }
+
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.company = company
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        phone_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        if len(phone_number) == 10:
+            phone_number = f"+1{phone_number}"
+        elif len(phone_number) == 11 and phone_number.startswith('1'):
+            phone_number = f"+{phone_number}"
+        elif len(phone_number) < 10:
+            raise ValidationError("Please provide a valid phone number.")
+        if self.company and Worker.objects.filter(phone_number=phone_number, companies=self.company).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise ValidationError("You're already in our system. Thanks!")
+        return phone_number

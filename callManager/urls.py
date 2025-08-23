@@ -67,7 +67,6 @@ urlpatterns = [
     path('location-profiles/delete/<int:pk>/', views.delete_location_profile, name='delete_location_profile'),
     path('login/', views.CustomLoginView.as_view(), name='login'),
     path('user-profile/', views.user_profile, name='user_profile'),
-    path('user/register/', views.user_registration, name='user_registration'),
     path('labor-request/<int:request_id>/<str:action>/', views.labor_request_action, name='labor_request_action'),
     path('cancel-event/<slug:slug>/', views.cancel_event, name='cancel_event'),
     path('auto-login/<uuid:token>/', views.auto_login, name='auto_login'),
