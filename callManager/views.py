@@ -209,52 +209,32 @@ def labor_type_partial(request, slug):
     return render(request, 'callManager/labor_type_partial.html', context)
 
 
-@login_required
-def create_event(request):
-    if not hasattr(request.user, 'manager'):
-        return redirect('login')
-    manager = request.user.manager
-    company = manager.company
-    print(f"Company: {company.name}, Location Profiles: {company.location_profiles.count()}")
-    if request.method == "POST":
-        form = EventForm(request.POST, company=company)
-        if form.is_valid():
-            event = form.save(commit=False)
-            event.company = company
-            event.save()
-            return redirect('event_detail', slug=event.slug)
-    else:
-        form = EventForm(company=company)
-    context = {'form': form, 'company': company}
-    return render(request, 'callManager/create_event.html', context)
-
 
 @csrf_exempt
 def sms_webhook(request):
     stop_list = ['stop', 'optout', 'cancel', 'end', 'quit', 'unsubscribe', 'revoke', 'stopall']
+    go_list = ['yes', 'start', 'go', 'resume', 'subscribe']
     if request.method == "POST":
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
-        print(f"Received SMS from {from_number}: {body}")
         workers = Worker.objects.filter(phone_number=from_number)
+        for worker in workers:
+            print(worker.name)
         if not workers.exists():
             response = MessagingResponse()
             response.message("Number not recognized. Please contact your Steward")
             return HttpResponse(str(response), content_type='text/xml')
-        
         # Check if any worker has stopped SMS
-        if any(worker.stop_sms for worker in workers):
+        if any(worker.stop_sms for worker in workers) and not body in go_list :
             response = MessagingResponse()
             response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
             return HttpResponse(str(response), content_type='text/xml')
-        
         response = MessagingResponse()
         if body.startswith('yes') or body == 'y' or body == 'start':
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
                 worker.save()
-            
             # Process queued labor requests for all workers
             queued_requests = LaborRequest.objects.filter(
                 worker__in=workers,

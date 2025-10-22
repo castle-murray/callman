@@ -92,7 +92,7 @@ from user_agents import parse
 import pytz
 import io
 
-from callManager.views import log_sms, send_message
+from callManager.views import log_sms, send_message, generate_short_token
 import logging
 
 # Create a logger instance
@@ -166,14 +166,13 @@ def event_detail(request, slug):
         queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
-            worker_tokens = {}
             workers_to_notify = {}
             for labor_request in queued_requests:
                 worker = labor_request.worker
                 if worker.id not in workers_to_notify:
                     workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
                 workers_to_notify[worker.id]['requests'].append(labor_request)
-            for worker_id, data in workers_to_notify.items():
+            for _, data in workers_to_notify.items():
                 worker = data['worker']
                 requests = data['requests']
                 # Use existing token_short if available, otherwise generate new
@@ -187,7 +186,8 @@ def event_detail(request, slug):
                     message_body = message_body[:141] + "..."
                 sms_errors.extend(send_message(message_body, worker, manager, company))
                 for labor_request in requests:
-                    labor_request.sms_sent = True
+                    if worker.sms_consent == True:
+                        labor_request.sms_sent = True
                     labor_request.token_short = token
                     labor_request.save()
             message = f"Messages processed for {len(workers_to_notify)} workers."
@@ -529,4 +529,24 @@ def search_events(request):
         'include_past': include_past,
         'stewards': stewards}
     return render(request, 'callManager/events_list_partial.html', context)
+
+
+@login_required
+def create_event(request):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    manager = request.user.manager
+    company = manager.company
+    print(f"Company: {company.name}, Location Profiles: {company.location_profiles.count()}")
+    if request.method == "POST":
+        form = EventForm(request.POST, company=company)
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.company = company
+            event.save()
+            return redirect('event_detail', slug=event.slug)
+    else:
+        form = EventForm(company=company)
+    context = {'form': form, 'company': company}
+    return render(request, 'callManager/create_event.html', context)
 

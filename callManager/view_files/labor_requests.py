@@ -93,7 +93,7 @@ from user_agents import parse
 import pytz
 import io
 
-from callManager.views import log_sms, send_message
+from callManager.views import log_sms, send_message, generate_short_token
 import logging
 
 # Create a logger instance
