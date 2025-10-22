@@ -214,7 +214,6 @@ def labor_type_partial(request, slug):
     return render(request, 'callManager/labor_type_partial.html', context)
 
 
-
 @csrf_exempt
 def sms_webhook(request):
     stop_list = ['stop', 'optout', 'cancel', 'end', 'quit', 'unsubscribe', 'revoke', 'stopall']
@@ -223,27 +222,23 @@ def sms_webhook(request):
         from_number = request.POST.get('From')
         body = request.POST.get('Body', '').strip().lower()
         workers = Worker.objects.filter(phone_number=from_number)
+        response = MessagingResponse()
         for worker in workers:
             print(worker.name)
         if not workers.exists():
-            response = MessagingResponse()
             response.message("Number not recognized. Please contact your Steward")
             return HttpResponse(str(response), content_type='text/xml')
         # Check if any worker has stopped SMS
         if any(worker.stop_sms for worker in workers) and not body in go_list:
-            response = MessagingResponse()
             response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
             return HttpResponse(str(response), content_type='text/xml')
-        response = MessagingResponse()
         if body.startswith('yes') or body == 'y' or body == 'start':
             consent_state = True
             for worker in workers: 
                 if worker.sms_consent != True:
                     consent_state = False
             if consent_state == True:
-                message_body = "You're already good. Sending 'yes' doesn't do anything here. Click the link." 
-                send_message(message_body,worker)
-                return
+                response.message( "You're already set. Sending 'yes' doesn't do anything here. Click the link to confirm availability." )
             else:
                 response.message("Thank you! You’ll now receive job requests.")
             for worker in workers:
@@ -256,8 +251,6 @@ def sms_webhook(request):
                 requested=True,
                 sms_sent=False
             ).select_related('worker', 'labor_requirement__call_time__event', 'labor_requirement__call_time__event__company')
-            
-            print(queued_requests)
             if queued_requests.exists():
                 # Group requests by event only
                 events_to_notify = {}
@@ -266,33 +259,29 @@ def sms_webhook(request):
                     if event.id not in events_to_notify:
                         events_to_notify[event.id] = {'event': event, 'company': event.company, 'requests': []}
                     events_to_notify[event.id]['requests'].append(req)
-                
                 # Send one message per event
-                for event_id, data in events_to_notify.items():
+                for _, data in events_to_notify.items():
                     event = data['event']
                     company = data['company']
                     requests = data['requests']
                     # Use existing token_short if available, otherwise generate new
                     token = next((req.token_short for req in requests if req.token_short), generate_short_token())
                     confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-                    message_body = (
+                    response.message(
                         f"This is {company.name}: Confirm availability for {event.event_name} "
                         f"on {event.start_date}: {confirmation_url}"
                     )
-                    sms_errors = send_message(message_body, requests[0].worker, None, company)
-                    if not sms_errors:
-                        # Update all requests for this event with the same token
-                        for req in requests:
-                            req.sms_sent = True
-                            req.token_short = token
-                            req.save()
+                    # Update all requests for this event with the same token
+                    for req in requests:
+                        req.sms_sent = True
+                        req.token_short = token
+                        req.save()
             
         elif body in stop_list:
             for worker in workers:
                 worker.sms_consent = False
                 worker.stop_sms = True
                 worker.save()
-            response.message("You have successfully been unsubscribed. You will not receive any more messages from this number. Reply START to resubscribe.")
         else:
             # Catchall response based on sms_consent
             if any(not worker.sms_consent for worker in workers):
@@ -301,31 +290,6 @@ def sms_webhook(request):
                 response.message("This is an automated system. No one is reading your response. Reply 'STOP' to unsubscribe.")
         return HttpResponse(str(response), content_type='text/xml')
     return HttpResponse(status=400)
-
-
-@csrf_exempt
-def sms_reply_webhook(request):
-    if request.method == "POST":
-        from_number = request.POST.get('From')
-        body = request.POST.get('Body', '').strip().upper()
-        if len(body) >= 4 and body[0] in ['Y', 'N'] and body[1].isdigit():
-            response = body[0]  # Y or N
-            short_id = body[1:4]  # Next 3 chars
-            labor_request = LaborRequest.objects.filter(
-                worker__phone_number=from_number,
-                token__startswith=short_id,  # Match first 3 chars of token
-                sms_sent=True
-            ).order_by('-requested_at').first()
-            if labor_request:
-                labor_request.response = 'yes' if response == 'Y' else 'no'
-                labor_request.responded_at = timezone.now()
-                labor_request.save()
-                return HttpResponse("Response recorded", content_type="text/plain")
-            else:
-                return HttpResponse("No matching request found.", content_type="text/plain")
-        else:
-            return HttpResponse("Invalid format. Reply Y<3-digit-id> or N<3-digit-id>.", content_type="text/plain")
-    return HttpResponse("Invalid request method", status=400, content_type="text/plain")
 
 
 def confirm_event_requests(request, slug, event_token):
@@ -511,7 +475,6 @@ def send_clock_in_link(request, slug):
     confirmed_workers = Worker.objects.filter(
         labor_requests__labor_requirement__call_time__event=event,
         labor_requests__confirmed=True).distinct()
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
     sms_errors = []
     for worker in confirmed_workers:
         token, created = ClockInToken.objects.get_or_create(
@@ -521,26 +484,14 @@ def send_clock_in_link(request, slug):
         if token.qr_sent:
             continue
         qr_code_url = request.build_absolute_uri(reverse('display_qr_code', args=[event.slug, worker.slug]))
-        if worker.sms_consent and not worker.stop_sms and worker.phone_number:
-            message_body = (
-                f"{manager.company.name}: Your clock-in QR code for {event.event_name}. "
-                f"View: {qr_code_url}")
-            if settings.TWILIO_ENABLED == 'enabled' and client:
-                try:
-                    client.messages.create(
-                        body=message_body,
-                        from_=settings.TWILIO_PHONE_NUMBER,
-                        to=str(worker.phone_number))
-                    token.qr_sent = True
-                    token.save()
-                    log_sms(manager.company)
-                except TwilioRestException as e:
-                    sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
-            else:
-                token.qr_sent = True
-                token.save()
-                log_sms(manager.company)
-                print(message_body)
+        message_body = (
+            f"{manager.company.name}: Your clock-in QR code for {event.event_name}. "
+            f"View: {qr_code_url}"
+            )
+        sms_errors = send_message(message_body, worker, manager, manager.company)
+        if not sms_errors:
+            token.qr_sent = True
+            token.save()
     if sms_errors:
         messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
     else:

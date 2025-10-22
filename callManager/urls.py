@@ -19,14 +19,14 @@ urlpatterns = [
     path('confirm/<uuid:token>/', views.confirm_assignment, name='confirm_assignment'),
 
     #event views
-    path('event/<slug:slug>/', event_views.event_detail, name='event_detail'),
-    path('event/<slug:slug>/edit/', event_views.edit_event, name='edit_event'),
+    path('events/<slug:slug>/', event_views.event_detail, name='event_detail'),
+    path('events/<slug:slug>/edit/', event_views.edit_event, name='edit_event'),
     path('events/create', event_views.create_event, name='create_event'),
-    path('event/<slug:slug>/delete/', event_views.delete_event, name='delete_event'),
-    path('event/<slug:slug>/cancel/', event_views.cancel_event, name='cancel_event'),
-    path('event/<slug:slug>/add-call/', event_views.add_call_time, name='add_call_time'),
-    path('event/<slug:slug>/assign-steward/', event_views.assign_steward, name='assign_steward'),
-    path('event/<slug:slug>/generate-signin-qr/', event_views.generate_signin_qr, name='generate_signin_qr'),
+    path('events/<slug:slug>/delete/', event_views.delete_event, name='delete_event'),
+    path('events/<slug:slug>/cancel/', event_views.cancel_event, name='cancel_event'),
+    path('events/<slug:slug>/add-call/', event_views.add_call_time, name='add_call_time'),
+    path('events/<slug:slug>/assign-steward/', event_views.assign_steward, name='assign_steward'),
+    path('events/<slug:slug>/generate-signin-qr/', event_views.generate_signin_qr, name='generate_signin_qr'),
     path('events/search/', event_views.search_events, name='search_events'),
     path('callman-admin/search-events/', event_views.admin_search_events, name='admin_search_events'),
 
