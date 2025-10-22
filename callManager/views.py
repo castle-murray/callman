@@ -115,6 +115,8 @@ def index(request):
 
 def log_sms(company):
     """logs the SMS sent to the SentSMS model"""
+    if company == None:
+        return
     sms = SentSMS.objects.create(company=company)
     sms.save()
 
@@ -142,14 +144,17 @@ def generate_short_token(length=6):
     return ''.join(random.choice(characters) for _ in range(length))
 
 
-def send_message(message_body, worker, manager, company):
+def send_message(message_body, worker, manager=None, company=None):
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
     sms_errors = []
     message_length = len(message_body)
     if worker.stop_sms:
         sms_errors.append(f"{worker.name} (opted out via STOP)")
     elif not worker.sms_consent and not worker.sent_consent_msg:
-        consent_body = f"This is {manager.user.first_name} with {company.name}.\nWe're using Callman to send out gigs. Reply 'Yes.' to receive job requests\nReply 'No.' or 'STOP' to opt out."
+        if manager and company:
+            consent_body = f"This is {manager.user.first_name} with {company.name}.\nWe're using Callman to send out gigs. Reply 'Yes.' to receive job requests\nReply 'No.' or 'STOP' to opt out."
+        else:
+            consent_body = f"Reply 'Yes.' to receive job requests\nReply 'No.' or 'STOP' to opt out."
         if settings.TWILIO_ENABLED == 'enabled' and client:
             try:
                 client.messages.create(
@@ -225,12 +230,19 @@ def sms_webhook(request):
             response.message("Number not recognized. Please contact your Steward")
             return HttpResponse(str(response), content_type='text/xml')
         # Check if any worker has stopped SMS
-        if any(worker.stop_sms for worker in workers) and not body in go_list :
+        if any(worker.stop_sms for worker in workers) and not body in go_list:
             response = MessagingResponse()
             response.message("You’ve been unsubscribed from CallMan messages. Reply 'START' to resume.")
             return HttpResponse(str(response), content_type='text/xml')
         response = MessagingResponse()
         if body.startswith('yes') or body == 'y' or body == 'start':
+            consent_state = True
+            for worker in workers: 
+                if worker.sms_consent != True:
+                    consent_state = False
+            if consent_state == True:
+                message_body = "You're already good. Sending 'yes' doesn't do anything here. Click the link." 
+                send_message(message_body,worker)
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
