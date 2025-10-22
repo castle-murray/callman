@@ -243,6 +243,9 @@ def sms_webhook(request):
             if consent_state == True:
                 message_body = "You're already good. Sending 'yes' doesn't do anything here. Click the link." 
                 send_message(message_body,worker)
+                return
+            else:
+                response.message("Thank you! You’ll now receive job requests.")
             for worker in workers:
                 worker.sms_consent = True
                 worker.stop_sms = False
@@ -284,7 +287,6 @@ def sms_webhook(request):
                             req.token_short = token
                             req.save()
             
-            response.message("Thank you! You’ll now receive job requests.")
         elif body in stop_list:
             for worker in workers:
                 worker.sms_consent = False
