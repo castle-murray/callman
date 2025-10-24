@@ -643,8 +643,8 @@ def call_time_confirmations(request, slug):
         labor_requirement__call_time=call_time,
         confirmed=True
     ).select_related('worker', 'labor_requirement__labor_type')
-    confirmed_requests = labor_requests.filter(time_change_confirmed=True)
-    unconfirmed_requests = labor_requests.filter(time_change_confirmed=False)
+    confirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=True)
+    unconfirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=False)
     context = {
         'call_time': call_time,
         'confirmed_requests': confirmed_requests,
