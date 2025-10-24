@@ -190,6 +190,7 @@ def delete_call_time(request, slug):
         return redirect('event_detail', slug=call_time.event.slug)
     return redirect('event_detail', slug=call_time.event.slug)  # Fallback for GET
 
+
 @login_required
 def call_time_request_list(request, slug):
     if not hasattr(request.user, 'administrator') and not hasattr(request.user, 'manager'):
@@ -244,7 +245,6 @@ def call_time_request_list(request, slug):
                             except TwilioRestException as e:
                                 sms_errors.append(f"Failed to notify {worker.name}: {str(e)}")
                             finally:
-
                                 log_sms(company)
                         else:
                             charges = 1
@@ -625,14 +625,30 @@ def confirm_time_change(request, token):
             expires_at__gt=timezone.now(),
             confirmed=False
         )
+    except TimeChangeConfirmation.DoesNotExist:
+        messages.error(request, "Invalid or expired confirmation link.")
+        return render(request, 'callManager/confirm_time_change.html')
+    
+    labor_request = confirmation.labor_request
+    call_time = labor_request.labor_requirement.call_time
+    call_time_name = call_time.name
+    event_name = call_time.event.event_name
+    original_time = labor_request.labor_requirement.call_time.original_time
+    new_time = labor_request.labor_requirement.call_time.time
+    context = {
+        'confirmation': confirmation,
+        'original_time': original_time,
+        'new_time': new_time,
+        'call_time_name': call_time_name,
+        'event_name': event_name
+    }
+    if request.method == "POST":
         confirmation.confirmed = True
-        confirmation.labor_request.time_change_confirmed = True
         confirmation.labor_request.save()
         confirmation.save()
         messages.success(request, "Time change confirmed successfully.")
-    except TimeChangeConfirmation.DoesNotExist:
-        messages.error(request, "Invalid or expired confirmation link.")
-    return render(request, 'callManager/confirm_time_change.html')
+    
+    return render(request, 'callManager/confirm_time_change.html', context)
 
 @login_required
 def call_time_confirmations(request, slug):

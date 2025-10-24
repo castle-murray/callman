@@ -163,7 +163,10 @@ def event_detail(request, slug):
         if not hasattr(user, 'administrator') and event.company != manager.company:
             messages.error(request, "You do not have permission to send messages for this event.")
             return redirect('event_detail', slug=slug)
-        queued_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event, requested=True, sms_sent=False).select_related('worker')
+        queued_requests = LaborRequest.objects.filter(
+                labor_requirement__call_time__event=event,
+                requested=True,
+                sms_sent=False).select_related('worker')
         if queued_requests.exists():
             sms_errors = []
             workers_to_notify = {}

@@ -5,9 +5,17 @@
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Confirm Time Change</h1>
         {% if messages %}
             <p class="text-text-primary mb-4 dark:text-dark-text-primary">Your confirmation has been processed.</p>
+            <a href="{% url 'user_profile' %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Go to User Profile</a>
         {% else %}
-            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please check the link or try again.</p>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm the time change for <b>{{ event_name }} - {{ call_time_name }}</b>.</p>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary">The time has changed from <b>{{ original_time }} to {{ new_time }}</b>.</p>
+            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm the time change by clicking the button below.</p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="bg-primary text-dark-text-primary px-4 py-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
+                    Confirm Time Change
+                </button>
+            </form>
         {% endif %}
-        <a href="{% url 'user_profile' %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Go to User Profile</a>
     </div>
 {% endblock %}
