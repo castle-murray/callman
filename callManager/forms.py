@@ -187,8 +187,12 @@ class WorkerFormLite(forms.ModelForm):
                 phone_number = f"+{phone_number}"
             elif len(phone_number) < 10:
                 raise forms.ValidationError("Please provide a valid phone number.")
-        if phone_number and len(phone_number) > 15:
-            raise forms.ValidationError("Phone number must be 15 characters or less.")
+            elif len(phone_number) == 11 and not phone_number.startswith('1'):
+                raise forms.ValidationError("Please provide a valid phone number.")
+            elif len(phone_number) == 12 and not phone_number.startswith('+'):
+                raise forms.ValidationError("Please provide a valid phone number.")
+            elif len(phone_number) > 15:
+                raise forms.ValidationError("Phone number must be 15 characters or less.")
         return phone_number
 
 

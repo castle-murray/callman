@@ -8,8 +8,10 @@ import pytz
 from datetime import datetime, timedelta
 
 def generate_unique_slug(model_class, length=7):
+    """Generate a unique slug for a model instance."""
+    # a-z A-Z 0-9
     while True:
-        slug = ''.join([str(random.randint(0, 9)) for _ in range(length)])
+        slug = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
         if not model_class.objects.filter(slug=slug).exists():
             return slug
 
@@ -21,7 +23,7 @@ class Administrator(models.Model):
 # Company model (e.g., "ABC Production Co.")
 class Company(models.Model):
     name = models.CharField(max_length=200)
-    name_short = models.CharField(max_length=5, null=True, blank=True)
+    name_short = models.CharField(max_length=10, null=True, blank=True)
     meal_penalty_trigger_time = models.PositiveIntegerField(default=5, help_text="Hours after start time to trigger meal penalty")
     hour_round_up = models.PositiveIntegerField(default=15, help_text="Minutes to round up hours worked")
     address = models.CharField(max_length=200, null=True, blank=True)
@@ -33,7 +35,13 @@ class Company(models.Model):
     website = models.URLField(max_length=200)
     time_tracking = models.BooleanField(default=False, help_text="Enable time tracking for this company")
     minimum_hours = models.PositiveIntegerField(default=4, help_text="Minimum hours for a call time")
+    slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
 
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(Company)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -214,7 +222,6 @@ class LaborRequest(models.Model):
     sms_sent = models.BooleanField(default=False)
     event_token = models.CharField(max_length=36, null=True, blank=True)
     sent_time = models.DateTimeField(null=True, blank=True)
-    time_change_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"

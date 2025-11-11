@@ -9,7 +9,9 @@
                     <form method="post" class="inline">
                         {% csrf_token %}
                         <input type="hidden" name="delete_id" value="{{ worker.id }}">
+
                     </form>
+                    <a href="{% url 'worker_history' worker.slug %}" class="bg-indigo text-dark-text-primary px-2 py-1 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover mr-2">History</a>
                         <button type="submit"
                             hx-delete="{% url 'delete_worker' worker.slug %}"
                             hx-target="closest li"

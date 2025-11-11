@@ -1,0 +1,26 @@
+{% extends 'callManager/base.html' %}
+{% load static %}
+
+{% block title %}Add Worker - Callman{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Give {{ company_name }} info</h1>
+    
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-text-tertiary font-semibold mb-1 dark:text-dark-text-tertiary">Name</label>
+                    {{ form.name }}
+                </div>
+                <div>
+                    <label for="{{ form.phone_number.id_for_label }}" class="block text-text-tertiary font-semibold mb-1 dark:text-dark-text-tertiary">Phone Number</label>
+                    {{ form.phone_number }}
+                </div>
+            </div>
+            <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add</button>
+        </form>
+    </div>
+    
+{% endblock %}

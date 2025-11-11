@@ -36,7 +36,7 @@ class CompanyAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
 
-            'fields': ('name', 'name_short', 'address', 'city', 'state', 'phone_number', 'email', 'website','time_tracking')
+            'fields': ('name', 'name_short', 'address', 'city', 'state', 'phone_number', 'email', 'website','time_tracking', 'slug')
         }),
         ('Time Settings', {
             'fields': ('meal_penalty_trigger_time', 'hour_round_up')

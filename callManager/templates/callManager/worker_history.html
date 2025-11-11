@@ -1,0 +1,87 @@
+{% extends 'callManager/base.html' %}
+{% block title %}Worker History - CallMan{% endblock %}
+{% block content %}
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Worker History</h1>
+    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Confirmed Requests</h2>
+        {% if confirmed_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in confirmed_requests %}
+                    <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
+                        {{ request.labor_requirement.call_time.event.event_name }} - 
+                        {{ request.labor_requirement.call_time.name }} - 
+                        {{ request.labor_requirement.labor_type.name }} - 
+                        {{ request.labor_requirement.call_time.date }} - 
+                        {{ request.labor_requirement.call_time.time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No confirmed requests.</p>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Declined Requests</h2>
+        {% if declined_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in declined_requests %}
+                    <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
+                        {{ request.labor_requirement.call_time.event.event_name }} - 
+                        {{ request.labor_requirement.call_time.name }} - 
+                        {{ request.labor_requirement.labor_type.name }} - 
+                        {{ request.labor_requirement.call_time.date }} - 
+                        {{ request.labor_requirement.call_time.time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No declined requests.</p>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-yellow dark:text-dark-text-yellow">NCNS Requests</h2>
+        {% if ncns_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in ncns_requests %}
+                    <li class="flex items-center justify-between text-text-yellow dark:text-dark-text-yellow">
+                        {{ request.labor_requirement.call_time.event.event_name }} - 
+                        {{ request.labor_requirement.call_time.name }} - 
+                        {{ request.labor_requirement.labor_type.name }} - 
+                        {{ request.labor_requirement.call_time.date }} - 
+                        {{ request.labor_requirement.call_time.time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No NCNS requests.</p>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-blue dark:text-dark-text-blue">Pending Requests</h2>
+        {% if pending_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in pending_requests %}
+                    <li class="flex items-center justify-between text-text-blue dark:text-dark-text-blue">
+                        {{ request.labor_requirement.call_time.event.event_name }} - 
+                        {{ request.labor_requirement.call_time.name }} - 
+                        {{ request.labor_requirement.labor_type.name }} - 
+                        {{ request.labor_requirement.call_time.date }} - 
+                        {{ request.labor_requirement.call_time.time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No pending requests.</p>
+        {% endif %}
+        <h2 class="text-xl font-semibold mb-2 text-text-green dark:text-dark-text-green">Available Requests</h2>
+        {% if available_requests %}
+            <ul class="space-y-2 mb-4">
+                {% for request in available_requests %}
+                    <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
+                        {{ request.labor_requirement.call_time.event.event_name }} - 
+                        {{ request.labor_requirement.call_time.name }} - 
+                        {{ request.labor_requirement.labor_type.name }} - 
+                        {{ request.labor_requirement.call_time.date }} - 
+                        {{ request.labor_requirement.call_time.time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No available requests.</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -129,7 +129,7 @@
                     console.log("Dispatching refreshMessages event");
                     document.body.dispatchEvent(new Event('refreshMessages'));
                     messageRefreshTimeout = null;
-                }, 1000); // 1000ms debounce time
+                }, 5000); // 1000ms debounce time
             }
 
             // Replace your existing htmx:afterSwap handler with this
@@ -187,7 +187,7 @@
                             console.log("Removing message");
                             message.remove();
                         }, 500);
-                    }, 5000); // 5 second timeout
+                    }, 8000); // 5 second timeout
                     
                     // Store timeout ID on the element
                     message.dataset.timeoutId = timeoutId.toString();

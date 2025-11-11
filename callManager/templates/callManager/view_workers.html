@@ -2,7 +2,14 @@
 {% load callman_tags %}
 {% block title %}View Workers - CallMan{% endblock %}
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Workers</h1>
+    <div class="flex justify-betwewn mx-auto">
+        <div class="flex-grow">
+            <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Workers</h1>
+        </div>
+        <div class="flex-shrink-0">
+            <a href="{% url 'import_workers' %}" class="bg-indigo {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Phone Contacts</a>
+        </div>
+    </div>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form method="get" class="mb-4 flex flex-wrap gap-4">
             <input type="text" 

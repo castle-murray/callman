@@ -2,46 +2,20 @@
 #models
 from time import sleep
 from callManager.models import (
-        CallTime,
         LaborRequest,
-        Event,
         LaborRequirement,
         LaborType,
         OneTimeLoginToken,
-        PasswordResetToken,
-        Steward,
-        TimeChangeConfirmation,
         Worker,
-        TimeEntry,
-        MealBreak,
-        SentSMS,
-        ClockInToken,
-        Owner,
-        OwnerInvitation,
-        Manager,
-        ManagerInvitation,
         Company,
-        StewardInvitation,
-        TemporaryScanner,
-        LocationProfile,
         )
 #forms
 from callManager.forms import (
-        CallTimeForm,
-        CompanyHoursForm,
         LaborTypeForm,
-        LaborRequirementForm,
-        EventForm,
         WorkerForm,
         WorkerFormLite,
         WorkerImportForm,
-        WorkerRegistrationForm,
         SkillForm,
-        OwnerRegistrationForm,
-        ManagerRegistrationForm,
-        CompanyForm,
-        LocationProfileForm,
-        AddWorkerForm
         )
 # Django imports
 from django.shortcuts import render, get_object_or_404, redirect
@@ -50,34 +24,12 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET, require_POST
 from django.db.models import Sum, Q, Case, When, IntegerField, Count
 from datetime import datetime, time, timedelta
-from django.conf import settings
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
-from django.contrib.messages import get_messages as django_get_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import FileResponse
-from django.db.models.functions import TruncDate, TruncMonth
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm, SetPasswordForm
-from django.contrib.auth.views import LoginView
-from callManager.utils import send_custom_email
 
-# Twilio imports
-from twilio.rest import Client
-from twilio.base.exceptions import TwilioRestException
-from twilio.twiml.messaging_response import MessagingResponse
 
-# repotlab imports for PDF generation
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import PageBreak, Table, TableStyle, Paragraph, SimpleDocTemplate, Table, TableStyle, Spacer, KeepTogether
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-from reportlab.lib.styles import getSampleStyleSheet
 
 # other imports
 import qrcode
@@ -94,6 +46,8 @@ import pytz
 import io
 
 import logging
+
+from callManager.views import send_message
 
 # Create a logger instance
 logger = logging.getLogger('callManager')
@@ -384,3 +338,83 @@ def delete_worker(request, slug):
             messages.success(request, f"{worker_name} deleted.")
         return render(request, "callManager/messages_partial.html")
 
+
+def worker_self_add(request, slug):
+    company = get_object_or_404(Company, slug=slug)
+    company_short_name = company.name_short
+    if request.method == "POST":
+        form = WorkerFormLite(request.POST)
+        if form.is_valid():
+            worker = form.save(commit=False)
+            worker.company = company
+            worker.save()
+            sms_message = f"Thanks for adding your contact info. To complete your registration, reply 'Yes.' to receive job requests from {company_short_name}."
+            if settings.TWILIO_ENABLED == 'enabled':
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                try:
+                    client.messages.create(
+                        body=sms_message,
+                        from_=settings.TWILIO_PHONE_NUMBER,
+                        to=str(worker.phone_number)
+                    )
+                except TwilioRestException as e:
+                    messages.error(request, f"Failed to send SMS: {str(e)}")
+                finally:
+                    log_sms(company)
+
+            else:
+                log_sms(company)
+                print(sms_message)
+            messages.success(request, "Successfully added your contact info.")
+            return redirect('worker_self_add_success', slug=slug)
+        else:
+            messages.error(request, "Failed to add your contact info. Please enter phone number including area code")
+    else:
+        form = WorkerFormLite()
+    context = {
+        'form': form,
+        'company_name': company_short_name,
+    }
+
+    return render(request, 'callManager/worker_self_add.html', context)
+
+@login_required
+def worker_self_add_qr(request, slug):
+    "display worker self add qr code"
+    company = get_object_or_404(Company, slug=slug)
+    qr_url = request.build_absolute_uri(reverse('worker_self_add', args=[company.slug]))
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(qr_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    qr_code_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    context = {
+        'qr_code_data': qr_code_data,
+        'company_name': company.name_short,
+        'qr_url': qr_url,
+    }
+    return render(request, 'callManager/worker_self_add_qr.html', context)
+
+@login_required
+def worker_history(request, slug):
+    worker = get_object_or_404(Worker, slug=slug)
+    company = request.user.manager.company
+    labor_requests = worker.labor_requests.filter(labor_requirement__call_time__event__company=company)
+    confirmed_requests = labor_requests.filter(confirmed=True)
+    declined_requests = labor_requests.filter(availability_response='no')
+    ncns_requests = labor_requests.filter(availability_response='ncns')
+    pending_requests = labor_requests.filter(availability_response__isnull=True)
+    available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
+
+    context = {
+        'worker': worker,
+        'confirmed_requests': confirmed_requests,
+        'declined_requests': declined_requests,
+        'ncns_requests': ncns_requests,
+        'pending_requests': pending_requests,
+        'available_requests': available_requests,
+    }
+    return render(request, 'callManager/worker_history.html', context)

@@ -1,0 +1,19 @@
+<!-- displays worker self add qr code -->
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Scan QR Code to Add your phone number to our system</title>
+    {% tailwind_css %}
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-background text-text-primary dark:bg-dark-background dark:text-dark-text-primary flex items-center justify-center min-h-screen">
+    <div class="max-w-md w-full p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
+        <h1 class="text-2xl font-semibold mb-4">Scan QR Code to add your phone number into our system</h1>
+                <img src="data:image/png;base64,{{ qr_code_data }}" alt="Clock-In QR Code" class="mx-auto mb-4 max-w-xs">
+        <h1 class="text-2xl font-semibold mb-4">or go to {{ qr_url }}</h1>
+    </div>
+</body>
+</html>
