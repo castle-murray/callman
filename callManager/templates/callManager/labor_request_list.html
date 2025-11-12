@@ -38,7 +38,7 @@
                            class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
                            hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1"
                            hx-target="#fill-list"
-                           hx-trigger="input delay:300ms"
+                           hx-trigger="input delay:100ms"
                            hx-include="[name='search'], [name='skill']">
                     <select id="skill" name="skill" class="w-full max-w-xs p-2 border rounded bg-card-bg text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border dark:focus:ring-dark-primary"
                             hx-get="{% url 'fill_labor_request_list' labor_requirement.slug %}?page=1"
