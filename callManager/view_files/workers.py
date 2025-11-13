@@ -117,6 +117,7 @@ def view_workers(request):
     manager = request.user.manager
     company = manager.company
     workers = Worker.objects.filter(company=company).order_by('name')
+    has_workers = Worker.objects.filter(company=manager.company).exists()
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
@@ -170,6 +171,8 @@ def view_workers(request):
         'search_query': search_query,
         'skill_id': skill_id,
         'add_form': form,
+        'has_workers': has_workers,
+        'company': company,
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
 
@@ -418,3 +421,20 @@ def worker_history(request, slug):
         'available_requests': available_requests,
     }
     return render(request, 'callManager/worker_history.html', context)
+
+@login_required
+def add_worker(request):
+    company=request.user.manager.company
+    if request.method == "POST":
+        form = WorkerForm(request.POST, company=company)
+        if form.is_valid():
+            worker = form.save(commit=False)
+            worker.company = company
+            worker.save()
+            messages.success(request, "Worker added successfully.")
+            return redirect('view_workers')
+        else:
+            messages.error(request, "Failed to add worker.")
+    else:
+        form = WorkerForm(company=company)
+    return render(request, 'callManager/add_worker.html', {'form': form})

@@ -12,7 +12,7 @@
             {% csrf_token %}
             <input type="hidden" name="add_skill" tabindex="1" >
             {{ add_form.name }}
-            <button type="submit" class="bg-success text-dark-text-primary px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover ml-2">Add</button>
+            <button type="submit" class="bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover ml-2">Add</button>
         </form>
         <h2 class="text-xl font-semibold my-4 text-text-heading dark:text-dark-text-primary">Current Skills</h2>
         {% if skills %}

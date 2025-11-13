@@ -6,6 +6,7 @@ from .models import (
         Event,
         LaborRequirement,
         LaborType,
+        Notifications,
         OneTimeLoginToken,
         PasswordResetToken,
         Steward,
@@ -376,14 +377,21 @@ def confirm_event_requests(request, slug, event_token):
         sms_errors = []
         for labor_request in labor_requests:
             worker = labor_request.worker
+            company = event.company
+            call_time = labor_request.labor_requirement.call_time
+            labor_type = labor_request.labor_requirement.labor_type
             response_key = f"response_{labor_request.id}"
             response = request.POST.get(response_key)
             if response in ['yes', 'no']:
                 labor_request.availability_response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
+                if response == 'yes' and not labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
+                    notif_message = f"{worker.name} Available for {event.event_name} - {call_time.name} - {labor_type.name}, Requires confirmation"
+                    print(notif_message)
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
                 if response == 'yes' and labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
+                    notif_message = f"{worker.name} confirmed for {event.event_name} - {call_time.name} - {labor_type.name}"
                     confirmed_count = LaborRequest.objects.filter(
                         labor_requirement=labor_request.labor_requirement,
                         confirmed=True).count()
@@ -409,6 +417,7 @@ def confirm_event_requests(request, slug, event_token):
                                 log_sms(company)
                                 print(message_body)
                 elif response == 'yes' and labor_request.is_reserved:
+                    notif_message = f"{worker.name} confirmed for {event.event_name} - {call_time.name} - {labor_type.name}"
                     labor_request.confirmed = True
                     labor_request.save()
                     call_time = labor_request.labor_requirement.call_time
@@ -430,6 +439,7 @@ def confirm_event_requests(request, slug, event_token):
                             log_sms(company)
                             print(message_body)
                 elif response == 'no' and labor_request.is_reserved:
+                    notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
                     labor_request.is_reserved = False
                     labor_request.save()
                     confirmed_count = LaborRequest.objects.filter(
@@ -444,6 +454,8 @@ def confirm_event_requests(request, slug, event_token):
                         if available_fcfs:
                             available_fcfs.confirmed = True
                             available_fcfs.save()
+                if notif_message:
+                    notify(labor_request.id, notif_message)
         if sms_errors:
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
@@ -547,3 +559,71 @@ def add_worker(request):
     else:
         form = WorkerForm()
     return render(request, 'callManager/add_worker.html', {'form': form})
+
+def dashboard_redirect(request):
+    if hasattr(request.user, 'administrator'):
+        return redirect('admin_dashboard')
+    elif hasattr(request.user, 'manager'):
+        return redirect('manager_dashboard')
+    elif hasattr(request.user, 'steward'):
+        return redirect('steward_dashboard')
+    else:
+        return redirect('user_profile')
+
+def notify(labor_request_id, message):
+    labor_request = get_object_or_404(LaborRequest, id=labor_request_id)
+    event = labor_request.labor_requirement.call_time.event
+    company = event.company
+    notification = Notifications.objects.create(
+        company=company,
+        event=event,
+        labor_request=labor_request,
+        message=message,
+        read=False,
+    )
+    notification.save()
+    return
+
+@login_required
+def notifications(request):
+    notifications = Notifications.objects.filter(
+        company=request.user.manager.company).order_by('-sent_at')
+    if request.method == "POST":
+        action = request.POST.get('action')
+        if action == 'mark_read':
+            notification_id = request.POST.get('notification_id')
+            notification = get_object_or_404(Notifications, id=notification_id)
+            notification.read = True
+            notification.save()
+        if action == 'mark_all_read':
+            notifications.update(read=True)
+        if action == 'delete':
+            notification_id = request.POST.get('notification_id')
+            notification = get_object_or_404(Notifications, id=notification_id)
+            notification.delete()
+        if action == 'delete_all':
+            notifications.delete()
+    context = {'notifications': notifications}
+    return render(request, 'callManager/notifications.html', context)
+
+def htmx_get_notification_count(request):
+    if hasattr(request.user, 'manager'):
+        count = Notifications.objects.filter(
+            company=request.user.manager.company,
+            read=False).count()
+    else:
+        count = 0
+    
+    if count == 0:
+        return render(request, 'callManager/notifications_button_empty.html')
+    else:
+        #if notification less than 10  seconds old messages.suuccess
+        new_notifications= Notifications.objects.filter(
+            company=request.user.manager.company,
+            read=False,
+            sent_at__gte=timezone.now() - timedelta(seconds=10))
+        new_notifications_count = new_notifications.count()
+        if new_notifications_count > 0:
+            for item in new_notifications:
+                messages.success(request, item.message)
+        return render(request, 'callManager/notification_button_count.html', {'count': count})

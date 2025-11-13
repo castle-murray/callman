@@ -451,3 +451,11 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Password reset token for {self.user.username}"
+
+class Notifications(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='notifications')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='notifications')
+    labor_request = models.ForeignKey(LaborRequest, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)

@@ -37,11 +37,10 @@
 {% endif %}
 <div class="mb-6 flex space-x-4">
     <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
-    <a href="{% url 'view_skills' %}" class="bg-secondary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
-    <a href="{% url 'view_workers' %}" class="bg-purple {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Contacts/Workers</a>
-    <a href="{% url 'steward_invite' %}" class="bg-teal text-dark-text-primary p-2 rounded hover:bg-teal-hover dark:bg-dark-teal dark:hover:bg-dark-teal-hover">Invite Steward</a>
-    <a href="{% url 'location_profiles' %}" class="bg-yellow {% if not has_locations %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-yellow-hover dark:bg-dark-yellow dark:hover:bg-dark-yellow-hover">Manage Locations</a>
-    <a href="{% url 'worker_self_add_qr' company.slug %}" class="bg-green text-dark-text-primary p-2 rounded hover:bg-green-hover dark:bg-dark-green dark:hover:bg-dark-green-hover">Worker Self Add QR</a>
+    <a href="{% url 'view_workers' %}" class="bg-primary {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Contacts</a>
+    <a href="{% url 'view_skills' %}" class="bg-primary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Skills/Jobs</a>
+    <a href="{% url 'steward_invite' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Invite Steward</a>
+    <a href="{% url 'location_profiles' %}" class="bg-primary {% if not has_locations %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-yellow-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Locations</a>
 </div>
 <div class="bg-card-bg p-6 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
     <h2 class="text-xl font-semibold mb-4 text-text-heading dark:text-dark-text-primary">Upcoming Events</h2>

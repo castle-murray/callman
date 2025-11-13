@@ -193,7 +193,7 @@ TWILIO_ENABLED = os.environ.get('TWILIO_ENABLED')
 
 # login
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'  # Already set, but confirm
+LOGIN_REDIRECT_URL = '/dashboard/'  # Already set, but confirm
 LOGOUT_REDIRECT_URL = '/login/'
 
 USE_TZ = False

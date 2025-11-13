@@ -7,13 +7,15 @@
         {% if confirmed_requests %}
             <ul class="space-y-2 mb-4">
                 {% for request in confirmed_requests %}
-                    <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
-                        {{ request.labor_requirement.call_time.event.event_name }} - 
-                        {{ request.labor_requirement.call_time.name }} - 
-                        {{ request.labor_requirement.labor_type.name }} - 
-                        {{ request.labor_requirement.call_time.date }} - 
-                        {{ request.labor_requirement.call_time.time }}
-                    </li>
+                    <a href="{% url 'event_detail' request.labor_requirement.call_time.event.slug %}">
+                        <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type.name }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </li>
+                    </a>
                 {% endfor %}
             </ul>
         {% else %}
@@ -23,13 +25,15 @@
         {% if declined_requests %}
             <ul class="space-y-2 mb-4">
                 {% for request in declined_requests %}
-                    <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
-                        {{ request.labor_requirement.call_time.event.event_name }} - 
-                        {{ request.labor_requirement.call_time.name }} - 
-                        {{ request.labor_requirement.labor_type.name }} - 
-                        {{ request.labor_requirement.call_time.date }} - 
-                        {{ request.labor_requirement.call_time.time }}
-                    </li>
+                    <a href="{% url 'event_detail' request.labor_requirement.call_time.event.slug %}">
+                        <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type.name }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </li>
+                    </a>
                 {% endfor %}
             </ul>
         {% else %}
@@ -39,13 +43,15 @@
         {% if ncns_requests %}
             <ul class="space-y-2 mb-4">
                 {% for request in ncns_requests %}
-                    <li class="flex items-center justify-between text-text-yellow dark:text-dark-text-yellow">
-                        {{ request.labor_requirement.call_time.event.event_name }} - 
-                        {{ request.labor_requirement.call_time.name }} - 
-                        {{ request.labor_requirement.labor_type.name }} - 
-                        {{ request.labor_requirement.call_time.date }} - 
-                        {{ request.labor_requirement.call_time.time }}
-                    </li>
+                    <a href="{% url 'event_detail' request.labor_requirement.call_time.event.slug %}">
+                        <li class="flex items-center justify-between text-text-yellow dark:text-dark-text-yellow">
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type.name }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </li>
+                    </a>
                 {% endfor %}
             </ul>
         {% else %}
@@ -55,13 +61,15 @@
         {% if pending_requests %}
             <ul class="space-y-2 mb-4">
                 {% for request in pending_requests %}
-                    <li class="flex items-center justify-between text-text-blue dark:text-dark-text-blue">
-                        {{ request.labor_requirement.call_time.event.event_name }} - 
-                        {{ request.labor_requirement.call_time.name }} - 
-                        {{ request.labor_requirement.labor_type.name }} - 
-                        {{ request.labor_requirement.call_time.date }} - 
-                        {{ request.labor_requirement.call_time.time }}
-                    </li>
+                    <a href="{% url 'event_detail' request.labor_requirement.call_time.event.slug %}">
+                        <li class="flex items-center justify-between text-text-blue dark:text-dark-text-blue">
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type.name }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </li>
+                    </a>
                 {% endfor %}
             </ul>
         {% else %}
@@ -71,13 +79,15 @@
         {% if available_requests %}
             <ul class="space-y-2 mb-4">
                 {% for request in available_requests %}
-                    <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
-                        {{ request.labor_requirement.call_time.event.event_name }} - 
-                        {{ request.labor_requirement.call_time.name }} - 
-                        {{ request.labor_requirement.labor_type.name }} - 
-                        {{ request.labor_requirement.call_time.date }} - 
-                        {{ request.labor_requirement.call_time.time }}
-                    </li>
+                    <a href="{% url 'event_detail' request.labor_requirement.call_time.event.slug %}">
+                        <li class="flex items-center justify-between text-text-green dark:text-dark-text-green">
+                            {{ request.labor_requirement.call_time.event.event_name }} - 
+                            {{ request.labor_requirement.call_time.name }} - 
+                            {{ request.labor_requirement.labor_type.name }} - 
+                            {{ request.labor_requirement.call_time.date }} - 
+                            {{ request.labor_requirement.call_time.time }}
+                        </li>
+                    </a>
                 {% endfor %}
             </ul>
         {% else %}

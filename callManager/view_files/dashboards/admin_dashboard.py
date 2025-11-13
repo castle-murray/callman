@@ -1,5 +1,4 @@
 #models
-from time import sleep
 from callManager.models import (
         LaborRequest,
         Event,
@@ -10,8 +9,7 @@ from callManager.models import (
 # Django imports
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_GET, require_POST
-from django.db.models import Sum, Q, Case, When, IntegerField, Count
+from django.db.models import Q, Count
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils import timezone
@@ -24,7 +22,7 @@ from twilio.base.exceptions import TwilioRestException
 
 import logging
 
-from callManager.views import log_sms, send_message
+from callManager.views import log_sms
 
 # Create a logger instance
 logger = logging.getLogger('callManager')

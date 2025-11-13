@@ -3,7 +3,7 @@
 {% block title %}Add Worker - Callman{% endblock %}
 
 {% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Add a New Worker</h1>
+    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Add a New Contact</h1>
     
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-2xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <form method="post">
@@ -23,7 +23,7 @@
                 </div>
             </div>
             <button type="submit" class="mt-6 bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Worker</button>
-            <a href="{% url 'worker_list' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
+            <a href="{% url 'view_workers' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Cancel</a>
         </form>
     </div>
 {% endblock %}

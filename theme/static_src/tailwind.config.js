@@ -77,9 +77,10 @@ module.exports = {
                 'purple-hover': '#7c3aed', // purple-600
                 'indigo': '#6366f1',      // indigo-500
                 'indigo-hover': '#4f46e5', // indigo-600
-                'teal': '#14b8a6',        // teal-500
-                'teal-hover': '#0d9488',   // teal-600
-                'yellow': '#eab308',      // yellow-500
+                'teal': '#059669',        // teal-600
+                'teal-hover': '#0d9488',   // teal-700
+                'yellow': '#eab308',      // yellow-700
+                'yellow-light': '#facc15',  // yellow-400
                 'yellow-hover': '#ca8a04', // yellow-600
                 'border-light': '#d1d5db', // gray-300
                 'text-available': '#1e40af', // Deep blue for available requests
@@ -98,11 +99,11 @@ module.exports = {
                 'dark-text-green': '#22c55e', // green-400
                 'dark-text-red': '#f87171',   // red-400
                 'dark-text-blue': '#60a5fa',  // blue-400
-                'dark-primary': '#1E40AF',    // blue-800
+                'dark-primary': '#263969',    // blue-900
                 'dark-primary-hover': '#1E3A8A', // blue-950
                 'dark-success': '#166534',    // green-600
                 'dark-success-hover': '#15803d', // green-700
-                'dark-danger': '#991B1B',     // red-800
+                'dark-danger': '#631111',     // red-800
                 'dark-danger-hover': '#7F1D1D', // red-900
                 'dark-secondary': '#4b5563',  // gray-600
                 'dark-secondary-hover': '#374151', // gray-700

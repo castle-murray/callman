@@ -4,6 +4,7 @@ from .models import (
         CallTime,
         LaborRequirement,
         LaborType,
+        Notifications,
         SentSMS,
         Steward,
         Worker,
@@ -182,3 +183,9 @@ class SentSMSAdmin(admin.ModelAdmin):
 @admin.register(TimeChangeConfirmation)
 class TimeChangeConfirmationAdmin(admin.ModelAdmin):
     list_display = ('labor_request', 'expires_at')
+
+@admin.register(Notifications)
+class NotificationsAdmin(admin.ModelAdmin):
+    list_display = ('company', 'event', 'labor_request', 'message', 'sent_at', 'read')
+    list_filter = ('company', 'event', 'read')
+    search_fields = ('message',)

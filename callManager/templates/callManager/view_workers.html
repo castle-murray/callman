@@ -7,7 +7,9 @@
             <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Workers</h1>
         </div>
         <div class="flex-shrink-0">
-            <a href="{% url 'import_workers' %}" class="bg-indigo {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Phone Contacts</a>
+            <a href="{% url 'worker_self_add_qr' company.slug %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Worker Self Add QR</a>
+            <a href="{% url 'add_worker' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Add Worker</a>
+            <a href="{% url 'import_workers' %}" class="bg-primary {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Import Phone Contacts</a>
         </div>
     </div>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">

@@ -30,6 +30,9 @@
                             {% if request.user.administrator %}
                                 <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin</a></li>
                             {% endif %}
+                                            
+
+
                             <!--
                             {% if request.user.owner %}
                                 <li><a href="{% url 'owner_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Owner</a></li>
@@ -59,6 +62,17 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
+                            </a>
+                        {% endif %}
+                        
+                        {% if request.user.manager %}
+                            <a href="{% url 'notifications' %}" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
+                                <span id="notification-count" hx-get="{% url 'htmx_get_notification_count' %}" hx-trigger="load" hx-target="#notification-button" hx-swap="outerHTML">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                                    </svg>
+                                </span>
                             </a>
                         {% endif %}
 
@@ -192,6 +206,12 @@
                     // Store timeout ID on the element
                     message.dataset.timeoutId = timeoutId.toString();
                 });
+            });
+            document.body.addEventListener('updateNotificationButton', function(event) {
+                const button = document.getElementById('notification-button');
+                if (button && event.detail.classes) {
+                    button.className = event.detail.classes;
+                }
             });
         </script>
         {% block extra_scripts %}{% endblock %}

@@ -83,6 +83,7 @@ urlpatterns = [
     path('callman-admin/', admin_dashboard.admin_dashboard, name='admin_dashboard'),
     path('steward/', steward_dashboard.steward_dashboard, name='steward_dashboard'),
     path('owner/', owner_dashboard.owner_dashboard, name='owner_dashboard'),
+    path('dashboard/', views.dashboard_redirect, name='dashboard_redirect'),
 
     #SMS
     path('sms/reply/', views.sms_webhook, name='sms_webhook'),
@@ -124,4 +125,8 @@ urlpatterns = [
     path('reset-password/<uuid:token>/', loginviews.reset_password, name='reset_password'),
     path('forgot-password/', loginviews.forgot_password, name='forgot_password'),
 
+
+    #notifications
+    path('notifications/', views.notifications, name='notifications'),
+    path('htmx-get-notification-count/', views.htmx_get_notification_count, name='htmx_get_notification_count'),
 ]
