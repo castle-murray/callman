@@ -23,7 +23,7 @@
         <header class="bg-card-bg shadow dark:bg-dark-header-bg dark:shadow-dark-shadow">
             <nav class="container mx-auto p-4">
                 <div class="flex justify-between items-center">
-                    <a href="{% url 'manager_dashboard' %}" class="text-xl font-bold text-text-primary dark:text-dark-text-primary">Callman</a>
+                    <a href="{% url 'dashboard_redirect' %}" class="text-xl font-bold text-text-primary dark:text-dark-text-primary">CallManager</a>
                     <div class="flex items-center space-x-4">
                         {% if user.is_authenticated %}
                             <span class="text-text-tertiary dark:text-dark-text-tertiary">Hello, {{ user.get_full_name|default:user.username }}</span>
@@ -206,12 +206,6 @@
                     // Store timeout ID on the element
                     message.dataset.timeoutId = timeoutId.toString();
                 });
-            });
-            document.body.addEventListener('updateNotificationButton', function(event) {
-                const button = document.getElementById('notification-button');
-                if (button && event.detail.classes) {
-                    button.className = event.detail.classes;
-                }
             });
         </script>
         {% block extra_scripts %}{% endblock %}
