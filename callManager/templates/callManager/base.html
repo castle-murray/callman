@@ -207,6 +207,20 @@
                     message.dataset.timeoutId = timeoutId.toString();
                 });
             });
+            {% if request.user.manager %}
+                const ws = new WebSocket('ws://' + window.location.host + '/ws/notifications/');
+
+                ws.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'htmx_trigger' && data.event === 'notification-update') {
+                        htmx.trigger('body', 'notification-update');
+                    }
+                };
+
+                ws.onclose = function() {
+                    setTimeout(() => location.reload(), 1000); // optional: reconnect
+                };
+            {% endif %}
         </script>
         {% block extra_scripts %}{% endblock %}
     </body>

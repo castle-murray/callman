@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'theme',
     'callManager.apps.CallmanagerConfig',
     'django_htmx',
+    'channels',
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')
@@ -239,6 +240,17 @@ if os.environ.get('DJANGO_ENV') == 'production':
             },
         },
     }
+
+ASGI_APPLICATION = 'callman.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('localhost', 6379)],
+        },
+    },
+}
 
 #else:
 #

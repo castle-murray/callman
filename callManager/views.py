@@ -89,6 +89,11 @@ import uuid
 from urllib.parse import urlencode, quote
 from user_agents import parse
 
+
+# channels imports
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 # posssibly imports
 import pytz
 import io
@@ -570,10 +575,13 @@ def dashboard_redirect(request):
     else:
         return redirect('user_profile')
 
+
 def notify(labor_request_id, message):
+
     labor_request = get_object_or_404(LaborRequest, id=labor_request_id)
     event = labor_request.labor_requirement.call_time.event
     company = event.company
+
     notification = Notifications.objects.create(
         company=company,
         event=event,
@@ -581,7 +589,23 @@ def notify(labor_request_id, message):
         message=message,
         read=False,
     )
-    notification.save()
+
+    # Send via WebSocket to all users in the company
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"company_{company.id}_notifications",
+        {
+            "type": "send.notification",
+            "notification": {
+                "id": notification.id,
+                "message": notification.message,
+                "sent_at": notification.sent_at.isoformat(),
+                "read": notification.read,
+                "labor_request_id": labor_request.id,
+                "type": "send_notification",  # maps to send_notification() in consumer
+            }
+        }
+    )
     return
 
 @login_required
@@ -607,23 +631,21 @@ def notifications(request):
     return render(request, 'callManager/notifications.html', context)
 
 def htmx_get_notification_count(request):
-    if hasattr(request.user, 'manager'):
-        count = Notifications.objects.filter(
-            company=request.user.manager.company,
-            read=False).count()
-    else:
-        count = 0
-    
-    if count == 0:
-        return render(request, 'callManager/notifications_button_empty.html')
-    else:
-        #if notification less than 10  seconds old messages.suuccess
-        new_notifications= Notifications.objects.filter(
-            company=request.user.manager.company,
-            read=False,
-            sent_at__gte=timezone.now() - timedelta(seconds=10))
-        new_notifications_count = new_notifications.count()
-        if new_notifications_count > 0:
-            for item in new_notifications:
-                messages.success(request, item.message)
-        return render(request, 'callManager/notification_button_count.html', {'count': count})
+    if not hasattr(request.user, 'manager'):
+        return HttpResponse("")  # or empty
+
+    company = request.user.manager.company
+    count = Notifications.objects.filter(company=company, read=False).count()
+
+    # Check for *very recent* notifications to trigger messages.success
+    recent = Notifications.objects.filter(
+        company=company,
+        read=False,
+        sent_at__gte=timezone.now() - timedelta(seconds=10)
+    )
+    for n in recent:
+        messages.success(request, n.message)
+
+    context = {'count': count}
+    template = 'callManager/notification_button_count.html' if count > 0 else 'callManager/notifications_button_empty.html'
+    return render(request, template, context)

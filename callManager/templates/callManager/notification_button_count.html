@@ -1,7 +1,9 @@
-{% load callman_tags %}
 <a href="{% url 'notifications' %}" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-danger dark:text-dark-tertiary dark:bg-dark-danger">
-    <div id="notification-count" hx-get="{% url 'htmx_get_notification_count' %}" hx-trigger="every 10s" hx-target="#notification-button" hx-swap="outerHTML">
+    <div id="notification-count"
+         hx-get="{% url 'htmx_get_notification_count' %}"
+         hx-trigger="notification-update from:body"
+         hx-target="#notification-button"
+         hx-swap="outerHTML">
         {{ count }}
     </div>
 </a>
-
