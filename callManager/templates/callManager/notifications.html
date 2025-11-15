@@ -23,7 +23,7 @@
                             hx-vals='{"action": "delete", "notification_id": "{{ notification.id }}"}'
                             hx-trigger="click" 
                             hx-target="#notification-dropdown" 
-                            hx-swap="outerHTML">Delete</button>
+                            hx-swap="outerHTML">Clear</button>
                     </div>
             </li>
             {% endfor %}
@@ -40,7 +40,7 @@
             hx-vals='{"action": "delete_all"}'
             hx-trigger="click" 
             hx-target="#notification-dropdown" 
-            hx-swap="outerHTML">Delete All</button>
+            hx-swap="outerHTML">Clear All</button>
         {% else %}
         <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="innerHTML" class="px-4 py-2">No notifications.</p>
         {% endif %}
