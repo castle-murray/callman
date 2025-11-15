@@ -589,7 +589,11 @@ def notify(labor_request_id, message):
         message=message,
         read=False,
     )
+    notification.save()
+    push_notification(company)
+    return
 
+def push_notification(company):
     # Send via WebSocket to all users in the company
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -597,19 +601,18 @@ def notify(labor_request_id, message):
         {
             "type": "send.notification",
             "notification": {
-                "id": notification.id,
-                "message": notification.message,
-                "sent_at": notification.sent_at.isoformat(),
-                "read": notification.read,
-                "labor_request_id": labor_request.id,
                 "type": "send_notification",  # maps to send_notification() in consumer
             }
         }
     )
     return
 
+
 @login_required
 def notifications(request):
+    if not hasattr(request.user, 'manager'):
+        return
+    company = request.user.manager.company
     notifications = Notifications.objects.filter(
         company=request.user.manager.company).order_by('-sent_at')
     channel_layer = get_channel_layer()
@@ -620,43 +623,19 @@ def notifications(request):
             notification = get_object_or_404(Notifications, id=notification_id)
             notification.read = True
             notification.save()
-            async_to_sync(channel_layer.group_send)(
-                    f"company_{notification.company.id}_notifications",
-                    {
-                        "type": "htmx_trigger",
-                        "event": "notification-update"
-                    }
-                )
+            push_notification(company)
 
         if action == 'mark_all_read':
             notifications.update(read=True)
-            async_to_sync(channel_layer.group_send)(
-                    f"company_{notification.company.id}_notifications",
-                    {
-                        "type": "htmx_trigger",
-                        "event": "notification-update"
-                    }
-                )
+            push_notification(company)
         if action == 'delete':
             notification_id = request.POST.get('notification_id')
             notification = get_object_or_404(Notifications, id=notification_id)
             notification.delete()
-            async_to_sync(channel_layer.group_send)(
-                    f"company_{notification.company.id}_notifications",
-                    {
-                        "type": "htmx_trigger",
-                        "event": "notification-update"
-                    }
-                )
+            push_notification(company)
         if action == 'delete_all':
             notifications.delete()
-            async_to_sync(channel_layer.group_send)(
-                    f"company_{notification.company.id}_notifications",
-                    {
-                        "type": "htmx_trigger",
-                        "event": "notification-update"
-                    }
-                )
+            push_notification(company)
     context = {'notifications': notifications}
     return render(request, 'callManager/notifications.html', context)
 

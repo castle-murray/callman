@@ -209,21 +209,24 @@
                 });
             });
         {% if request.user.manager %}
-              (function() {
+            (function() {
                 let ws = null;
-                const url = 'wss://' + window.location.host + '/ws/notifications/';
+                const url = 
+                  (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+                  window.location.host +
+                  '/ws/notifications/';
 
                 function connect() {
                   ws = new WebSocket(url);
 
                   ws.onopen = () => {
-                    console.log('WebSocket CONNECTED');
+                    console.log('WebSocket CONNECTED:', url);
                   };
 
                   ws.onmessage = (e) => {
                     const data = JSON.parse(e.data);
                     if (data.type === 'htmx_trigger' && data.event === 'notification-update') {
-                      console.log('Notification received → triggering HTMX');
+                      console.log('Notification received → updating UI');
                       htmx.trigger('body', 'notification-update');
                     }
                   };
@@ -235,21 +238,12 @@
                   ws.onclose = (e) => {
                     console.log('WebSocket CLOSED:', e.code, e.reason);
                     ws = null;
-                    // Reconnect after 2 seconds — NO RELOAD
-                    setTimeout(connect, 2000);
+                    setTimeout(connect, 2000); // Auto-reconnect
                   };
                 }
 
-                // Start connection
                 connect();
-
-                // Optional: reconnect on page visibility change
-                document.addEventListener('visibilitychange', () => {
-                  if (!document.hidden && !ws) {
-                    connect();
-                  }
-                });
-              })(); 
+              })();
         {% endif %}
         </script>
 
