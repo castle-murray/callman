@@ -168,7 +168,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-## callman/settings.py
+# callman/settings.py
 #LOGGING = {
 #    'version': 1,
 #    'disable_existing_loggers': False,
@@ -254,42 +254,42 @@ CHANNEL_LAYERS = {
 
 #else:
 #
-#    LOGGING = {
-#        'version': 1,
-#        'disable_existing_loggers': False,
-#        'formatters': {
-#            'verbose': {
-#                'format': '{asctime} - {name} - {levelname} - {message}',
-#                'style': '{',
-#            },
-#            'simple': {
-#                'format': '{levelname} {message}',
-#                'style': '{',
-#            },
-#        },
-#        'handlers': {
-#            'file': {
-#                'level': 'DEBUG',
-#                'class': 'logging.FileHandler',
-#                'filename': '/home/sean/projects/callman/callman/logs/django_debug.log',
-#                'formatter': 'verbose',
-#            },
-#            'console': {
-#                'level': 'INFO',
-#                'class': 'logging.StreamHandler',
-#                'formatter': 'simple',
-#            },
-#        },
-#        'loggers': {
-#            'callManager': {
-#                'handlers': ['file', 'console'],
-#                'level': 'DEBUG',
-#                'propagate': True,
-#            },
-#            'django': {
-#                'handlers': ['file'],
-#                'level': 'WARNING',
-#                'propagate': True,
-#            },
-#        },
-#    }
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} - {name} - {levelname} - {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/home/sean/projects/callman/callman/logs/django_debug.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'callManager': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}
