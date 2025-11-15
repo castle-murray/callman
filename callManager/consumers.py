@@ -2,6 +2,10 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 import json
+import logging
+
+# Create a logger instance
+logger = logging.getLogger('callManager')
 
 @database_sync_to_async
 def get_user_manager(user):
