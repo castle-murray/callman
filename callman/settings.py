@@ -271,7 +271,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/home/sean/projects/callman/callman/logs/django_debug.log',
+            'filename': '/opt/callman/logs/django_debug.log',
             'formatter': 'verbose',
         },
         'console': {
