@@ -259,7 +259,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{asctime} - {name} - {levelname} - {message}',
+            'format': '{asctime} {name} {levelname} {message} [user:{user}] [path:{path}]',
             'style': '{',
         },
         'simple': {
@@ -279,17 +279,46 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        'daphne_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/opt/callman/logs/daphne.log',
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
+        # Your app
         'callManager': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
+        # Django
         'django': {
             'handlers': ['file'],
             'level': 'WARNING',
-            'propagate': True,
+            'propagate': False,
+        },
+        # === CRITICAL FOR WEBSOCKETS ===
+        'daphne': {
+            'handlers': ['daphne_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'channels': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'channels.server': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'channels.consumer': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
 }
