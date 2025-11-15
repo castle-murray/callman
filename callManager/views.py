@@ -612,6 +612,7 @@ def notify(labor_request_id, message):
 def notifications(request):
     notifications = Notifications.objects.filter(
         company=request.user.manager.company).order_by('-sent_at')
+    channel_layer = get_channel_layer()
     if request.method == "POST":
         action = request.POST.get('action')
         if action == 'mark_read':
@@ -619,14 +620,43 @@ def notifications(request):
             notification = get_object_or_404(Notifications, id=notification_id)
             notification.read = True
             notification.save()
+            async_to_sync(channel_layer.group_send)(
+                    f"company_{notification.company.id}_notifications",
+                    {
+                        "type": "htmx_trigger",
+                        "event": "notification-update"
+                    }
+                )
+
         if action == 'mark_all_read':
             notifications.update(read=True)
+            async_to_sync(channel_layer.group_send)(
+                    f"company_{notification.company.id}_notifications",
+                    {
+                        "type": "htmx_trigger",
+                        "event": "notification-update"
+                    }
+                )
         if action == 'delete':
             notification_id = request.POST.get('notification_id')
             notification = get_object_or_404(Notifications, id=notification_id)
             notification.delete()
+            async_to_sync(channel_layer.group_send)(
+                    f"company_{notification.company.id}_notifications",
+                    {
+                        "type": "htmx_trigger",
+                        "event": "notification-update"
+                    }
+                )
         if action == 'delete_all':
             notifications.delete()
+            async_to_sync(channel_layer.group_send)(
+                    f"company_{notification.company.id}_notifications",
+                    {
+                        "type": "htmx_trigger",
+                        "event": "notification-update"
+                    }
+                )
     context = {'notifications': notifications}
     return render(request, 'callManager/notifications.html', context)
 
