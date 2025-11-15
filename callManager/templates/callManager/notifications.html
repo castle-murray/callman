@@ -1,3 +1,31 @@
-.
+<!-- // notification drop down -->
+<div class="">
+    <div id="notification-dropdown" class="">
+        {% if notifications %}
+            <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark">
+                {% for notification in notifications %}
+                <li class="px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
+                    {{ notification.message }}{% if not notification.read %} new{% endif %}
+                        <button class="ml-2 bg-secondary text-dark-text-primary px-2 py-1 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover"
+                            hx-post="{% url  'notifications' %}" 
+                            hx-vals='{"action": "mark_read", "notification_id": "{{ notification.id }}"}'
+                            hx-trigger="click" 
+                            hx-target="#notification-dropdown" 
+                            hx-swap="outerHTML">Mark as Read</button>
+                        <button class="ml-2 bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover"
+                            hx-post="{% url  'notifications' %}"
+                            hx-vals='{"action": "delete", "notification_id": "{{ notification.id }}"}'
+                            hx-trigger="click" 
+                            hx-target="#notification-dropdown" 
+                            hx-swap="outerHTML">Delete</button>
+                        </li>
+                        
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="px-4 py-2">No notifications.</p>
+        {% endif %}
+    </div>
+</div>
 
         
