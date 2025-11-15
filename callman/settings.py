@@ -259,7 +259,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{asctime} {name} {levelname} {message} [user:{user}] [path:{path}]',
+            'format': '{asctime} {name} {levelname} {message}',
             'style': '{',
         },
         'simple': {
@@ -271,7 +271,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/opt/callman/logs/django_debug.log',
+            'filename': BASE_DIR / 'logs/django_debug.log',
             'formatter': 'verbose',
         },
         'console': {
@@ -282,7 +282,7 @@ LOGGING = {
         'daphne_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/opt/callman/logs/daphne.log',
+            'filename': BASE_DIR / 'logs/daphne.log',
             'formatter': 'verbose',
         },
     },
