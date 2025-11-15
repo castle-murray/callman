@@ -207,21 +207,52 @@
                     message.dataset.timeoutId = timeoutId.toString();
                 });
             });
-            {% if request.user.manager %}
-                const ws = new WebSocket('ws://' + window.location.host + '/ws/notifications/');
+        {% if request.user.manager %}
+              (function() {
+                let ws = null;
+                const url = 'wss://' + window.location.host + '/ws/notifications/';
 
-                ws.onmessage = function(e) {
+                function connect() {
+                  ws = new WebSocket(url);
+
+                  ws.onopen = () => {
+                    console.log('WebSocket CONNECTED');
+                  };
+
+                  ws.onmessage = (e) => {
                     const data = JSON.parse(e.data);
                     if (data.type === 'htmx_trigger' && data.event === 'notification-update') {
-                        htmx.trigger('body', 'notification-update');
+                      console.log('Notification received → triggering HTMX');
+                      htmx.trigger('body', 'notification-update');
                     }
-                };
+                  };
 
-                ws.onclose = function() {
-                    setTimeout(() => location.reload(), 1000); // optional: reconnect
-                };
-            {% endif %}
+                  ws.onerror = (e) => {
+                    console.error('WebSocket ERROR:', e);
+                  };
+
+                  ws.onclose = (e) => {
+                    console.log('WebSocket CLOSED:', e.code, e.reason);
+                    ws = null;
+                    // Reconnect after 2 seconds — NO RELOAD
+                    setTimeout(connect, 2000);
+                  };
+                }
+
+                // Start connection
+                connect();
+
+                // Optional: reconnect on page visibility change
+                document.addEventListener('visibilitychange', () => {
+                  if (!document.hidden && !ws) {
+                    connect();
+                  }
+                });
+              })(); 
+        {% endif %}
         </script>
+
+
         {% block extra_scripts %}{% endblock %}
     </body>
 </html>
