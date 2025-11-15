@@ -131,4 +131,5 @@ urlpatterns = [
     #notifications
     path('notifications/', views.notifications, name='notifications'),
     path('htmx-get-notification-count/', views.htmx_get_notification_count, name='htmx_get_notification_count'),
+    path('htmx-clear/', views.htmx_clear, name='htmx_clear'),
 ]

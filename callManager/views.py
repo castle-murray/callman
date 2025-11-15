@@ -579,12 +579,16 @@ def dashboard_redirect(request):
 def notify(labor_request_id, message):
 
     labor_request = get_object_or_404(LaborRequest, id=labor_request_id)
-    event = labor_request.labor_requirement.call_time.event
+    labor_requirement = labor_request.labor_requirement
+    call_time = labor_requirement.call_time
+    event = call_time.event
     company = event.company
 
     notification = Notifications.objects.create(
         company=company,
         event=event,
+        call_time=call_time,
+        labor_requirement=labor_requirement,
         labor_request=labor_request,
         message=message,
         read=False,
@@ -658,3 +662,6 @@ def htmx_get_notification_count(request):
     context = {'count': count}
     template = 'callManager/notification_button_count.html' if count > 0 else 'callManager/notifications_button_empty.html'
     return render(request, template, context)
+
+def htmx_clear(request):
+    return HttpResponse("")

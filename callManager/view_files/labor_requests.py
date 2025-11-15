@@ -1,6 +1,8 @@
 
 #models
 from time import sleep
+
+from twilio.rest.api.v2010.account.call import notification
 from callManager.models import (
         LaborRequest,
         LaborRequirement,
@@ -26,7 +28,7 @@ from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
 
-from callManager.views import log_sms, generate_short_token
+from callManager.views import log_sms, generate_short_token, push_notification
 import logging
 
 # Create a logger instance
@@ -38,12 +40,19 @@ def labor_request_list(request, slug):
     if hasattr(request.user, 'administrator'):
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
         manager = labor_requirement.call_time.event.company.managers.first()
+        company = labor_requirement.call_time.event.company
     elif not hasattr(request.user, 'manager'):
         return redirect('login')
     else:
         manager = request.user.manager
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
+    for labor_request in labor_requests:
+        notifications = labor_request.notifications.all()
+        for notification in notifications:
+            notification.read = True
+            notification.save()
+            push_notification(company)
     event = labor_requirement.call_time.event
     company = event.company
     workers = Worker.objects.filter(company=company).distinct()

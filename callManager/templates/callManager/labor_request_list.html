@@ -1,9 +1,9 @@
 {% extends 'callManager/base.html' %}
 {% load callman_tags %}
-{% block title %}Labor Requests - {{ labor_requirement.labor_type.name }} - CallMan{% endblock %}
+{% block title %}{{ labor_requirement.call_time.event.event_name }} - {{ labor_requirement.call_time.name }} - {{ labor_requirement.labor_type.name }}{% endblock %}
 {% block content %}
     <div class="flex justify-between">
-        <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Labor Requests for {{ labor_requirement.labor_type.name }}</h1>
+        <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">{{ labor_requirement.call_time.event.event_name }} - {{ labor_requirement.labor_type.name }}</h1>
         <a href="{% url 'event_detail' labor_requirement.call_time.event.slug %}" class="text-2xl inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
     <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
