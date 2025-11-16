@@ -391,10 +391,6 @@ def confirm_event_requests(request, slug, event_token):
                 labor_request.availability_response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
-                if response == 'no':
-                    notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
-                    notify(labor_request.id, 'Declined', notif_message)
-
                 if response == 'yes' and not labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     notif_message = f"{worker.name} Available for {event.event_name} - {call_time.name} - {labor_type.name}, Requires confirmation"
                     notify(labor_request.id, 'Available', notif_message)
@@ -450,23 +446,25 @@ def confirm_event_requests(request, slug, event_token):
                         else:
                             log_sms(company)
                             print(message_body)
-                elif response == 'no' and labor_request.is_reserved:
+                if response == 'no':
                     notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
                     notify(labor_request.id, 'Declined', notif_message)
-                    labor_request.is_reserved = False
-                    labor_request.save()
-                    confirmed_count = LaborRequest.objects.filter(
-                        labor_requirement=labor_request.labor_requirement,
-                        confirmed=True).count()
-                    if confirmed_count < labor_request.labor_requirement.fcfs_positions:
-                        available_fcfs = LaborRequest.objects.filter(
+
+                    if labor_request.is_reserved:
+                        labor_request.is_reserved = False
+                        labor_request.save()
+                        confirmed_count = LaborRequest.objects.filter(
                             labor_requirement=labor_request.labor_requirement,
-                            availability_response='yes',
-                            confirmed=False,
-                            is_reserved=False).exclude(id=labor_request.id).order_by('responded_at').first()
-                        if available_fcfs:
-                            available_fcfs.confirmed = True
-                            available_fcfs.save()
+                            confirmed=True).count()
+                        if confirmed_count < labor_request.labor_requirement.fcfs_positions:
+                            available_fcfs = LaborRequest.objects.filter(
+                                labor_requirement=labor_request.labor_requirement,
+                                availability_response='yes',
+                                confirmed=False,
+                                is_reserved=False).exclude(id=labor_request.id).order_by('responded_at').first()
+                            if available_fcfs:
+                                available_fcfs.confirmed = True
+                                available_fcfs.save()
         if sms_errors:
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
