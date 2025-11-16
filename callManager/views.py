@@ -391,6 +391,10 @@ def confirm_event_requests(request, slug, event_token):
                 labor_request.availability_response = response
                 labor_request.responded_at = timezone.now()
                 labor_request.save()
+                if response == 'no':
+                    notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
+                    notify(labor_request.id, 'Declined', notif_message)
+
                 if response == 'yes' and not labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     notif_message = f"{worker.name} Available for {event.event_name} - {call_time.name} - {labor_type.name}, Requires confirmation"
                     notify(labor_request.id, 'Available', notif_message)
