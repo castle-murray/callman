@@ -66,14 +66,14 @@
                         {% endif %}
                         
                         {% if request.user.manager %}
-                            <span href="{% url 'notifications' %}" hx-get="{% url 'notifications' %}" hx-trigger="click" hx-target="#notification-button" hx-swap="innnerHTML" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
+                            <button href="{% url 'notifications' %}" hx-get="{% url 'notifications' %}" hx-trigger="click" hx-target="#notification-button" hx-swap="innnerHTML" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
                                 <span id="notification-count" hx-get="{% url 'htmx_get_notification_count' %}" hx-trigger="load" hx-target="#notification-button" hx-swap="outerHTML">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
                                         <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
                                     </svg>
                                 </span>
-                            </span>
+                            </button>
                         {% endif %}
 
                         <button id="dark-mode-toggle" class="p-1 text-text-tertiary dark:text-dark-text-tertiary hover:text-primary dark:hover:text-dark-text-blue focus:outline-none">

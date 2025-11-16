@@ -1,48 +1,46 @@
 <!-- // notification drop down -->
-<div class="">
-    <div id="notification-dropdown" class="">
-        {% if notifications %}
-        <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark">
-            {% for notification in notifications %}
-            <li class="px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
-                <div class="flex justify-between">
-                    <div>
-                        <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}" class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}{% if not notification.read %} new{% endif %}</a>
-                    </div>
-                    <div>
-                        {% if not notification.read %}
-                        <button class="ml-2 bg-success text-dark-text-success px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover"
-                            hx-post="{% url  'notifications' %}" 
-                            hx-vals='{"action": "mark_read", "notification_id": "{{ notification.id }}"}'
-                            hx-trigger="click" 
-                            hx-target="#notification-dropdown" 
-                            hx-swap="outerHTML">Mark as Read</button>
-                        {% endif %}
-                        <button class="ml-2 bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover"
-                            hx-post="{% url  'notifications' %}"
-                            hx-vals='{"action": "delete", "notification_id": "{{ notification.id }}"}'
-                            hx-trigger="click" 
-                            hx-target="#notification-dropdown" 
-                            hx-swap="outerHTML">Clear</button>
-                    </div>
-            </li>
-            {% endfor %}
-        </ul>
-        <div class="flex justify-around">
-        <button class="w-full bg-success text-dark-text-success px-2 py-1 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover"
-            hx-post="{% url  'notifications' %}" 
-            hx-vals='{"action": "mark_all_read"}'
-            hx-trigger="click" 
-            hx-target="#notification-dropdown" 
-            hx-swap="outerHTML">Mark All as Read</button>
-        <button class="w-full bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover"
-            hx-post="{% url  'notifications' %}" 
-            hx-vals='{"action": "delete_all"}'
-            hx-trigger="click" 
-            hx-target="#notification-dropdown" 
-            hx-swap="outerHTML">Clear All</button>
-        {% else %}
-        <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="innerHTML" class="px-4 py-2">No notifications.</p>
-        {% endif %}
-    </div>
+<div class="p-4" id="notification-dropdown">
+    {% if notifications %}
+    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark">
+        {% for notification in notifications %}
+        <li class="px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
+            <div class="flex justify-between">
+                <div>
+                    <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}" class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}{% if not notification.read %} new{% endif %}</a>
+                </div>
+                <div>
+                    {% if not notification.read %}
+                    <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+                        hx-post="{% url  'notifications' %}" 
+                        hx-vals='{"action": "mark_read", "notification_id": "{{ notification.id }}"}'
+                        hx-trigger="click" 
+                        hx-target="#notification-dropdown" 
+                        hx-swap="outerHTML">Mark as Read</button>
+                    {% endif %}
+                    <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+                        hx-post="{% url  'notifications' %}"
+                        hx-vals='{"action": "delete", "notification_id": "{{ notification.id }}"}'
+                        hx-trigger="click" 
+                        hx-target="#notification-dropdown" 
+                        hx-swap="outerHTML">Clear</button>
+                </div>
+        </li>
+        {% endfor %}
+    </ul>
+    <div class="flex justify-around">
+    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+        hx-post="{% url  'notifications' %}" 
+        hx-vals='{"action": "mark_all_read"}'
+        hx-trigger="click" 
+        hx-target="#notification-dropdown" 
+        hx-swap="outerHTML">Mark All as Read</button>
+    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+        hx-post="{% url  'notifications' %}" 
+        hx-vals='{"action": "delete_all"}'
+        hx-trigger="click" 
+        hx-target="#notification-dropdown" 
+        hx-swap="outerHTML">Clear All</button>
+    {% else %}
+    <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="innerHTML" class="px-4 py-2">No notifications.</p>
+    {% endif %}
 </div>
