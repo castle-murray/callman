@@ -453,11 +453,17 @@ class PasswordResetToken(models.Model):
         return f"Password reset token for {self.user.username}"
 
 class Notifications(models.Model):
+    RESPONSE_CHOICES = [
+        ('Available', 'Available'),
+        ('Confirmed', 'Confirmed'),
+        ('Declined', 'Declined'),
+    ]
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='notifications')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='notifications')
     call_time = models.ForeignKey(CallTime, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
     labor_requirement = models.ForeignKey(LaborRequirement, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
     labor_request = models.ForeignKey(LaborRequest, on_delete=models.CASCADE, related_name='notifications')
+    response = models.CharField(max_length=20, choices=RESPONSE_CHOICES, null=True, blank=True)
     message = models.TextField()
     sent_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)

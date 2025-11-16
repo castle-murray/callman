@@ -1,12 +1,27 @@
 <!-- // notification drop down -->
-<div class="p-4" id="notification-dropdown">
+<div class="absolute top-16 left-1/2 -translate-x-1/2 mt-2 border-secondary border-solid border-2 bg-white dark:bg-dark-card-bg rounded-lg shadow-md p-4 w-full lg:w-auto lg:mx-auto max-h-3/4" 
+    id="notification-dropdown">
     {% if notifications %}
-    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark">
+    <div class="flex justify-center">
+        <div>
+    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-auto">
         {% for notification in notifications %}
         <li class="px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
             <div class="flex justify-between">
                 <div>
-                    <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}" class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}{% if not notification.read %} new{% endif %}</a>
+                    <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}">
+                    {% if notification.response == 'Declined' %}
+                    <p class="text-sm text-danger dark:text-red-400">{{ notification.response }}</p>
+                    {% elif notification.response == 'Confirmed' %}
+                    <p class="text-sm text-success dark:text-green-400">{{ notification.response }}</p>
+                    {% elif notification.response == 'Available' %}
+                    <p class="text-sm font-bold text-teal dark:text-dark-teal">{{ notification.response }}</p>
+                    {% endif %}
+
+                    <p class="text-sm text-text-secondary dark:text-dark-text-secondary">{{ notification.sent_at|date:"F j, Y, P" }}</p>
+                </div>
+                <div>
+                    <span class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}</span></a>
                 </div>
                 <div>
                     {% if not notification.read %}
@@ -15,7 +30,7 @@
                         hx-vals='{"action": "mark_read", "notification_id": "{{ notification.id }}"}'
                         hx-trigger="click" 
                         hx-target="#notification-dropdown" 
-                        hx-swap="outerHTML">Mark as Read</button>
+                        hx-swap="outerHTML">Read</button>
                     {% endif %}
                     <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
                         hx-post="{% url  'notifications' %}"
@@ -27,7 +42,7 @@
         </li>
         {% endfor %}
     </ul>
-    <div class="flex justify-around">
+    <div class="flex justify-around mt-3">
     <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
         hx-post="{% url  'notifications' %}" 
         hx-vals='{"action": "mark_all_read"}'
@@ -40,7 +55,20 @@
         hx-trigger="click" 
         hx-target="#notification-dropdown" 
         hx-swap="outerHTML">Clear All</button>
+    </div>
+    </div>
+    <div class="flex-shrink-0 ml-5">
+
+    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+        hx-get="{% url 'htmx_clear' %}" 
+        
+        hx-trigger="click" 
+        hx-target="#notification-dropdown" 
+        hx-swap="outerHTML">X</button>
+    </div>
+    </div>
     {% else %}
-    <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="innerHTML" class="px-4 py-2">No notifications.</p>
+    <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="outerHTML" class="px-4 py-2">No notifications.</p>
     {% endif %}
+
 </div>

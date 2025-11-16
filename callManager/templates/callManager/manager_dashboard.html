@@ -5,11 +5,11 @@
 <h1 class="text-3xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">{{ company.name }} Dashboard</h1>
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <div class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Total Events</h2>
+        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Upcoming Events</h2>
         <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ total_events }}</p>
     </div>
     <a href="{% url 'pending_requests' %}" class="bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
-        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Pending Requests</h2>
+        <h2 class="text-lg font-semibold text-text-tertiary dark:text-dark-text-tertiary">Pending</h2>
         <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ pending_requests }}</p>
     </a>
     <a href="{% url 'declined_requests' %}" class="block bg-card-bg p-4 rounded-lg shadow dark:bg-dark-card-bg dark:shadow-dark-shadow">
@@ -36,9 +36,9 @@
 </ul>
 {% endif %}
 <div class="mb-6 flex space-x-4">
-    <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
+    <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">New Event</a>
     <a href="{% url 'view_workers' %}" class="bg-primary {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Contacts</a>
-    <a href="{% url 'view_skills' %}" class="bg-primary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Skills/Jobs</a>
+    <a href="{% url 'view_skills' %}" class="bg-primary {% if not has_skills %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Skills</a>
     <a href="{% url 'steward_invite' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Invite Steward</a>
     <a href="{% url 'location_profiles' %}" class="bg-primary {% if not has_locations %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-yellow-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Locations</a>
 </div>

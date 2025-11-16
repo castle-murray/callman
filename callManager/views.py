@@ -393,10 +393,12 @@ def confirm_event_requests(request, slug, event_token):
                 labor_request.save()
                 if response == 'yes' and not labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     notif_message = f"{worker.name} Available for {event.event_name} - {call_time.name} - {labor_type.name}, Requires confirmation"
+                    notify(labor_request.id, 'Available', notif_message)
                     print(notif_message)
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ENABLED == 'enabled' else None
                 if response == 'yes' and labor_request.labor_requirement.fcfs_positions > 0 and not labor_request.is_reserved:
                     notif_message = f"{worker.name} confirmed for {event.event_name} - {call_time.name} - {labor_type.name}"
+                    notify(labor_request.id, 'Confirmed', notif_message)
                     confirmed_count = LaborRequest.objects.filter(
                         labor_requirement=labor_request.labor_requirement,
                         confirmed=True).count()
@@ -423,6 +425,7 @@ def confirm_event_requests(request, slug, event_token):
                                 print(message_body)
                 elif response == 'yes' and labor_request.is_reserved:
                     notif_message = f"{worker.name} confirmed for {event.event_name} - {call_time.name} - {labor_type.name}"
+                    notify(labor_request.id, 'Confirmed', notif_message)
                     labor_request.confirmed = True
                     labor_request.save()
                     call_time = labor_request.labor_requirement.call_time
@@ -445,6 +448,7 @@ def confirm_event_requests(request, slug, event_token):
                             print(message_body)
                 elif response == 'no' and labor_request.is_reserved:
                     notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
+                    notify(labor_request.id, 'Declined', notif_message)
                     labor_request.is_reserved = False
                     labor_request.save()
                     confirmed_count = LaborRequest.objects.filter(
@@ -459,8 +463,6 @@ def confirm_event_requests(request, slug, event_token):
                         if available_fcfs:
                             available_fcfs.confirmed = True
                             available_fcfs.save()
-                if notif_message:
-                    notify(labor_request.id, notif_message)
         if sms_errors:
             messages.warning(request, f"Some SMS failed: {', '.join(sms_errors)}")
         context = {
@@ -576,7 +578,7 @@ def dashboard_redirect(request):
         return redirect('user_profile')
 
 
-def notify(labor_request_id, message):
+def notify(labor_request_id, response, message):
 
     labor_request = get_object_or_404(LaborRequest, id=labor_request_id)
     labor_requirement = labor_request.labor_requirement
@@ -591,6 +593,7 @@ def notify(labor_request_id, message):
         labor_requirement=labor_requirement,
         labor_request=labor_request,
         message=message,
+        response=response,
         read=False,
     )
     notification.save()
@@ -664,4 +667,4 @@ def htmx_get_notification_count(request):
     return render(request, template, context)
 
 def htmx_clear(request):
-    return HttpResponse("")
+    return HttpResponse("<div id='notification-dropdown'></div>")

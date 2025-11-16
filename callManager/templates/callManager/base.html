@@ -66,7 +66,7 @@
                         {% endif %}
                         
                         {% if request.user.manager %}
-                            <button href="{% url 'notifications' %}" hx-get="{% url 'notifications' %}" hx-trigger="click" hx-target="#notification-button" hx-swap="innnerHTML" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
+                            <button href="{% url 'notifications' %}" hx-get="{% url 'notifications' %}" hx-trigger="click" hx-target="#notification-button" hx-swap="innerHTML" id="notification-button" class="px-3 py-1 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
                                 <span id="notification-count" hx-get="{% url 'htmx_get_notification_count' %}" hx-trigger="load" hx-target="#notification-button" hx-swap="outerHTML">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
@@ -91,7 +91,7 @@
 
 
         <main class="lg:container lg:mx-auto py-6 ml-2 lg:px-6 lg:flex-grow">
-            <div id="notification-dropdown" class="ease-in-out"></div>
+        <div id="notification-dropdown"></div>
             {% block content %}{% endblock %}
         </main>
 
