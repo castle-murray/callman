@@ -6,7 +6,7 @@
     {% if notifications %}
     <div class="flex justify-stretch flex-grow h-full">
         <div class="flex flex-col flex-grow min-h-0">
-    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-scroll flex-grow max-h-svh">
+    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-auto flex-grow custom-scrollbar">
         {% for notification in notifications %}
         <li class="px-2 lg:px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
             

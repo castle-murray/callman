@@ -157,6 +157,29 @@ module.exports = {
             },
             '.dark [type="month"]::-webkit-calendar-picker-indicator': {
                 filter: 'invert(1)'
+            },
+            // Custom scrollbar styles
+            '.custom-scrollbar::-webkit-scrollbar': {
+                width: '6px',
+            },
+            '.custom-scrollbar::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f5f9', // slate-100
+            },
+            '.custom-scrollbar::-webkit-scrollbar-thumb': {
+                backgroundColor: '#cbd5e1', // slate-300
+                borderRadius: '3px',
+            },
+            '.custom-scrollbar::-webkit-scrollbar-thumb:hover': {
+                backgroundColor: '#94a3b8', // slate-400
+            },
+            '.dark .custom-scrollbar::-webkit-scrollbar-track': {
+                backgroundColor: '#374151', // gray-700
+            },
+            '.dark .custom-scrollbar::-webkit-scrollbar-thumb': {
+                backgroundColor: '#6b7280', // gray-500
+            },
+            '.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover': {
+                backgroundColor: '#9ca3af', // gray-400
             }
         });
     }
