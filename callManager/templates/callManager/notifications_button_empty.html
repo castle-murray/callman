@@ -3,6 +3,7 @@
     hx-trigger="click" 
     hx-target="#notification-dropdown" 
     hx-swap="outerHTML" 
+    onclick="event.stopPropagation()"
     id="notification-dropdown" 
     class="px-3 py-1 mx-2 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
     <div id="notification-count"

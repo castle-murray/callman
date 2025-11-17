@@ -43,13 +43,13 @@
                                 <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin</a></li>
                             {% endif %}
                             {% if request.user.manager %}
-                                <li><a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Manager</a></li>
+                                <li><a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a></li>
                             {% endif %}
                             {% if request.user.steward %}
-                                <li><a href="{% url 'steward_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Steward</a></li>
+                                <li><a href="{% url 'steward_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Steward Dashboard</a></li>
                             {% endif %}
                             {% if user.is_authenticated and user.workers.exists %}
-                                <li><a href="{% url 'user_profile' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">User Profile</a></li>
+                                <li><a href="{% url 'user_profile' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Profile</a></li>
                             {% endif %}
 
                             <form method="post" action="{% url 'logout' %}" style="display:inline;">
@@ -278,6 +278,15 @@
                 if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== btn) {
                     menu.classList.add('hidden');
                 }
+            // Close notification dropdown when clicking anywhere outside
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            if (notificationDropdown && notificationDropdown.innerHTML.trim() !== '' && 
+                !notificationDropdown.contains(e.target) && e.target !== notificationBtn) {
+                htmx.ajax('GET', '{% url "htmx_clear" %}', {
+                    target: '#notification-dropdown',
+                    swap: 'outerHTML'
+                });
+            }
             });
         {% endif %}
         </script>

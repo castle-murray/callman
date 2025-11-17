@@ -1,14 +1,17 @@
 <!-- // notification drop down -->
-<div class="absolute top-16 left-1/2 -translate-x-1/2 mt-2 border-secondary border-solid border-2 bg-white dark:bg-dark-card-bg rounded-lg shadow-md p-4 w-full lg:w-auto lg:mx-auto max-h-3/4" 
+<div class="absolute top-16 left-1/2 -translate-x-1/2 mt-2 border-secondary border-solid border-2 bg-white dark:bg-dark-card-bg rounded-lg shadow-md p-4 w-full lg:w-auto lg:mx-auto max-h-1/2" 
     id="notification-dropdown">
+    
+<h1 class="sr-only">Notifications</h1>
     {% if notifications %}
-    <div class="flex justify-between">
-        <div>
-    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-auto">
+    <div class="flex justify-stretch flex-grow h-full">
+        <div class="flex flex-col flex-grow min-h-0">
+    <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-scroll flex-grow max-h-svh">
         {% for notification in notifications %}
-        <li class="px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
-            <div class="flex justify-between">
-                <div>
+        <li class="px-2 lg:px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
+            
+            <div class="flex flex-grow-0">
+                <div class="flex flex-col w-1/6 mr-1">
                     <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}">
                     {% if notification.response == 'Declined' %}
                     <p class="text-sm text-danger dark:text-red-400">{{ notification.response }}</p>
@@ -18,12 +21,12 @@
                     <p class="text-sm font-bold text-teal dark:text-dark-teal">{{ notification.response }}</p>
                     {% endif %}
 
-                    <p class="text-sm text-text-secondary dark:text-dark-text-secondary">{{ notification.sent_at|date:"F j, Y, P" }}</p>
+                    <p class="text-sm text-text-secondary dark:text-dark-text-secondary">{{ notification.sent_at|date:"m/d H:i" }}</p>
                 </div>
-                <div>
+                <div class="flex flex-col w-full">
                     <span class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}</span></a>
                 </div>
-                <div>
+                <div class="flex flex-col">
                     {% if not notification.read %}
                     <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
                         hx-post="{% url  'notifications' %}" 
@@ -57,9 +60,9 @@
         hx-swap="outerHTML">Clear All</button>
     </div>
     </div>
-    <div class="flex-shrink-0 ml-5">
+    <div class="flex-shrink-0 ml-5 w-12">
 
-    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+    <button class="w-12 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
         hx-get="{% url 'htmx_clear' %}" 
         
         hx-trigger="click" 
