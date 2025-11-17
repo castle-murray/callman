@@ -253,17 +253,32 @@
                 connect();
               })(); 
             // Simple Alpine-style toggle (no extra library required)
-              const btn   = document.getElementById('mobile-menu-toggle');
-              const menu  = document.getElementById('mobile-menu');
+            const btn = document.getElementById('mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const notificationBtn = document.getElementById('notification-button');
 
-              btn?.addEventListener('click', () => {
+            btn?.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent document click handler from firing
                 menu.classList.toggle('hidden');
-              });
+                
+                // Close notification dropdown when opening mobile menu
+                if (!menu.classList.contains('hidden')) {
+                    const notificationDropdown = document.getElementById('notification-dropdown');
+                    if (notificationDropdown && notificationDropdown.innerHTML.trim() !== '') {
+                        htmx.ajax('GET', '{% url "htmx_clear" %}', {
+                            target: '#notification-dropdown',
+                            swap: 'outerHTML'
+                        });
+                    }
+                }
+            });
 
-              // Close menu when clicking a link (optional but nice UX)
-              menu.querySelectorAll('a, button[type="submit"]').forEach(el => {
-                el.addEventListener('click', () => menu.classList.add('hidden'));
-              });
+            // Close mobile menu when clicking anywhere outside
+            document.addEventListener('click', (e) => {
+                if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.add('hidden');
+                }
+            });
         {% endif %}
         </script>
 
