@@ -634,8 +634,9 @@ def notifications(request):
             notification.save()
             push_notification(company)
 
-        if action == 'mark_all_read':
-            notifications.update(read=True)
+        if action == 'clear_read':
+            read_notifications = notifications.filter(read=True)
+            read_notifications.delete()
             push_notification(company)
         if action == 'delete':
             notification_id = request.POST.get('notification_id')

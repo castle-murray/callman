@@ -27,14 +27,6 @@
                     <span class="text-text-primary dark:text-dark-text-primary">{{ notification.message }}</span></a>
                 </div>
                 <div class="flex flex-col">
-                    {% if not notification.read %}
-                    <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
-                        hx-post="{% url  'notifications' %}" 
-                        hx-vals='{"action": "mark_read", "notification_id": "{{ notification.id }}"}'
-                        hx-trigger="click" 
-                        hx-target="#notification-dropdown" 
-                        hx-swap="outerHTML">Read</button>
-                    {% endif %}
                     <button class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
                         hx-post="{% url  'notifications' %}"
                         hx-vals='{"action": "delete", "notification_id": "{{ notification.id }}"}'
@@ -46,23 +38,24 @@
         {% endfor %}
     </ul>
     <div class="flex justify-around mt-3">
-    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
-        hx-post="{% url  'notifications' %}" 
-        hx-vals='{"action": "mark_all_read"}'
-        hx-trigger="click" 
-        hx-target="#notification-dropdown" 
-        hx-swap="outerHTML">Mark All as Read</button>
-    <button class="w-full bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+    
+    <button class="w-auto bg-primary text-dark-text-primary px-5 py-1 rounded-lg hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover w-auto"
         hx-post="{% url  'notifications' %}" 
         hx-vals='{"action": "delete_all"}'
         hx-trigger="click" 
         hx-target="#notification-dropdown" 
         hx-swap="outerHTML">Clear All</button>
+    <button class="w-auto bg-primary text-dark-text-primary px-5 py-1 rounded-lg hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+        hx-post="{% url  'notifications' %}" 
+        hx-vals='{"action": "clear_read"}'
+        hx-trigger="click" 
+        hx-target="#notification-dropdown" 
+        hx-swap="outerHTML">Clear Read</button>
     </div>
     </div>
     <div class="flex-shrink-0 ml-5 w-12">
 
-    <button class="w-12 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
+    <button class="w-auto bg-primary text-dark-text-primary px-3 py-1 rounded-full hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
         hx-get="{% url 'htmx_clear' %}" 
         
         hx-trigger="click" 

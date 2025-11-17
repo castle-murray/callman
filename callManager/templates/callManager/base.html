@@ -40,13 +40,13 @@
                                 shadow-lg md:shadow-none p-4 pl-6 md:p-0  md:space-y-0
                                 transition-all duration-300 ease-in-out">
                             {% if request.user.administrator %}
-                                <li><a href="{% url 'admin_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin</a></li>
+                                <li><a href="{% url 'admin_dashboard' %}" class="mr-4 text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Admin</a></li>
                             {% endif %}
                             {% if request.user.manager %}
-                                <li><a href="{% url 'manager_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a></li>
+                                <li><a href="{% url 'manager_dashboard' %}" class="mr-4 text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Dashboard</a></li>
                             {% endif %}
                             {% if request.user.steward %}
-                                <li><a href="{% url 'steward_dashboard' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Steward Dashboard</a></li>
+                                <li><a href="{% url 'steward_dashboard' %}" class="mr-4 text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Steward Dashboard</a></li>
                             {% endif %}
                             {% if user.is_authenticated and user.workers.exists %}
                                 <li><a href="{% url 'user_profile' %}" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Profile</a></li>
