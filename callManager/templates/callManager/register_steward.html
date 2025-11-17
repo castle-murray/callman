@@ -3,7 +3,7 @@
 {% block content %}
     <div class="max-w-md mx-auto p-6 bg-card-bg rounded-lg shadow-md dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <h1 class="text-2xl font-bold mb-4 text-text-heading dark:text-dark-text-primary">Register as Steward</h1>
-        <p class="text-text-primary mb-4 dark:text-dark-text-primary">Join {{ invitation.company.name }} as a steward, {{ invitation.worker.name }}.</p>
+        <p class="text-text-primary mb-4 dark:text-dark-text-primary"> You have been invited to join {{ invitation.company.name }} as a steward.</p>
         <form method="post" class="flex flex-col gap-4">
             {% csrf_token %}
             <div>
@@ -31,7 +31,7 @@
                 {% endif %}
             </div>
             <div>
-                <input type="tel" name="phone_number" value="{{ form.phone_number.value|default:'' }}" placeholder="Phone Number" required class="w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                <input type="tel" hidden name="phone_number" value="{{ form.phone_number.value|default:'' }}">
                 {% if form.phone_number.errors %}
                     <p class="text-text-red dark:text-dark-text-red text-sm mt-1">{{ form.phone_number.errors|join:", " }}</p>
                 {% endif %}

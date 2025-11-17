@@ -22,11 +22,21 @@
             <p class="text-2xl font-bold text-text-blue dark:text-dark-text-blue">{{ sent_messages }}</p>
         </a>
     </div>
-    <div class="mb-6 flex space-x-4">
-        <a href="{% url 'create_event' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Create New Event</a>
-        <a href="{% url 'view_skills' %}" class="bg-secondary text-dark-text-primary p-2 rounded hover:bg-secondary-hover dark:bg-dark-secondary dark:hover:bg-dark-secondary-hover">Edit/Add Skills</a>
-        <a href="{% url 'view_workers' %}" class="bg-purple text-dark-text-primary p-2 rounded hover:bg-purple-hover dark:bg-dark-purple dark:hover:bg-dark-purple-hover">Edit/Add Workers</a>
-        <a href="{% url 'import_workers' %}" class="bg-indigo text-dark-text-primary p-2 rounded hover:bg-indigo-hover dark:bg-dark-indigo dark:hover:bg-dark-indigo-hover">Import Contacts</a>
+    <div class="mb-6">
+        <div class="relative">
+            <button id="actions-dropdown-toggle" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover flex items-center">
+                Actions
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="actions-dropdown" class="hidden absolute left-0 mt-2 w-48 bg-card-bg dark:bg-dark-card-bg rounded-lg shadow-lg border border-gray-200 dark:border-dark-border z-10">
+                <a href="{% url 'create_event' %}" class="block px-4 py-2 text-text-tertiary dark:text-dark-text-tertiary hover:bg-gray-100 dark:hover:bg-dark-border-dark rounded-t-lg">Create New Event</a>
+                <a href="{% url 'view_skills' %}" class="block px-4 py-2 text-text-tertiary dark:text-dark-text-tertiary hover:bg-gray-100 dark:hover:bg-dark-border-dark">Edit/Add Skills</a>
+                <a href="{% url 'view_workers' %}" class="block px-4 py-2 text-text-tertiary dark:text-dark-text-tertiary hover:bg-gray-100 dark:hover:bg-dark-border-dark">Edit/Add Workers</a>
+                <a href="{% url 'import_workers' %}" class="block px-4 py-2 text-text-tertiary dark:text-dark-text-tertiary hover:bg-gray-100 dark:hover:bg-dark-border-dark rounded-b-lg">Import Contacts</a>
+            </div>
+        </div>
     </div>
     <div class="mb-6">
         <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Invite New Owner</h2>

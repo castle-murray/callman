@@ -44,7 +44,7 @@
                         <form method="post" action="{% url 'delete_event' event.slug %}" class="inline" hx-disinherit="*">
                             {% csrf_token %}
                             <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover data-no-nav" 
-                                    onclick="return confirm('Are you sure you want to delete this event? This will also delete associated call times and labor requirements.');">Delete</button>
+                                    onclick="return confirm('Are you sure you want to delete this event? This will also delete associated call times and jobs. This cannot be undone.');">Delete</button>
                         </form>
                         {% if not event.canceled %}
                             <button type="submit" 
@@ -52,7 +52,7 @@
                                     hx-target="#events-list"
                                     hx-swap="outerHTML"
                                     hx-trigger="click"
-                                    hx-confirm="Are you sure you want to cancel this event? This will notify all scheduled workers of the cancellation."
+                                    hx-confirm="Are you sure you want to cancel this event? This will notify all scheduled workers of the cancellation. This cannot be undone."
                                     class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Cancel Event</button>
                         {% endif %}
                     </div>
