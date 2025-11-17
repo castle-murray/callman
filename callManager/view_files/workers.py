@@ -280,7 +280,7 @@ def import_workers(request):
             messages.success(request, f"Imported {imported} workers.")
             if errors:
                 messages.warning(request, f"Encountered {errors} import errors.")
-            return render(request, 'callManager/import_workers.html', {'form': form, 'qr_url': qr_url, 'is_mobile': is_mobile})
+            return redirect('view_workers')
     else:
         form = WorkerImportForm()
     return render(request, 'callManager/import_workers.html', {'form': form, 'qr_url': qr_url, 'is_mobile': is_mobile})

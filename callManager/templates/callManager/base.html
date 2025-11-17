@@ -290,22 +290,63 @@
             });
 
         {% endif %}
-            document.addEventListener('DOMContentLoaded', function() {
-                const dropdownToggle = document.getElementById('actions-dropdown-toggle');
-                const dropdown = document.getElementById('actions-dropdown');
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownToggle = document.getElementById('actions-dropdown-toggle');
+            const dropdown = document.getElementById('actions-dropdown');
+            
+            if (dropdownToggle && dropdown) {
+                let currentIndex = -1;
+                const menuItems = dropdown.querySelectorAll('a, button');
                 
-                dropdownToggle?.addEventListener('click', (e) => {
+                dropdownToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
                     dropdown.classList.toggle('hidden');
+                    if (!dropdown.classList.contains('hidden')) {
+                        currentIndex = -1;
+                        menuItems.forEach(item => item.classList.remove('bg-gray-100', 'dark:bg-dark-border-dark'));
+                    }
                 });
+                
+                // Keyboard navigation
+                document.addEventListener('keydown', (e) => {
+                    if (!dropdown.classList.contains('hidden')) {
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            currentIndex = (currentIndex + 1) % menuItems.length;
+                            updateHighlight();
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            currentIndex = currentIndex <= 0 ? menuItems.length - 1 : currentIndex - 1;
+                            updateHighlight();
+                        } else if (e.key === 'Enter' && currentIndex >= 0) {
+                            e.preventDefault();
+                            menuItems[currentIndex].click();
+                        } else if (e.key === 'Escape') {
+                            dropdown.classList.add('hidden');
+                            currentIndex = -1;
+                        }
+                    }
+                });
+                
+                function updateHighlight() {
+                    menuItems.forEach((item, index) => {
+                        if (index === currentIndex) {
+                            item.classList.add('bg-gray-100', 'dark:bg-dark-border-dark');
+                        } else {
+                            item.classList.remove('bg-gray-100', 'dark:bg-dark-border-dark');
+                        }
+                    });
+                }
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
                     if (!dropdown.classList.contains('hidden') && !dropdown.contains(e.target) && e.target !== dropdownToggle) {
                         dropdown.classList.add('hidden');
+                        currentIndex = -1;
                     }
                 });
-            });
+            }
+        });
         </script>
 
 
