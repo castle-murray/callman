@@ -1,7 +1,5 @@
 from django.urls import path
 from callManager import views
-from django.urls import re_path
-from callManager.consumers import NotificationConsumer
 from callManager.view_files.dashboards import admin_dashboard, manager_dashboard, steward_dashboard, owner_dashboard
 from callManager.view_files import (
         invites,
@@ -46,6 +44,7 @@ urlpatterns = [
     path('info/add/<slug:slug>/', workers.worker_self_add, name='worker_self_add'),
     path('info/add/qr/<slug:slug>/', workers.worker_self_add_qr, name='worker_self_add_qr'),
     path('worker/history/<slug:slug>/', workers.worker_history, name='worker_history'),
+    path('contacts/clear-unused/', workers.clear_unused_contacts, name='clear_unused_contacts'),
 
     #call_times
     path('call/<slug:slug>/add-labor/', call_times.add_labor_to_call, name='add_labor_to_call'),

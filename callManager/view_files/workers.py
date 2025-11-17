@@ -163,6 +163,7 @@ def view_workers(request):
                 return redirect(redirect_url)
             else:
                 messages.error(request, "Failed to add worker. Please check the form errors.")
+
     form = WorkerForm(company=manager.company)
     labor_types = LaborType.objects.filter(company=manager.company)
     context = {
@@ -438,3 +439,12 @@ def add_worker(request):
     else:
         form = WorkerForm(company=company)
     return render(request, 'callManager/add_worker.html', {'form': form})
+
+
+@login_required
+def clear_unused_contacts(request):
+    company = request.user.manager.company
+    workers = Worker.objects.filter(company=company, labor_requests__isnull=True)
+    workers.delete()
+    messages.success(request, "Unused contacts deleted.")
+    return redirect('view_workers')

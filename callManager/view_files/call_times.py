@@ -222,6 +222,7 @@ def call_time_request_list(request, slug):
                 if action == 'confirm':
                     call_time = labor_request.labor_requirement.call_time
                     if worker.sms_consent and not worker.stop_sms and worker.phone_number:
+                        sms_errors = []
                         if labor_request.sms_sent:
                             message_body = (
                                     f"confirmed {labor_request.labor_requirement.labor_type}"
