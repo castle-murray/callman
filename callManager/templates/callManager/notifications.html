@@ -53,6 +53,7 @@
         hx-swap="outerHTML">Clear Read</button>
     </div>
     </div>
+    <!--
     <div class="flex-shrink-0 ml-5 w-12">
 
     <button class="w-auto bg-primary text-dark-text-primary px-3 py-1 rounded-full hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover"
@@ -62,6 +63,7 @@
         hx-target="#notification-dropdown" 
         hx-swap="outerHTML">X</button>
     </div>
+    -->
     </div>
     {% else %}
     <p hx-get="{% url 'htmx_clear' %}" hx-trigger="load delay:2s" hx-target="#notification-dropdown" hx-swap="outerHTML" class="px-4 py-2">No notifications.</p>

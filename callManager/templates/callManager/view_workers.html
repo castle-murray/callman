@@ -6,7 +6,7 @@
         <div class="flex-grow">
             <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">Workers</h1>
         </div>
-        <div class="flex-shrink-0">
+        <div class="flex flex-col lg:flex-row flex-shrink-0">
             <a href="{% url 'worker_self_add_qr' company.slug %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Worker Self Add QR</a>
             <a href="{% url 'import_workers' %}" class="bg-primary {% if not has_workers %} ring-2 ring-red-500 {% endif %} text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Import Phone Contacts</a>
             <a href="{% url 'clear_unused_contacts' %}" class="bg-danger text-dark-text-danger p-2 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Clear Unused Contacts</a>

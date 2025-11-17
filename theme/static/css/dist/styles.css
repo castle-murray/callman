@@ -2272,6 +2272,10 @@ select {
     flex-grow: 1;
   }
 
+  .lg\:flex-row {
+    flex-direction: row;
+  }
+
   .lg\:px-4 {
     padding-left: 1rem;
     padding-right: 1rem;
