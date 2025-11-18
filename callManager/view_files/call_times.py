@@ -43,7 +43,7 @@ from callManager.forms import (
         LocationProfileForm,
         AddWorkerForm
         )
-from callManager.views import log_sms, send_message
+from callManager.views import generate_short_token, log_sms, send_message
 # Django imports
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.http import base64

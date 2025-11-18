@@ -153,7 +153,7 @@ def event_detail(request, slug):
         elif confirmed >= needed:
             display_text = f"<span class='text-text-green dark:text-dark-text-green'>{confirmed} filled</span>"
         else:
-            display_text = f"""{needed} (<span class='px-2 py-1 rounded-full bg-yellow dark:bg-dark-yellow text-secondary dark:text-text-primary' data-tooltip='Pending'>{pending}</span>, 
+            display_text = f"""{needed} (<span class='px-2 py-1 rounded-full bg-yellow dark:bg-dark-yellow text-secondary dark:text-text-primary' data-tooltip='Pending'>{pending}</span>,
                                          <span class='px-2 py-1 rounded-full bg-bg-available dark:bg-dark-bg-available text-secondary dark:text-dark-text-primary' data-tooltip='Available'>{available}</span>, 
                                          <span class='px-2 py-1 rounded-full bg-success dark:bg-dark-success text-secondary dark:text-dark-text-primary' data-tooltip='Confirmed'>{confirmed}</span>, 
                                          <span class='px-2 py-1 rounded-full bg-danger dark:bg-dark-danger text-secondary dark:text-dark-text-primary' data-tooltip='Declined'>{declined}</span>)"""
