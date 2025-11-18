@@ -113,7 +113,7 @@ module.exports = {
                 'dark-indigo-hover': '#4338ca', // indigo-700
                 'dark-teal': '#0d9488',       // teal-600
                 'dark-teal-hover': '#0f766e', // teal-700
-                'dark-yellow': '#ca8a04',     // yellow-600
+                'dark-yellow': '#D69406',     // yellow-600
                 'dark-yellow-hover': '#a16207', // yellow-700
                 'dark-border': '#4b5563',     // gray-600
                 'dark-border-dark': '#374151', // gray-700

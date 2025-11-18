@@ -130,6 +130,7 @@ def event_detail(request, slug):
     labor_requests = LaborRequest.objects.filter(labor_requirement__call_time__event=event).values('labor_requirement_id').annotate(
         pending_count=Count('id', filter=Q(requested=True) & Q(availability_response__isnull=True)),
         confirmed_count=Count('id', filter=Q(confirmed=True)),
+        available_count=Count('id', filter=Q(availability_response='yes') & Q(confirmed=False)),
         rejected_count=Count('id', filter=Q(availability_response='no'))
     )
     labor_counts = {}
@@ -137,25 +138,30 @@ def event_detail(request, slug):
         lr_id = lr.id
         pending = next((item['pending_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
         confirmed = next((item['confirmed_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
-        rejected = next((item['rejected_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
+        available = next((item['available_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0) 
+        declined = next((item['rejected_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
         needed = lr.needed_labor
         non_rejected = pending + confirmed
         if non_rejected > needed:
             overbooked = non_rejected - needed
             if confirmed >= needed:
-                display_text = f"{confirmed} filled"
+                display_text = f"<span class='text-green dark:text-dark-text-green'>{confirmed} filled</span>"
                 if overbooked > 0:
                     display_text += f", overbooked by {overbooked}"
             else:
                 display_text = f"{needed} needed, overbooked by {overbooked} pending"
         elif confirmed >= needed:
-            display_text = f"{confirmed} filled"
+            display_text = f"<span class='text-text-green dark:text-dark-text-green'>{confirmed} filled</span>"
         else:
-            display_text = f"{needed} needed ({pending} pending, {confirmed} confirmed, {rejected} rejected)"
+            display_text = f"""{needed} (<span class='px-2 py-1 rounded-full bg-yellow dark:bg-dark-yellow text-secondary dark:text-text-primary' data-tooltip='Pending'>{pending}</span>, 
+                                         <span class='px-2 py-1 rounded-full bg-bg-available dark:bg-dark-bg-available text-secondary dark:text-dark-text-primary' data-tooltip='Available'>{available}</span>, 
+                                         <span class='px-2 py-1 rounded-full bg-success dark:bg-dark-success text-secondary dark:text-dark-text-primary' data-tooltip='Confirmed'>{confirmed}</span>, 
+                                         <span class='px-2 py-1 rounded-full bg-danger dark:bg-dark-danger text-secondary dark:text-dark-text-primary' data-tooltip='Declined'>{declined}</span>)"""
         labor_counts[lr_id] = {
             'pending': pending,
             'confirmed': confirmed,
-            'rejected': rejected,
+            'available': available,
+            'declined': declined,
             'display_text': display_text,
             'labor_requirement': lr
         }
