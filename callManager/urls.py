@@ -12,6 +12,7 @@ from callManager.view_files import (
         labor_requests,
         call_times,
         workers,
+        profile_views,
         )
 
 urlpatterns = [
@@ -57,6 +58,7 @@ urlpatterns = [
     path('call/time-sheet-row/<int:id>/', call_times.htmx_time_sheet_row, name='htmx_time_sheet_row'),
     path('call/confirm-time-change/<uuid:token>/', call_times.confirm_time_change, name='confirm_time_change'),
     path('call/confirmations/<slug:slug>/', call_times.call_time_confirmations, name='call_time_confirmations'),
+    path('call/<slug:slug>/send-reminder/', call_times.send_reminder, name='send_reminder'),
 
     #labor requests
     path('labor/<slug:slug>/requests/', labor_requests.labor_request_list, name='labor_request_list'),
@@ -121,12 +123,13 @@ urlpatterns = [
     
     #login/profile
     path('login/', loginviews.CustomLoginView.as_view(), name='login'),
-    path('user-profile/', loginviews.user_profile, name='user_profile'),
     path('auto-login/<uuid:token>/', loginviews.auto_login, name='auto_login'),
     path('reset-password/<uuid:token>/', loginviews.reset_password, name='reset_password'),
     path('forgot-password/', loginviews.forgot_password, name='forgot_password'),
 
-
+    #user profile
+    path('user-profile/', profile_views.user_profile, name='user_profile'),
+    
     #notifications
     path('notifications/', views.notifications, name='notifications'),
     path('htmx-get-notification-count/', views.htmx_get_notification_count, name='htmx_get_notification_count'),

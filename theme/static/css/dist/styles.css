@@ -868,10 +868,6 @@ select {
   inset: 0px;
 }
 
-.inset-4 {
-  inset: 1rem;
-}
-
 .-top-2 {
   top: -0.5rem;
 }
@@ -1367,7 +1363,7 @@ select {
 
 .bg-bg-available {
   --tw-bg-opacity: 1;
-  background-color: rgb(224 242 254 / var(--tw-bg-opacity, 1));
+  background-color: rgb(173 223 255 / var(--tw-bg-opacity, 1));
 }
 
 .bg-blue-500 {
@@ -1779,11 +1775,6 @@ select {
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
-.text-dark-shadow {
-  --tw-text-opacity: 1;
-  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
-}
-
 .opacity-100 {
   opacity: 1;
 }
@@ -1812,23 +1803,13 @@ select {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
-.shadow-slate-800 {
-  --tw-shadow-color: #1e293b;
+.shadow-neutral-400 {
+  --tw-shadow-color: #a3a3a3;
   --tw-shadow: var(--tw-shadow-colored);
 }
 
-.shadow-slate-500 {
-  --tw-shadow-color: #64748b;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.shadow-slate-400 {
-  --tw-shadow-color: #94a3b8;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.shadow-slate-300 {
-  --tw-shadow-color: #cbd5e1;
+.shadow-neutral-500 {
+  --tw-shadow-color: #737373;
   --tw-shadow: var(--tw-shadow-colored);
 }
 
@@ -1837,18 +1818,8 @@ select {
   --tw-shadow: var(--tw-shadow-colored);
 }
 
-.shadow-neutral-600 {
-  --tw-shadow-color: #525252;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.shadow-neutral-400 {
-  --tw-shadow-color: #a3a3a3;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.shadow-neutral-500 {
-  --tw-shadow-color: #737373;
+.shadow-primary {
+  --tw-shadow-color: #3b82f6;
   --tw-shadow: var(--tw-shadow-colored);
 }
 
@@ -2017,11 +1988,6 @@ select {
 .dark\:divide-dark-border-dark:is(.dark *) > :not([hidden]) ~ :not([hidden]) {
   --tw-divide-opacity: 1;
   border-color: rgb(55 65 81 / var(--tw-divide-opacity, 1));
-}
-
-.dark\:divide-dark-primary:is(.dark *) > :not([hidden]) ~ :not([hidden]) {
-  --tw-divide-opacity: 1;
-  border-color: rgb(38 57 105 / var(--tw-divide-opacity, 1));
 }
 
 .dark\:divide-dark-secondary:is(.dark *) > :not([hidden]) ~ :not([hidden]) {
@@ -2227,6 +2193,11 @@ select {
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
+.dark\:shadow-dark-secondary:is(.dark *) {
+  --tw-shadow-color: #4b5563;
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
 .dark\:shadow-dark-shadow:is(.dark *) {
   --tw-shadow-color: #374151;
   --tw-shadow: var(--tw-shadow-colored);
@@ -2237,43 +2208,13 @@ select {
   --tw-shadow: var(--tw-shadow-colored);
 }
 
-.dark\:shadow-dark-secondary:is(.dark *) {
-  --tw-shadow-color: #4b5563;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-slate-800:is(.dark *) {
-  --tw-shadow-color: #1e293b;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-slate-700:is(.dark *) {
-  --tw-shadow-color: #334155;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-neutral-500:is(.dark *) {
-  --tw-shadow-color: #737373;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-neutral-900:is(.dark *) {
-  --tw-shadow-color: #171717;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-neutral-700:is(.dark *) {
-  --tw-shadow-color: #404040;
+.dark\:shadow-neutral-600:is(.dark *) {
+  --tw-shadow-color: #525252;
   --tw-shadow: var(--tw-shadow-colored);
 }
 
 .dark\:shadow-neutral-800:is(.dark *) {
   --tw-shadow-color: #262626;
-  --tw-shadow: var(--tw-shadow-colored);
-}
-
-.dark\:shadow-neutral-600:is(.dark *) {
-  --tw-shadow-color: #525252;
   --tw-shadow: var(--tw-shadow-colored);
 }
 

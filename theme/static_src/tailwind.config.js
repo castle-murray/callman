@@ -84,7 +84,8 @@ module.exports = {
                 'yellow-hover': '#ca8a04', // yellow-600
                 'border-light': '#d1d5db', // gray-300
                 'text-available': '#1e40af', // Deep blue for available requests
-                'bg-available': '#e0f2fe', // Light blue for available requests
+                'bg-available': '#addfff', // Light blue for available requests
+                'available-bg': '#addfff', // Light blue for available requests
 
                 // Dark Mode
                 'dark-body-bg': '#1f2937', // gray-900

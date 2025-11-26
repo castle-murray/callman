@@ -119,7 +119,6 @@ def event_detail(request, slug):
             manager = company.managers.first()  # Get first manager or None
     else:
         return redirect('login')
-   
     call_times = event.call_times.all().order_by('date', 'time')
     for call_time in call_times:
         if call_time.original_time != call_time.time or call_time.original_date != call_time.date:

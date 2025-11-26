@@ -222,6 +222,7 @@ class LaborRequest(models.Model):
     sms_sent = models.BooleanField(default=False)
     event_token = models.CharField(max_length=36, null=True, blank=True)
     sent_time = models.DateTimeField(null=True, blank=True)
+    reminder_sent = models.BooleanField(default=False)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"

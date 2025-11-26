@@ -669,3 +669,35 @@ def call_time_confirmations(request, slug):
     }
     return render(request, 'callManager/call_time_confirmations.html', context)
 
+
+@login_required
+def send_reminder(request, slug):
+    if not hasattr(request.user, 'manager'):
+        return redirect('login')
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=request.user.manager.company)
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=True
+    ).select_related('worker', 'labor_requirement__labor_type')
+    errors = []
+    if request.method == "POST":
+        for labor_request in labor_requests:
+            if labor_request.reminder_sent:
+                continue
+            message = [f"Courtesy reminder\n",
+                f"{call_time.event.event_name} @ {call_time.event.location_profile.name}\n",
+                f"{call_time.date.strftime('%B %d')}\n",
+                f"{call_time.name} at {call_time.time.strftime('%I:%M %p')}\n",
+                f"{labor_request.labor_requirement.labor_type.name}\n",
+                f"Do not respond to this message."]
+            str_message = ''.join(message)
+            error = send_message(str_message, labor_request.worker, call_time.event.company)
+            
+            if errors:
+                messages.warning(request, f"Failed to send reminder: {', '.join(error)}")
+                errors.extend(error)
+            else:
+                labor_request.reminder_sent = True
+                labor_request.save()
+                messages.success(request, "Reminder sent successfully.")
+

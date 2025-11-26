@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.contrib import admin
 from .models import (
         Event,
@@ -21,6 +22,10 @@ from .models import (
         ManagerInvitation
         )
 
+
+class UserAdmin(User):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'phone_number')
+    search_fields = ('username', 'email', 'first_name', 'last_name', 'phone_number')
     
 @admin.register(LocationProfile)
 class LocationProfileAdmin(admin.ModelAdmin):
