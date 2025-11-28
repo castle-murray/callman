@@ -4,12 +4,19 @@
     hx-target="#notification-dropdown" 
     hx-swap="outerHTML" 
     onclick="event.stopPropagation()"
-    class="px-3 py-1 mx-2 text-tertiary rounded-full bg-danger dark:text-dark-tertiary dark:bg-dark-danger">
+    class="relative px-3 py-1 mx-2 text-tertiary rounded-full bg-primary dark:text-dark-tertiary dark:bg-dark-primary">
     <div id="notification-count"
          hx-get="{% url 'htmx_get_notification_count' %}"
          hx-trigger="notification-update from:body"
          hx-target="#notification-button"
          hx-swap="outerHTML">
-        {{ count }}
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+        </svg>
+        <!-- a little red dot in the top right of the svg -->
+        <svg class="w-2 h-2 absolute top-0 right-0 -translate-x-1.5 translate-y-1" fill="red" viewBox="0 0 20 20">
+            <circle cx="10" cy="10" r="10"/>
+        </svg>
     </div>
 </button>
