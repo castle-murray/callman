@@ -142,6 +142,7 @@ class CallTime(models.Model):
     date = models.DateField(null=True, blank=True)
     name = models.CharField(max_length=200)
     time = models.TimeField()
+    call_unixtime = models.BigIntegerField()
     minimum_hours = models.PositiveIntegerField(blank=True, null=True, help_text="Minimum hours for this call time (defaults to event's location profile or company)")
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
     original_date = models.DateField(null=True, blank=True)
@@ -168,6 +169,8 @@ class CallTime(models.Model):
         if not self.slug:
             self.slug = generate_unique_slug(CallTime)
             super().save(update_fields=['slug'])
+        if self.date and self.time:
+            self.call_unixtime = int(self.date.timestamp()) + int(self.time.hour * 3600) + int(self.time.minute * 60)
 
     def has_changed(self):
         if not self.pk:

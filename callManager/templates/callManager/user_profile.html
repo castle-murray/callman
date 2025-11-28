@@ -14,9 +14,9 @@
             <p class="text-text-secondary dark:text-dark-text-secondary mb-4">No associated workers found.</p>
         {% endif %}
         <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Your Calls</h2>
-        {% if labor_requests %}
+        {% if upcoming %}
             <ul class="space-y-2">
-                {% for request in labor_requests %}
+                {% for request in upcoming %}
                     <li class="border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
                         <div class="flex justify-between items-center">
                             <div>
