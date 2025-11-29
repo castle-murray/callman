@@ -151,6 +151,8 @@ class CallTime(models.Model):
     message = models.TextField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        datetime_obj = datetime.combine(self.date, self.time)
+        self.call_unixtime = int(datetime_obj.timestamp())
         if not self.pk and self.minimum_hours is None:
             # Set default minimum_hours from event's location profile or company
             if self.event.location_profile and self.event.location_profile.minimum_hours is not None:
@@ -169,8 +171,6 @@ class CallTime(models.Model):
         if not self.slug:
             self.slug = generate_unique_slug(CallTime)
             super().save(update_fields=['slug'])
-        if self.date and self.time:
-            self.call_unixtime = int(self.date.timestamp()) + int(self.time.hour * 3600) + int(self.time.minute * 60)
 
     def has_changed(self):
         if not self.pk:

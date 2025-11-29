@@ -22,11 +22,19 @@ from django.conf import settings
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
+from django.contrib.auth.models import User
 
 # Twilio imports
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
+# repotlab imports for PDF generation
+
+# other imports
+import re
+import uuid
+
+# posssibly imports
 
 from callManager.views import log_sms, send_message, generate_short_token
 import logging

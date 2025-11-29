@@ -28,6 +28,7 @@ from reportlab.platypus import (
         KeepTogether,
         )
 from reportlab.lib import colors
+from django.db.models.functions import TruncDate, TruncMonth
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet
 

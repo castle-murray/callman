@@ -62,5 +62,25 @@
         {% else %}
             <p class="text-text-secondary dark:text-dark-text-secondary">No gigs found.</p>
         {% endif %}
+        {% if past %}
+            <h2 class="pt-10 text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Past Shows</h2>
+            <ul class="space-y-2">
+                {% for request in past %}
+                    <li class="border-b py-2 text-text-tertiary dark:text-dark-text-tertiary dark:border-dark-border-dark">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-md font-semibold">{{ request.labor_requirement.call_time.event.company.name }} -
+                                {{ request.labor_requirement.call_time.event.event_name }}</p>
+                                <p class="text-sm">{{ request.labor_requirement.call_time.event.location_profile.name }} - {{ request.labor_requirement.call_time.name }} - {{ request.labor_requirement.labor_type.name }}</p>
+                                <p class="text-text-secondary dark:text-dark-text-secondary">
+                                    {{ request.labor_requirement.call_time.date }} at {{ request.labor_requirement.call_time.time|time:"h:i A" }}
+                                </p>
+                                <p class="text-sm text-text-tertiary dark:text-dark-text-tertiary">{{ request.labor_requirement.call_time.message }}</p>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </div>
 {% endblock %}

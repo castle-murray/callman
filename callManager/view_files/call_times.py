@@ -29,7 +29,6 @@ from django.contrib import messages
 # Twilio imports
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
-from twilio.twiml.messaging_response import MessagingResponse
 
 import logging
 

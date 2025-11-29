@@ -30,6 +30,7 @@ from twilio.base.exceptions import TwilioRestException
 
 
 from callManager.views import log_sms, generate_short_token, push_notification
+from callManager.view_files.notify import notify
 import logging
 
 # Create a logger instance
@@ -584,10 +585,16 @@ def labor_request_action(request, request_id, action):
         if action == 'confirm':
             if labor_request.is_reserved or labor_request.labor_requirement.fcfs_positions > 0:
                 labor_request.confirmed = True
+                notif_message = f"{labor_request.worker.name} confirmed for {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}"
+                notify(labor_request.id, 'Confirmed', notif_message)
             labor_request.availability_response = 'yes'
+            notif_message = f"{labor_request.worker.name} Available for {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}, Requires confirmation"
+            notify(labor_request.id, 'Available', notif_message)
             labor_request.save()
             messages.success(request, "Request confirmed successfully.")
         elif action == 'decline':
+            notif_message = f"{labor_request.worker.name} declined {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}"
+            notify(labor_request.id, 'Declined', notif_message)
             if labor_request.is_reserved:
                 labor_request.is_reserved = False
                 if labor_request.labor_requirement.fcfs_positions > 0:
@@ -595,7 +602,7 @@ def labor_request_action(request, request_id, action):
                     labor_request.labor_requirement.save()
             labor_request.availability_response = 'no'
             labor_request.save()
-            messages.success(request, "Request declined successfully.")
+            messages.success(request, "Request declined.")
         else:
             messages.error(request, "Invalid action.")
         return redirect('user_profile')
