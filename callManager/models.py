@@ -37,6 +37,13 @@ class Company(models.Model):
     minimum_hours = models.PositiveIntegerField(default=4, help_text="Minimum hours for a call time")
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
 
+    def natural_key(self):
+        return (self.slug,)
+
+    @classmethod
+    def get_by_natural_key(cls, slug):
+        return cls.objects.get(slug=slug)
+
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -113,6 +120,13 @@ class LaborType(models.Model):
     class Meta:
         unique_together = ('company', 'name')  # Prevent duplicate labor types per company
 
+    def natural_key(self):
+        return (self.company.slug, self.name)
+
+    @classmethod
+    def get_by_natural_key(cls, company_slug, name):
+        return cls.objects.get(company__slug=company_slug, name=name)
+
 # Event model for concerts or entertainment gigs
 class Event(models.Model):
     event_name = models.CharField(max_length=200)
@@ -126,6 +140,13 @@ class Event(models.Model):
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
     steward = models.ForeignKey('Steward', on_delete=models.SET_NULL, null=True, blank=True)
     canceled = models.BooleanField(default=False)
+
+    def natural_key(self):
+        return (self.slug,)
+
+    @classmethod
+    def get_by_natural_key(cls, slug):
+        return cls.objects.get(slug=slug)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -181,6 +202,12 @@ class CallTime(models.Model):
     def __str__(self):
         return f"{self.name} at {self.time} ({self.event})"
 
+    def natural_key(self):
+        return (self.slug,)
+
+    @classmethod
+    def get_by_natural_key(cls, slug):
+        return cls.objects.get(slug=slug)
 
 class LaborRequirement(models.Model):
     call_time = models.ForeignKey(CallTime, on_delete=models.CASCADE, related_name='labor_requirements', null=True, blank=True)
@@ -204,6 +231,13 @@ class LaborRequirement(models.Model):
 
     class Meta:
         unique_together = ('call_time', 'labor_type')
+
+    def natural_key(self):
+        return (self.slug,)
+
+    @classmethod
+    def get_by_natural_key(cls, slug):
+        return cls.objects.get(slug=slug)
 
 
 class LaborRequest(models.Model):
@@ -279,6 +313,13 @@ class Worker(models.Model):
 
     def __str__(self):
         return self.name or "Unnamed Worker"
+
+    def natural_key(self):
+        return (self.slug,)
+
+    @classmethod
+    def get_by_natural_key(cls, slug):
+        return cls.objects.get(slug=slug)
 
 
 class ClockInToken(models.Model):
