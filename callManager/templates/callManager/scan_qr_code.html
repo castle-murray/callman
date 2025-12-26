@@ -43,7 +43,24 @@
             console.log(`Starting scanner with cameraId: ${cameraId || 'default (environment)'}`);
             html5QrCode.start(
                 cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                { 
+                    fps: 10, 
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        // Make the scan area much larger - 80% of the smaller dimension
+                        let minEdgePercentage = 1;
+                        let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                        let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                        return {
+                            width: qrboxSize,
+                            height: qrboxSize
+                        };
+                    },
+                    aspectRatio: 1.0,
+                    disableFlip: false,
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                },
                 (decodedText) => {
                     try {
                         const tokenMatch = decodedText.match(/\/clock-in\/([0-9a-f-]{36})\//);

@@ -18,7 +18,10 @@
         <div class="mb-4">
             <form method="post" class="inline-block">
                 {% csrf_token %}
-                <label for="fcfs_positions" class="text-text-primary dark:text-dark-text-primary">FCFS Positions:</label>
+                <label for="fcfs_positions" class="text-text-primary dark:text-dark-text-primary" data-tooltip="First Come First Served positions: Number of slots that will be filled automatically by the first to respond to your request.">FCFS Positions:</label>
+                            <div class="tooltip hidden absolute z-10 bg-gray-800 text-white text-sm p-2 rounded shadow-md">
+                                <div class="tooltip-text"></div>
+                            </div>
                 <input type="number" name="fcfs_positions" value="{{ labor_requirement.fcfs_positions }}" min="0" max="{{ labor_requirement.needed_labor }}" class="p-1 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border w-16">
                 <button type="submit" class="ml-2 bg-primary text-dark-text-primary px-2 py-1 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Update</button>
             </form>

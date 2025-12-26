@@ -84,30 +84,29 @@ def event_detail(request, slug):
         available = next((item['available_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0) 
         declined = next((item['rejected_count'] for item in labor_requests if item['labor_requirement_id'] == lr_id), 0)
         needed = lr.needed_labor
-        non_rejected = pending + confirmed
-        if non_rejected > needed:
-            overbooked = non_rejected - needed
+        not_declined = pending + confirmed + available
+        overbooked = 0
+        is_overbooked = False
+        is_filled = False
+        if not_declined > needed:
+            overbooked = not_declined - needed
             if confirmed >= needed:
-                display_text = f"<span class='text-green dark:text-dark-text-green'>{confirmed} filled</span>"
+                is_filled = True
                 if overbooked > 0:
-                    display_text += f", overbooked by {overbooked}"
-            else:
-                display_text = f"{needed} needed, overbooked by {overbooked} pending"
-        elif confirmed >= needed:
-            display_text = f"<span class='text-text-green dark:text-dark-text-green'>{confirmed} filled</span>"
-        else:
-            display_text = f"""{needed} (<span class='px-2 py-1 rounded-full bg-yellow dark:bg-dark-yellow text-secondary dark:text-text-primary' data-tooltip='Pending'>{pending}</span>,
-                                         <span class='px-2 py-1 rounded-full bg-bg-available dark:bg-dark-bg-available text-secondary dark:text-dark-text-primary' data-tooltip='Available'>{available}</span>, 
-                                         <span class='px-2 py-1 rounded-full bg-success dark:bg-dark-success text-secondary dark:text-dark-text-primary' data-tooltip='Confirmed'>{confirmed}</span>, 
-                                         <span class='px-2 py-1 rounded-full bg-danger dark:bg-dark-danger text-secondary dark:text-dark-text-primary' data-tooltip='Declined'>{declined}</span>)"""
+                    is_overbooked = True
         labor_counts[lr_id] = {
+            'labor_type': lr.labor_type,
+            'is_filled': is_filled,
+            'is_overbooked': is_overbooked,
+            'overbooked': overbooked,
+            'needed': needed,
             'pending': pending,
             'confirmed': confirmed,
             'available': available,
             'declined': declined,
-            'display_text': display_text,
             'labor_requirement': lr
         }
+
     if request.method == "POST" and 'send_messages' in request.POST:
         if not hasattr(user, 'administrator') and event.company != manager.company:
             messages.error(request, "You do not have permission to send messages for this event.")

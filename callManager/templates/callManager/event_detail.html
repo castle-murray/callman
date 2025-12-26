@@ -70,13 +70,33 @@
             <li class="p-1 flex rounded-md box-shadow shadow-md shadow-neutral-400 inset-shadow-md dark:shadow-neutral-800 justify-between bg-body-bg dark:bg-slate-950 items-center">
                 <div class="flex items-center">
                 <span class="ml-2">
-                    <a href="{% url 'labor_request_list' labor.slug %}" class="text-text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover">• 
-                        {{ labor.labor_type.name }} - {{ counts.display_text|safe }}
-                        
+                    <a href="{% url 'labor_request_list' labor.slug %}" class="text-text-primary hover:underline dark:text-dark-text-primary dark:hover:text-dark-primary-hover"> 
+                    <div class="flex flex-col md:flex-row">
+                        <div class="mr-2">
+                            {{ labor.labor_type }} - {{ counts.needed }} 
+                        </div>
+                        {% if counts.is_filled and not counts.is_overbooked %}
+                        <div class="text-success dark:text-dark-success">Filled</div>
+                        {% else %}
+                        {% if counts.is_overbooked %}
+                        <div class="text-danger lg:mr-2">Overbooked by {{ counts.overbooked }}</div>
+                        {% endif %}
+                        <div>(
+                            <div class="tooltip hidden absolute z-10 bg-gray-800 text-white text-sm p-2 rounded shadow-md">
+                                <div class="tooltip-text"></div>
+                            </div>
+                            <span class='px-2 lg:mx-1 py-1 rounded-full bg-yellow dark:bg-dark-yellow text-secondary dark:text-text-primary' data-tooltip='Pending'>{{ counts.pending }}
+                            </span>
+                            <span class='px-2 lg:mx-1 py-1 rounded-full bg-bg-available dark:bg-dark-bg-available text-secondary dark:text-dark-text-primary' data-tooltip='Available'>{{ counts.available }}
+                            </span>
+                            <span class='px-2 lg:mx-1 py-1 rounded-full bg-success dark:bg-dark-success text-secondary dark:text-dark-text-primary' data-tooltip='Confirmed'>{{ counts.confirmed }}
+                            </span> 
+                            <span class='px-2 lg:mx-1 py-1 rounded-full bg-danger dark:bg-dark-danger text-secondary dark:text-dark-text-primary' data-tooltip='Declined'>{{ counts.declined }}
+                            </span>)
+                        </div>
+                        {% endif %}
+                    </div>  
                     
-                    <div class="tooltip hidden absolute z-10 bg-gray-800 text-white text-sm p-2 rounded shadow-md">
-                        <div class="tooltip-text"></div>
-                    </div>
                     </a>
 
                 </span>
