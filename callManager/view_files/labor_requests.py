@@ -45,9 +45,13 @@ def labor_request_list(request, slug):
         company = labor_requirement.call_time.event.company
     elif not hasattr(request.user, 'manager'):
         return redirect('login')
+    elif hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        company = request.user.steward.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
     else:
         manager = request.user.manager
-        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+        company = manager.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     for labor_request in labor_requests:
         notifications = labor_request.notifications.all()
@@ -347,7 +351,7 @@ def labor_request_list(request, slug):
         worker_conflicts[labor_request.worker_id]['conflicts'].append(conflict_info)
         if labor_request.confirmed:
             worker_conflicts[labor_request.worker_id]['is_confirmed'] = True
-    labor_types = LaborType.objects.filter(company=manager.company)
+    labor_types = LaborType.objects.filter(company=company)
     requested_worker_ids = list(labor_requests.values_list('worker__id', flat=True))
     context = {
         'labor_requirement': labor_requirement,
@@ -379,9 +383,10 @@ def fill_labor_request_list(request, slug):
         return redirect('login')
     else:
         manager = request.user.manager
-        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+        company = manager.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
-    workers = Worker.objects.filter(company=manager.company).distinct()
+    workers = Worker.objects.filter(company=company).distinct()
     search_query = request.GET.get('search', '').strip()
     skill_id = request.GET.get('skill', '').strip()
     if search_query or skill_id:
