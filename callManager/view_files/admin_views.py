@@ -1,4 +1,5 @@
-from django.core.paginator import Paginator
+from django.contrib.auth.models import User
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from callManager.forms import WorkerForm
 from callManager.models import Worker
@@ -64,3 +65,20 @@ def admin_view_workers(request):
         'add_form': form,
         'labor_types': labor_types}
     return render(request, 'callManager/view_workers.html', context)
+
+@login_required
+def list_users(request):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('dashboard_redirect')
+    users = User.objects.all()
+    paginator = Paginator(users, 100)
+    page_number = request.GET.get('page', 1)
+    try:
+        users = paginator.page(page_number)
+    except PageNotAnInteger:
+        users = paginator.page(1)
+    except EmptyPage:
+        users = paginator.page(paginator.num_pages)
+
+    return render(request, 'callManager/list_users.html', {'users': users})
+

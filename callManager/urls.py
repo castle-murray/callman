@@ -2,6 +2,7 @@ from django.urls import path
 from callManager import views
 from callManager.view_files.dashboards import admin_dashboard, manager_dashboard, steward_dashboard, owner_dashboard
 from callManager.view_files import (
+        admin_views,
         invites,
         reports,
         event_views,
@@ -13,6 +14,7 @@ from callManager.view_files import (
         call_times,
         workers,
         profile_views,
+        stripe,
         )
 
 urlpatterns = [
@@ -126,13 +128,18 @@ urlpatterns = [
     path('auto-login/<uuid:token>/', loginviews.auto_login, name='auto_login'),
     path('reset-password/<uuid:token>/', loginviews.reset_password, name='reset_password'),
     path('forgot-password/', loginviews.forgot_password, name='forgot_password'),
-    path('change-password/', views.change_password, name='change_password'),
 
     #user profile
     path('user-profile/', profile_views.user_profile, name='user_profile'),
+    path('change-password/', views.change_password, name='change_password'),
     
     #notifications
     path('notifications/', views.notifications, name='notifications'),
     path('htmx-get-notification-count/', views.htmx_get_notification_count, name='htmx_get_notification_count'),
     path('htmx-clear/', views.htmx_clear, name='htmx_clear'),
+    
+    #stripe
+    path('subscription-status/', stripe.subscription_status_view, name='subscription_status'),
+    path('admin-login-as-user/<int:user_id>/', views.admin_login_as_user, name='admin_login_as_user'),
+    path('list-users/', admin_views.list_users, name='list_users'),
 ]

@@ -23,6 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 if os.environ.get('DEBUG') == 'True':
     DEBUG = True
@@ -46,6 +49,7 @@ INSTALLED_APPS = [
     'callManager.apps.CallmanagerConfig',
     'django_htmx',
     'channels',
+    'stripe',
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')
@@ -60,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')

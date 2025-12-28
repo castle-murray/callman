@@ -1,5 +1,6 @@
 #models
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.models import User
 from .models import (
         LaborRequest,
         Event,
@@ -586,6 +587,7 @@ def htmx_get_notification_count(request):
 def htmx_clear(request):
     return HttpResponse("<div id='notification-dropdown'></div>")
 
+@login_required
 def change_password(request):
     if request.method == "POST":
         form = ChangePasswordForm(request.POST)
@@ -609,3 +611,10 @@ def change_password(request):
     return render(request, 'callManager/change_password.html', {'form': form})
 
 
+@login_required
+def admin_login_as_user(request, user_id):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('login')
+    user = get_object_or_404(User, id=user_id)
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    return redirect('dashboard_redirect')
