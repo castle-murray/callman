@@ -1731,6 +1731,11 @@ select {
   color: rgb(153 27 27 / var(--tw-text-opacity, 1));
 }
 
+.text-secondary {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
+}
+
 .text-success {
   --tw-text-opacity: 1;
   color: rgb(34 197 94 / var(--tw-text-opacity, 1));
@@ -1794,11 +1799,6 @@ select {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-
-.text-secondary {
-  --tw-text-opacity: 1;
-  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
 }
 
 .opacity-100 {
@@ -2106,6 +2106,11 @@ select {
   background-color: rgb(22 101 52 / var(--tw-bg-opacity, 1));
 }
 
+.dark\:bg-dark-yellow:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(214 148 6 / var(--tw-bg-opacity, 1));
+}
+
 .dark\:bg-gray-700:is(.dark *) {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
@@ -2124,11 +2129,6 @@ select {
 .dark\:bg-slate-950:is(.dark *) {
   --tw-bg-opacity: 1;
   background-color: rgb(2 6 23 / var(--tw-bg-opacity, 1));
-}
-
-.dark\:bg-dark-yellow:is(.dark *) {
-  --tw-bg-opacity: 1;
-  background-color: rgb(214 148 6 / var(--tw-bg-opacity, 1));
 }
 
 .dark\:bg-dark-cancelled-event-gradient:is(.dark *) {
@@ -2152,6 +2152,11 @@ select {
 .dark\:text-dark-purple:is(.dark *) {
   --tw-text-opacity: 1;
   color: rgb(124 58 237 / var(--tw-text-opacity, 1));
+}
+
+.dark\:text-dark-success:is(.dark *) {
+  --tw-text-opacity: 1;
+  color: rgb(22 101 52 / var(--tw-text-opacity, 1));
 }
 
 .dark\:text-dark-teal:is(.dark *) {
@@ -2214,19 +2219,14 @@ select {
   color: rgb(248 113 113 / var(--tw-text-opacity, 1));
 }
 
-.dark\:text-white:is(.dark *) {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-
 .dark\:text-text-primary:is(.dark *) {
   --tw-text-opacity: 1;
   color: rgb(31 41 55 / var(--tw-text-opacity, 1));
 }
 
-.dark\:text-dark-success:is(.dark *) {
+.dark\:text-white:is(.dark *) {
   --tw-text-opacity: 1;
-  color: rgb(22 101 52 / var(--tw-text-opacity, 1));
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
 .dark\:shadow-dark-secondary:is(.dark *) {
@@ -2329,11 +2329,6 @@ select {
     position: static;
   }
 
-  .md\:mx-1 {
-    margin-left: 0.25rem;
-    margin-right: 0.25rem;
-  }
-
   .md\:flex {
     display: flex;
   }
@@ -2382,14 +2377,14 @@ select {
 }
 
 @media (min-width: 1024px) {
-  .lg\:mx-auto {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
   .lg\:mx-1 {
     margin-left: 0.25rem;
     margin-right: 0.25rem;
+  }
+
+  .lg\:mx-auto {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .lg\:mr-2 {

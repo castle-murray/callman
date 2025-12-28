@@ -1,4 +1,5 @@
 #models
+from django.contrib.auth import update_session_auth_hash
 from .models import (
         LaborRequest,
         Event,
@@ -11,6 +12,7 @@ from .models import (
 
 #forms
 from .forms import (
+        ChangePasswordForm,
         LaborTypeForm,
         WorkerForm,
         )
@@ -583,3 +585,27 @@ def htmx_get_notification_count(request):
 
 def htmx_clear(request):
     return HttpResponse("<div id='notification-dropdown'></div>")
+
+def change_password(request):
+    if request.method == "POST":
+        form = ChangePasswordForm(request.POST)
+        if form.is_valid():
+            old_password = form.cleaned_data['old_password']
+            new_password1 = form.cleaned_data['new_password1']
+            
+            if request.user.check_password(old_password):
+                request.user.set_password(new_password1)
+                request.user.save()
+                update_session_auth_hash(request, request.user)  # Keep user logged in
+                messages.success(request, "Password changed successfully.")
+                return redirect('manager_dashboard')  # Add redirect after success
+            else:
+                messages.error(request, "Old password is incorrect.")
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = ChangePasswordForm()
+
+    return render(request, 'callManager/change_password.html', {'form': form})
+
+

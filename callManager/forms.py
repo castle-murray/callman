@@ -492,3 +492,33 @@ class AddWorkerForm(forms.ModelForm):
         if self.company and Worker.objects.filter(phone_number=phone_number, companies=self.company).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise ValidationError("You're already in our system. Thanks!")
         return phone_number
+
+class ChangePasswordForm(forms.Form):
+    old_password = forms.CharField(
+        label="Old Password",
+        widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    new_password1 = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    new_password2 = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border'}))
+    class Meta:
+        fields = ['old_password', 'new_password1', 'new_password2']
+        labels = {
+            'old_password': 'Old Password',
+            'new_password1': 'New Password',
+            'new_password2': 'Confirm New Password',
+        }
+        error_messages = {
+            'old_password': {
+                'required': 'Old password is required.',
+            },
+            'new_password1': {
+                'required': 'New password is required.',
+            },
+            'new_password2': {
+                'required': 'Please confirm your new password.',
+                'password_mismatch': 'Passwords do not match.'
+            }
+        }

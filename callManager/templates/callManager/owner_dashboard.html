@@ -37,6 +37,7 @@
                 <input type="tel" name="phone" id="phone" required class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border">
             </div>
             <button type="submit" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Send Invitation</button>
+            <a href="{% url 'change_password' %}" class="bg-primary text-dark-text-primary p-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover text-center" >Change Password</button>
         </form>
         <a href="{% url 'manager_dashboard' %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Manager Dashboard</a>
     </div>

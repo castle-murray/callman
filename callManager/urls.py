@@ -126,6 +126,7 @@ urlpatterns = [
     path('auto-login/<uuid:token>/', loginviews.auto_login, name='auto_login'),
     path('reset-password/<uuid:token>/', loginviews.reset_password, name='reset_password'),
     path('forgot-password/', loginviews.forgot_password, name='forgot_password'),
+    path('change-password/', views.change_password, name='change_password'),
 
     #user profile
     path('user-profile/', profile_views.user_profile, name='user_profile'),
