@@ -218,13 +218,25 @@ if os.environ.get('DJANGO_ENV') == 'production':
                 'format': '{levelname} {message}',
                 'style': '{',
             },
+            'failed_login': {
+                'format': '{asctime} - {levelname} - {message} - {request} - {credentials}',
+                'style': '{',
+            },
         },
         'handlers': {
             'file': {
                 'level': 'DEBUG',
                 'class': 'logging.FileHandler',
-                'filename': '/home/autorigger/callman/logs/django_debug.log',
+                'filename': '/var/log/django/django_debug.log',
                 'formatter': 'verbose',
+            },
+            'failed_login_file': {
+                'level': 'WARNING',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': '/var/log/django/failed_login.log',
+                'formatter': 'simple',
+                'maxBytes': 10485760,  # 10MB
+                'backupCount': 5,
             },
             'console': {
                 'level': 'INFO',
@@ -243,9 +255,153 @@ if os.environ.get('DJANGO_ENV') == 'production':
                 'level': 'WARNING',
                 'propagate': True,
             },
+            'django.security.failed_login': {
+                'handlers': ['failed_login_file'],
+                'level': 'WARNING',
+                'propagate': False,
+            },
         },
     }
 
+else:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{asctime} - {name} - {levelname} - {message}',
+                'style': '{',
+            },
+            'simple': {
+                'format': '{levelname} {message}',
+                'style': '{',
+            },
+        },
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': '/var/log/django/django_debug.log',
+                'formatter': 'verbose',
+            },
+            'failed_login_file': {
+                'level': 'WARNING',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': '/var/log/django/failed_logins.log',
+                'maxBytes': 5242880,  # 5 MB
+                'backupCount': 5,
+                'formatter': 'simple',
+            },
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple',
+            },
+        },
+        'loggers': {
+            'callManager': {
+                'handlers': ['file', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+            'django': {
+                'handlers': ['file'],
+                'level': 'WARNING',
+                'propagate': True,
+            },
+            'django.security.failed_login': {
+                'handlers': ['failed_login_file'],
+                'level': 'WARNING',
+                'propagate': False,
+            },
+        },
+    }
+
+
+#    LOGGING = {
+#        'version': 1,
+#        'disable_existing_loggers': False,
+#        'formatters': {
+#            'verbose': {
+#                'format': '{asctime} {name} {levelname} {message}',
+#                'style': '{',
+#            },
+#            'simple': {
+#                'format': '{levelname} {message}',
+#                'style': '{',
+#            },
+#            'failed_login': {
+#                'format': '{asctime} {levelname} {message} - {request} - {credentials}',
+#                'style': '{',
+#            },
+#        },
+#        'handlers': {
+#            'file': {
+#                'level': 'DEBUG',
+#                'class': 'logging.FileHandler',
+#                'filename': BASE_DIR / 'logs/django_debug.log',
+#                'formatter': 'verbose',
+#            },
+#            'console': {
+#                'level': 'INFO',
+#                'class': 'logging.StreamHandler',
+#                'formatter': 'simple',
+#            },
+#            'daphne_file': {
+#                'level': 'DEBUG',
+#                'class': 'logging.FileHandler',
+#                'filename': BASE_DIR / 'logs/daphne.log',
+#                'formatter': 'verbose',
+#            },
+#            'failed_login_file': {
+#                'level': 'WARNING',
+#                'class': 'logging.FileHandler',
+#                'filename': BASE_DIR / 'logs/failed_login.log',
+#                'formatter': 'failed_login',
+#            },
+#        },
+#        'loggers': {
+#            # Your app
+#            'callManager': {
+#                'handlers': ['file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': False,
+#            },
+#            # Django
+#            'django': {
+#                'handlers': ['file'],
+#                'level': 'WARNING',
+#                'propagate': False,
+#            },
+#            # === CRITICAL FOR WEBSOCKETS ===
+#            'daphne': {
+#                'handlers': ['daphne_file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': False,
+#            },
+#            'channels': {
+#                'handlers': ['file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': False,
+#            },
+#            'channels.server': {
+#                'handlers': ['file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': False,
+#            },
+#            'channels.consumer': {
+#                'handlers': ['file', 'console'],
+#                'level': 'DEBUG',
+#                'propagate': False,
+#            },
+#            'django.security.failed_login': {
+#                'handlers': ['failed_login_file'],
+#                'level': 'WARNING',
+#                'propagate': False,
+#            },
+#        },
+#    }
+#
 ASGI_APPLICATION = 'callman.asgi.application'
 
 CHANNEL_LAYERS = {
@@ -259,71 +415,3 @@ CHANNEL_LAYERS = {
 
 #else:
 #
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} {name} {levelname} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/django_debug.log',
-            'formatter': 'verbose',
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-        'daphne_file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/daphne.log',
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        # Your app
-        'callManager': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        # Django
-        'django': {
-            'handlers': ['file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        # === CRITICAL FOR WEBSOCKETS ===
-        'daphne': {
-            'handlers': ['daphne_file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'channels': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'channels.server': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'channels.consumer': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
-}

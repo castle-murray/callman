@@ -20,7 +20,7 @@ from callManager.forms import (
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from callManager.utils import send_custom_email
+from callManager.utils.email import send_custom_email
 
 import logging
 

@@ -17,12 +17,13 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.views import LoginView
-from callManager.utils import send_custom_email
+from callManager.utils.email import send_custom_email
 
 import logging
 
 # Create a logger instance
 logger = logging.getLogger('callManager')
+
 
 @login_required
 def user_profile(request):
@@ -101,6 +102,7 @@ def forgot_password(request):
             messages.error(request, "No user found with this email address.")
         return render(request, 'callManager/forgot_password.html')
     return render(request, 'callManager/forgot_password.html')
+
 
 class CustomLoginView(LoginView):
     template_name = 'callManager/login.html'
