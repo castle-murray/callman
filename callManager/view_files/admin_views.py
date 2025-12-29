@@ -70,8 +70,8 @@ def admin_view_workers(request):
 def list_users(request):
     if not hasattr(request.user, 'administrator'):
         return redirect('dashboard_redirect')
-    users = User.objects.all()
-    paginator = Paginator(users, 100)
+    users = User.objects.all().order_by('username')
+    paginator = Paginator(users, 25)
     page_number = request.GET.get('page', 1)
     try:
         users = paginator.page(page_number)
@@ -82,3 +82,21 @@ def list_users(request):
 
     return render(request, 'callManager/list_users.html', {'users': users})
 
+@login_required
+def search_users(request):
+    if not hasattr(request.user, 'administrator'):
+        return redirect('dashboard_redirect')
+    users = User.objects.all()
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        users = users.filter(Q(username__icontains=search_query) | Q(email__icontains=search_query) | Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query) | Q(manager__company__name__icontains=search_query))
+        paginator = Paginator(users, 25)
+        print(users)
+        page_number = request.GET.get('page', 1)
+        try:
+            users = paginator.page(page_number)
+        except PageNotAnInteger:
+            users = paginator.page(1)
+        except EmptyPage:
+            users = paginator.page(paginator.num_pages)
+    return render(request, 'callManager/list_users_partial.html', {'users': users, 'search_query': search_query})

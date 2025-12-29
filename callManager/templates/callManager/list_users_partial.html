@@ -1,24 +1,4 @@
 
-{% extends 'callManager/base.html' %}
-{% block title %}List Users - CallMan{% endblock %}
-{% block content %}
-    <h1 class="text-2xl font-bold mb-6 text-text-heading dark:text-dark-text-primary">List Users</h1>
-    <div class="mb-6">
-        <form method="get" class="mb-4 flex space-x-4">
-            <input type="text"
-                   name="search"
-                   value="{{ search_query }}"
-                   placeholder="Search by username, email, first name, last name, or phone number"
-                   class="w-full max-w-md p-2 border rounded bg-card-bg text-text-tertiary dark:bg-dark-card-bg dark:text-dark-text-tertiary dark:border-dark-border"
-                   hx-get="{% url 'search_users' %}"
-                   hx-target="#users-table"
-                   hx-swap="outerHTML"
-                   hx-trigger="keyup changed delay:300ms"
-                   hx-include="[name='search']">
-        </form>
-    </div>
-    
-    <div class="bg-card-bg p-6 rounded-lg shadow-md max-w-4xl mx-auto dark:bg-dark-card-bg dark:shadow-dark-shadow">
         <table class="w-full" id="users-table">
             <thead>
                 <tr>
@@ -45,7 +25,4 @@
                 {% endfor %}
             </thead>
         </table>
-    </div>
-{% endblock %}
-
 

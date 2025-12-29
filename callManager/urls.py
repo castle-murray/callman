@@ -141,5 +141,8 @@ urlpatterns = [
     #stripe
     path('subscription-status/', stripe.subscription_status_view, name='subscription_status'),
     path('admin-login-as-user/<int:user_id>/', views.admin_login_as_user, name='admin_login_as_user'),
+    
+    #administrator
     path('list-users/', admin_views.list_users, name='list_users'),
+    path('search-users/', admin_views.search_users, name='search_users'),
 ]
