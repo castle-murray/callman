@@ -220,7 +220,7 @@
                     message.dataset.timeoutId = timeoutId.toString();
                 });
             });
-        {% if request.user.manager %}
+        {% if request.user.is_authenticated and request.user.manager %}
             (function() {
                 let ws = null;
                 const url = 
