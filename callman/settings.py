@@ -215,11 +215,7 @@ if os.environ.get('DJANGO_ENV') == 'production':
                 'style': '{',
             },
             'simple': {
-                'format': '{asctime} - {levelname} {message}',
-                'style': '{',
-            },
-            'failed_login': {
-                'format': '{asctime} - {levelname} - {message} - {request} - {credentials}',
+                'format': '{levelname} {message}',
                 'style': '{',
             },
         },
@@ -273,11 +269,7 @@ else:
                 'style': '{',
             },
             'simple': {
-                'format': '{asctime} - {levelname} {message}',
-                'style': '{',
-            },
-            'failed_login': {
-                'format': '{asctime} - {levelname} - {message} - {request} - {credentials}',
+                'format': '{levelname} {message}',
                 'style': '{',
             },
         },
