@@ -81,6 +81,7 @@ class ManagerInvitation(models.Model):
 class Steward(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='steward')
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='stewards')
+    per_page_preference = models.PositiveIntegerField(default=10, choices=[(10, '10'), (25, '25'), (50, '50'), (100, '100')])
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} (Steward)"
 

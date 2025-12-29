@@ -43,11 +43,12 @@ def labor_request_list(request, slug):
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
         manager = labor_requirement.call_time.event.company.managers.first()
         company = labor_requirement.call_time.event.company
-    elif not hasattr(request.user, 'manager'):
-        return redirect('login')
     elif hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        steward = request.user.steward
         company = request.user.steward.company
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
+    elif not hasattr(request.user, 'manager') and not hasattr(request.user, 'steward'):
+        return redirect('login')
     else:
         manager = request.user.manager
         company = manager.company
@@ -249,7 +250,14 @@ def labor_request_list(request, slug):
         search_query = request.POST.get('search', request.GET.get('search', '')).strip()
         if search_query:
             workers_list = [w for w in workers_list if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')]
-        per_page = int(request.POST.get('per_page', request.GET.get('per_page', manager.per_page_preference)))
+        if hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+            per_page = int(request.POST.get('per_page', request.GET.get('per_page', steward.per_page_preference)))
+            steward.per_page_preference = per_page
+            steward.save()
+        else:
+            per_page = int(request.POST.get('per_page', request.GET.get('per_page', manager.per_page_preference)))
+            manager.per_page_preference = per_page
+            manager.save()
         paginator = Paginator(workers_list, per_page)
         page_number = request.POST.get('page', request.GET.get('page', 1))
         try:
@@ -317,7 +325,14 @@ def labor_request_list(request, slug):
     search_query = request.GET.get('search', '').strip()
     if search_query:
         workers_list = [w for w in workers_list if search_query.lower() in (w.name or '').lower() or search_query in (w.phone_number or '')]
-    per_page = manager.per_page_preference
+    if hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        per_page = steward.per_page_preference
+        steward.per_page_preference = per_page
+        steward.save()
+    else:
+        per_page = manager.per_page_preference
+        manager.per_page_preference = per_page
+        manager.save()
     paginator = Paginator(workers_list, per_page)
     page_number = request.GET.get('page', 1)
     try:
@@ -374,17 +389,23 @@ def labor_request_list(request, slug):
     }
     return render(request, 'callManager/labor_request_list.html', context)
 
+
 @login_required
 def fill_labor_request_list(request, slug):
     if hasattr(request.user, 'administrator'):
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
         manager = labor_requirement.call_time.event.company.managers.first()
-    elif not hasattr(request.user, 'manager'):
-        return redirect('login')
-    else:
+        company = labor_requirement.call_time.event.company
+    elif hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        steward = request.user.steward
+        company = request.user.steward.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
+    elif hasattr(request.user, 'manager'):
         manager = request.user.manager
         company = manager.company
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
+    else:
+        return redirect('dashboard_redirect')
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     workers = Worker.objects.filter(company=company).distinct()
     search_query = request.GET.get('search', '').strip()
@@ -398,10 +419,14 @@ def fill_labor_request_list(request, slug):
         workers = workers.filter(query)
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
-    if request.GET.get('per_page'):
+    if request.GET.get('per_page') and hasattr(request.user, 'manager'):
         per_page = int(request.GET.get('per_page'))
         manager.per_page_preference = per_page
         manager.save()
+    elif request.GET.get('per_page') and hasattr(request.user, 'steward'):
+        per_page = int(request.GET.get('per_page'))
+        steward.per_page_preference = per_page
+        steward.save()
     else:
         per_page = manager.per_page_preference
     paginator = Paginator(workers_list, per_page)
@@ -443,7 +468,7 @@ def fill_labor_request_list(request, slug):
     pending_requests = labor_requests.filter(availability_response__isnull=True)
     available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
-    labor_types = LaborType.objects.filter(company=manager.company)
+    labor_types = LaborType.objects.filter(company=company)
     context = {
         'labor_requirement': labor_requirement,
         'pending_count': pending_requests.count(),
@@ -461,8 +486,20 @@ def fill_labor_request_list(request, slug):
 
 @login_required
 def worker_fill_partial(request, slug, worker_id):
-    manager = request.user.manager
-    labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=manager.company)
+    if hasattr(request.user, 'administrator'):
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
+        manager = labor_requirement.call_time.event.company.managers.first()
+        company = labor_requirement.call_time.event.company
+    elif hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        steward = request.user.steward
+        company = request.user.steward.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
+    elif hasattr(request.user, 'manager'):
+        manager = request.user.manager
+        company = manager.company
+        labor_requirement = get_object_or_404(LaborRequirement, slug=slug, call_time__event__company=company)
+    else:
+        return redirect('dashboard_redirect')
     worker = get_object_or_404(Worker, id=worker_id)
     labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement, requested=True).select_related('worker')
     requested_worker_ids = list(labor_requests.values_list('worker__id', flat=True))
