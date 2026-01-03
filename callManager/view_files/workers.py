@@ -245,13 +245,17 @@ def import_workers(request):
             errors = 0
             current_name = None
             current_phone = None
-            for i, line in enumerate(vcf_file):
+            for _, line in enumerate(vcf_file):
                 line = line.strip()
                 try:
                     if line.startswith('END:VCARD'):
                         if current_name or current_phone:
                             if current_phone:
-                                current_phone = current_phone.replace(' ', '').replace('-', '')
+                                current_phone = current_phone.replace(' ', '')
+                                current_phone = current_phone.replace('-', '')
+                                current_phone = current_phone.replace('(', '')
+                                current_phone = current_phone.replace(')', '')
+                                current_phone = current_phone.replace('.', '')
                                 if current_phone.startswith('1') and len(current_phone) == 11:
                                     current_phone = f"+{current_phone}"
                                 elif not current_phone.startswith('+') and len(current_phone) == 10:
@@ -259,7 +263,7 @@ def import_workers(request):
                                 elif len(current_phone) < 10:
                                     messages.error(request, f"Invalid phone number: {current_phone}")
                                     continue
-                            worker, created = Worker.objects.get_or_create(
+                            _, created = Worker.objects.get_or_create(
                                 phone_number=current_phone,
                                 company=manager.company,
                                 defaults={'name': current_name.strip() if current_name else None})

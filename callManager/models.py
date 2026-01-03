@@ -291,19 +291,27 @@ class Worker(models.Model):
     nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
     slug = models.CharField(max_length=10, unique=True, editable=False)
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            while True:
-                slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-                if not Worker.objects.filter(slug=slug).exists():
-                    self.slug = slug
-                    break
-        super().save(*args, **kwargs)
 
     def add_company(self, company):
         if not self.company:
             self.company = company
             self.save()
+
+    def full_phone_number(self):
+        phone = self.phone_number.replace('-', '')
+        phone = phone.replace(' ', '')
+        phone = phone.replace('(', '')
+        phone = phone.replace(')', '')
+        phone = phone.replace('.', '')
+        if phone.startswith('+1'):
+            phone = phone[2:]  # Remove +1 prefix
+        if len(phone) == 10 and phone.isdigit():
+            return f"+1{phone}"
+        elif len(phone) == 11 and phone.isdigit():
+            return f"+{phone}"
+        elif len(phone) == 12 and phone.startswith('+'):
+            return phone
+        return phone
 
     def formatted_phone_number(self):
         phone = self.phone_number.replace('-', '').replace('(', '').replace(')', '').replace(' ', '')
@@ -322,6 +330,17 @@ class Worker(models.Model):
     @classmethod
     def get_by_natural_key(cls, slug):
         return cls.objects.get(slug=slug)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            while True:
+                slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+                if not Worker.objects.filter(slug=slug).exists():
+                    self.slug = slug
+                    break
+        self.phone_number = self.full_phone_number()
+
+        super().save(*args, **kwargs)
 
 
 class ClockInToken(models.Model):
