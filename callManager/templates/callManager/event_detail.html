@@ -63,6 +63,7 @@
                     {% csrf_token %}
                 </form>
             </div>
+                <a href="{% url 'send_calltime' call_time.slug %}" class="shadow-sm shadow-secondary dark:shadow-dark-secondary bg-success text-dark-text-primary ml-2 p-2 rounded hover:bg-success-hover dark:bg-dark-success dark:hover:bg-dark-success-hover">Send Call Time</a>
         </h3>
         <ul class="mt-2 divide-y divide-success dark:divide-dark-secondary mb-2">
             {% for labor in call_time.labor_requirements.all %}

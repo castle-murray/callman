@@ -273,6 +273,8 @@ class TimeChangeConfirmation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     confirmed = models.BooleanField(default=False)
+    cant_do_it = models.BooleanField(default=False)
+    message = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"Time change confirmation for {self.labor_request}"

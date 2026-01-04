@@ -24,5 +24,18 @@
             <p class="text-text-secondary dark:text-dark-text-secondary mb-6">No unconfirmed requests.</p>
         {% endif %}
         <a href="{% url 'event_detail' call_time.event.slug %}" class="inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
+        <h2 class="text-xl font-semibold mb-2 text-text-heading dark:text-dark-text-primary">Cant Do It</h2>
+        {% if cant_do_it_requests %}
+            <ul class="mb-6 space-y-2 text-text-red dark:text-dark-text-red">
+                {% for request in cant_do_it_requests %}
+                    <li>{{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }}) - {{ request.labor_requirement.labor_type.name }}</li>
+                    {% if request.message %}
+                        <p class="text-text-secondary dark:text-dark-text-secondary">{{ request.message }}</p>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-text-secondary dark:text-dark-text-secondary mb-6">No cant do it requests.</p>
+        {% endif %}
     </div>
 {% endblock %}

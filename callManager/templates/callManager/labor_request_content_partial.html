@@ -106,7 +106,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="request_id" value="{{ request.id }}">
                             <input type="hidden" name="action" value="decline">
-                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Decline</button>
+                            <button type="submit" class="bg-danger text-dark-text-primary px-2 py-1 rounded hover:bg-danger-hover dark:bg-dark-danger dark:hover:bg-dark-danger-hover">Declined</button>
                         </form>
                         <form method="post" class="inline">
                             {% csrf_token %}

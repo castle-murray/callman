@@ -35,6 +35,32 @@ import logging
 # Create a logger instance
 logger = logging.getLogger('callManager')
 
+def send_calltime(request, slug):
+    manager = request.user.manager
+    call_time = get_object_or_404(CallTime, slug=slug)
+    event = call_time.event
+    company = event.company
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=False,
+        availability_response__isnull=True
+    )
+    for lr in labor_requests:
+        worker = lr.worker
+        token = lr.token_short
+        confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+        message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
+        errors = send_message(message_body, worker, manager, company)
+        if errors:
+            messages.warning(request, f"Failed to send reminder: {', '.join(errors)}")
+        else:
+            lr.sms_sent = True
+            lr.save()
+            messages.success(request, "Messages sent successfully.")
+    return redirect('event_detail', slug=event.slug)
+
+
+
 @login_required
 def add_labor_to_call(request, slug):
     manager = request.user.manager
@@ -565,7 +591,6 @@ def confirm_time_change(request, token):
     except TimeChangeConfirmation.DoesNotExist:
         messages.error(request, "Invalid or expired confirmation link.")
         return render(request, 'callManager/confirm_time_change.html')
-    
     labor_request = confirmation.labor_request
     call_time = labor_request.labor_requirement.call_time
     call_time_name = call_time.name
@@ -582,6 +607,8 @@ def confirm_time_change(request, token):
     if request.method == "POST":
         confirmation.confirmed = True
         confirmation.labor_request.save()
+        confirmation.message = request.POST.get('message')
+        confirmation.cant_do_it = request.POST.get('cant_do_it', False)
         confirmation.save()
         messages.success(request, "Time change confirmed successfully.")
     
@@ -597,11 +624,18 @@ def call_time_confirmations(request, slug):
         confirmed=True
     ).select_related('worker', 'labor_requirement__labor_type')
     confirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=True)
+    confirmed_requests = confirmed_requests.filter(time_change_confirmations__cant_do_it=False)
     unconfirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=False)
+    cant_do_it_requests = labor_requests.filter(time_change_confirmations__cant_do_it=True)
+    for item in cant_do_it_requests:
+        item.message = item.time_change_confirmations.first().message
+    for item in cant_do_it_requests:
+        print(item.message)
     context = {
         'call_time': call_time,
         'confirmed_requests': confirmed_requests,
         'unconfirmed_requests': unconfirmed_requests,
+        'cant_do_it_requests': cant_do_it_requests,
     }
     return render(request, 'callManager/call_time_confirmations.html', context)
 

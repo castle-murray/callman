@@ -402,7 +402,6 @@ def confirm_event_requests(request, slug, event_token):
                 if response == 'no':
                     notif_message = f"{worker.name} declined {event.event_name} - {call_time.name} - {labor_type.name}"
                     notify(labor_request.id, 'Declined', notif_message)
-
                     if labor_request.is_reserved:
                         labor_request.is_reserved = False
                         labor_request.save()
@@ -522,6 +521,7 @@ def add_worker(request):
         form = WorkerForm()
     return render(request, 'callManager/add_worker.html', {'form': form})
 
+
 def dashboard_redirect(request):
     if hasattr(request.user, 'administrator'):
         return redirect('admin_dashboard')
@@ -531,6 +531,7 @@ def dashboard_redirect(request):
         return redirect('steward_dashboard')
     else:
         return redirect('user_profile')
+
 
 @login_required
 def notifications(request):
@@ -548,7 +549,6 @@ def notifications(request):
             notification.read = True
             notification.save()
             push_notification(company)
-
         if action == 'clear_read':
             read_notifications = notifications.filter(read=True)
             read_notifications.delete()
@@ -564,13 +564,12 @@ def notifications(request):
     context = {'notifications': notifications}
     return render(request, 'callManager/notifications.html', context)
 
+
 def htmx_get_notification_count(request):
     if not hasattr(request.user, 'manager'):
         return HttpResponse("")  # or empty
-
     company = request.user.manager.company
     count = Notifications.objects.filter(company=company, read=False).count()
-
     # Check for *very recent* notifications to trigger messages.success
     recent = Notifications.objects.filter(
         company=company,
@@ -579,13 +578,14 @@ def htmx_get_notification_count(request):
     )
     for n in recent:
         messages.success(request, n.message)
-
     context = {'count': count}
     template = 'callManager/notification_button_count.html' if count > 0 else 'callManager/notifications_button_empty.html'
     return render(request, template, context)
 
+
 def htmx_clear(request):
     return HttpResponse("<div id='notification-dropdown'></div>")
+
 
 @login_required
 def change_password(request):
@@ -607,7 +607,6 @@ def change_password(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = ChangePasswordForm()
-
     return render(request, 'callManager/change_password.html', {'form': form})
 
 

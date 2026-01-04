@@ -62,6 +62,8 @@ def admin_dashboard(request):
                 term_filter = Q(event_name__icontains=term) | Q(location_profile__name__icontains=term)
             events = events.filter(term_filter)
     events = events.order_by('start_date').distinct()
+    if request.GET.get('include_past'):
+        events = events.order_by('start_date')
     total_events = events.count()
     pending_requests = LaborRequest.objects.filter(
         availability_response__isnull=True).count()

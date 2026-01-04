@@ -9,13 +9,35 @@
         {% else %}
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm the time change for <b>{{ event_name }} - {{ call_time_name }}</b>.</p>
         <p class="text-text-primary mb-4 dark:text-dark-text-primary">The time has changed from <b>{{ original_time }} to {{ new_time }}</b>.</p>
-            <p class="text-text-primary mb-4 dark:text-dark-text-primary">Please confirm the time change by clicking the button below.</p>
+            
             <form method="post">
                 {% csrf_token %}
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="cant_do_it" value="True" id="cant-do-checkbox" class="mr-2">
+                        <span class="text-text-primary dark:text-dark-text-primary">I can't work the new time</span>
+                    </label>
+                </div>
+                
+                <div id="message-field" class="mb-4 hidden">
+                    <textarea name="message" class="w-full p-2 border rounded" placeholder="Optional message"></textarea>
+                </div>
+                
                 <button type="submit" class="bg-primary text-dark-text-primary px-4 py-2 rounded hover:bg-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
                     Confirm Time Change
                 </button>
             </form>
         {% endif %}
     </div>
+
+    <script>
+        document.getElementById('cant-do-checkbox').addEventListener('change', function() {
+            const messageField = document.getElementById('message-field');
+            if (this.checked) {
+                messageField.classList.remove('hidden');
+            } else {
+                messageField.classList.add('hidden');
+            }
+        });
+    </script>
 {% endblock %}

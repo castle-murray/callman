@@ -61,6 +61,7 @@ urlpatterns = [
     path('call/confirm-time-change/<uuid:token>/', call_times.confirm_time_change, name='confirm_time_change'),
     path('call/confirmations/<slug:slug>/', call_times.call_time_confirmations, name='call_time_confirmations'),
     path('call/<slug:slug>/send-reminder/', call_times.send_reminder, name='send_reminder'),
+    path('call/<slug:slug>/send-calltime/', call_times.send_calltime, name='send_calltime'),
 
     #labor requests
     path('labor/<slug:slug>/requests/', labor_requests.labor_request_list, name='labor_request_list'),
