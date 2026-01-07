@@ -32,6 +32,9 @@
         {% if worker.nocallnoshow >= 2 %}
             <span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>
         {% endif %}
+        {% if worker.canceled_requests > 0 %}
+            <span class="text-text-red dark:text-dark-text-red">{{ worker.canceled_requests }} Cancels</span>
+        {% endif %}
         {% if worker.id in worker_conflicts %}
             <ul class="ml-4 {% if worker_data.is_confirmed %}text-text-green dark:text-dark-text-green{% else %}text-text-yellow dark:text-dark-text-yellow{% endif %}">
                 {% for conflict in worker_data.conflicts %}

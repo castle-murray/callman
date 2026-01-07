@@ -62,6 +62,7 @@
             <p> These are calls for which you have indicated your availability. You are not on these calls until confirmed. </p>
             <ul class="list-disc pl-5 mb-4">
                 {% for item in available_call_times %}
+
                     <li class="text-text-primary dark:text-dark-text-primary">
                         {{ item.labor_requirement.call_time.name }} on {{ item.labor_requirement.call_time.date|date:"F j, Y" }} at {{ item.labor_requirement.call_time.time|time:"h:i A" }} @ {{ item.call_time.event.location_profile.name }} ( {{ item.labor_requirement.labor_type }})
                         {% if item.labor_requirement.call_time.message %}
@@ -77,12 +78,24 @@
             <h2 class="text-xl font-semibold mb-2 text-text-primary dark:text-dark-text-primary">Confirmed Call Times</h2>
             <ul class="list-disc pl-5 mb-4">
                 {% for item in confirmed_call_times %}
-                    <li class="text-text-primary dark:text-dark-text-primary">
-                        {{ item.call_time.name }} on {{ item.call_time.date|date:"F j, Y" }} at {{ item.call_time.time|time:"h:i A" }} @ {{ item.call_time.event.location_profile }} (Position: {{ item.position }})
-                        <a href="{{ item.gcal_url }}" target="_blank" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Add to Google Calendar</a>
-                        {% if item.message %}
-                            <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ item.message }}</p>
-                        {% endif %}
+                    <li class="flex flex-row justify-between text-text-primary dark:text-dark-text-primary">
+                        <div class="flex-col">
+                            <div>{{ item.call_time.name }} on {{ item.call_time.date|date:"F j, Y" }} at {{ item.call_time.time|time:"h:i A" }} @ {{ item.call_time.event.location_profile }} (Position: {{ item.position }})</div>
+                            <div><a href="{{ item.gcal_url }}" target="_blank" class="text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Add to Google Calendar</a></div>
+                            {% if item.message %}
+                            <div>
+                                <p class="text-text-secondary mt-1 dark:text-dark-text-secondary">{{ item.message }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <button 
+                                hx-get="{% url 'cancel_confirmed_request' item.slug %}" 
+                                hx-target="closest li" 
+                                hx-swap="innerHTML" 
+                                hx-confirm="Are you sure you want to cancel this request? This cannot be undone. Click OK to confirm."
+                                class="bg-danger dark:bg-dark-danger text-white px-4 py-2 rounded hover:bg-danger-hover">Cancel</button>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>

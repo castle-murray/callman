@@ -73,6 +73,8 @@ urlpatterns = [
     path('labor/<slug:slug>/delete/', labor_requests.delete_labor_requirement, name='delete_labor_requirement'),
     path('labor-request/<int:request_id>/<str:action>/', labor_requests.labor_request_action, name='labor_request_action'),
 
+
+
     #time tracking
     path('call/<slug:slug>/track/meal_edit/', time_tracking.call_time_tracking_meal_edit, name='call_time_tracking_meal_edit'),
     path('call/<slug:slug>/track/meal_display/', time_tracking.call_time_tracking_meal_display, name='call_time_tracking_meal_display'),
@@ -97,6 +99,7 @@ urlpatterns = [
 
     #confirmations
     path('event/<slug:slug>/confirm/<event_token>/', views.confirm_event_requests, name='confirm_event_requests'),
+    path('cancel-request/<slug:slug>/', views.cancel_confirmed_request, name='cancel_confirmed_request'),
 
     #registrations
     path('user/register/success/', registrations.registration_success, name='registration_success'),

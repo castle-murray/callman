@@ -148,4 +148,15 @@
     {% else %}
         <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No declined requests.</p>
     {% endif %}
+    {% if canceled_requests %}
+        <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Canceled  {% if canceled_count %}  {{ canceled_count }} {% endif %}</h2>
+        <ul class="space-y-2 mb-4">
+            {% for request in canceled_requests %}
+                <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
+                    {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number|default:"No phone" }})
+                    {% if request.is_reserved %}<span class="ml-2 text-text-secondary dark:text-dark-text-secondary">(Reserved)</span>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 </div>

@@ -9,7 +9,6 @@
     <ul class="divide-y divide-gray-100 dark:divide-dark-border-dark overflow-y-auto flex-grow custom-scrollbar max-h-96">
         {% for notification in notifications %}
         <li class="px-2 lg:px-4 py-2 {%if notification.read %}bg-gray-100 dark:bg-dark-border-dark{% else %}bg-white dark:bg-dark-card-bg{% endif %} hover:bg-gray-100 dark:hover:bg-dark-border-dark">
-            
             <div class="flex flex-grow-0">
                 <div class="flex flex-col w-1/6 mr-1">
                     <a href="{% url 'labor_request_list' notification.labor_request.labor_requirement.slug %}">
@@ -19,8 +18,9 @@
                     <p class="text-sm text-success dark:text-green-400">{{ notification.response }}</p>
                     {% elif notification.response == 'Available' %}
                     <p class="text-sm font-bold text-teal dark:text-dark-teal">{{ notification.response }}</p>
+                    {% elif notification.response == 'Canceled' %}
+                    <p class="text-sm text-danger dark:text-red-400">{{ notification.response }}</p>
                     {% endif %}
-
                     <p class="text-sm text-text-secondary dark:text-dark-text-secondary">{{ notification.sent_at|date:"m/d H:i" }}</p>
                 </div>
                 <div class="flex flex-col w-full">

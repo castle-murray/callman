@@ -36,6 +36,20 @@ import logging
 logger = logging.getLogger('callManager')
 
 def send_calltime(request, slug):
+    if hasattr(request.user, 'administrator'):
+        call_time = get_object_or_404(CallTime, slug=slug) 
+        company = call_time.event.company
+        manager = company.managers.first()
+    elif hasattr(request.user, 'manager'):
+        manager = request.user.manager
+        company = manager.company
+        call_time = get_object_or_404(CallTime, slug=slug)
+    elif hasattr(request.user, 'steward') and not hasattr(request.user, 'manager'):
+        steward = request.user.steward
+        company = steward.company
+        call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    else:
+        return redirect('login')
     manager = request.user.manager
     call_time = get_object_or_404(CallTime, slug=slug)
     event = call_time.event
@@ -49,7 +63,8 @@ def send_calltime(request, slug):
         worker = lr.worker
         token = lr.token_short
         confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
-        message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
+        call_time_time = call_time.time.strftime('%I:%M %p')
+        message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} on {event.start_date} @ {call_time_time}: {confirmation_url}"
         errors = send_message(message_body, worker, manager, company)
         if errors:
             messages.warning(request, f"Failed to send reminder: {', '.join(errors)}")
@@ -238,16 +253,19 @@ def call_time_request_list(request, slug):
     pending_requests = labor_requests.filter(availability_response__isnull=True)
     available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
-    declined_requests = labor_requests.filter(availability_response='no')
+    declined_requests = labor_requests.filter(availability_response='no', canceled=False)
+    canceled_requests = labor_requests.filter(canceled=True)
     ncns_requests = labor_requests.filter(availability_response='ncns')
     labor_types = LaborType.objects.filter(laborrequirement__call_time=call_time).distinct()
     message = request.GET.get('message', '')
+    print(canceled_requests)
     context = {
         'call_time': call_time,
         'pending_requests': pending_requests,
         'available_requests': available_requests,
         'confirmed_requests': confirmed_requests,
         'declined_requests': declined_requests,
+        'canceled_requests': canceled_requests,
         'ncns_requests': ncns_requests,
         'labor_types': labor_types,
         'selected_labor_type': labor_type_filter,
@@ -670,4 +688,3 @@ def send_reminder(request, slug):
                 labor_request.reminder_sent = True
                 labor_request.save()
                 messages.success(request, "Reminder sent successfully.")
-

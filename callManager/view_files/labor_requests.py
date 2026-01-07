@@ -153,8 +153,7 @@ def labor_request_list(request, slug):
                                 charges += 1
                                 msglen -= 144
                             log_sms(company)
-                            print(message_body)
-                            print(charges, msglen)
+                    
                     if labor_request.availability_response in [None, 'no']:  # Allow confirm from pending or declined
                         labor_request.availability_response = 'yes'
                         labor_request.responded_at = timezone.now()
@@ -244,6 +243,7 @@ def labor_request_list(request, slug):
         available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
         confirmed_requests = labor_requests.filter(confirmed=True)
         declined_requests = labor_requests.filter(availability_response='no')
+        canceled_requests = labor_requests.filter(canceled=True)
         workers = Worker.objects.filter(company=company).distinct()
         workers_list = list(workers)
         workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
@@ -302,6 +302,7 @@ def labor_request_list(request, slug):
             'confirmed_count': confirmed_requests.count(),
             'declined_requests': declined_requests,
             'declined_count': declined_requests.count(),
+            'canceled_requests': canceled_requests,
             'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
             'workers': page_obj,
             'worker_conflicts': worker_conflicts,
@@ -319,6 +320,7 @@ def labor_request_list(request, slug):
     available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
     confirmed_requests = labor_requests.filter(confirmed=True)
     declined_requests = labor_requests.filter(availability_response='no')
+    canceled_requests = labor_requests.filter(canceled=True)
     workers = Worker.objects.filter(company=company).distinct()
     workers_list = list(workers)
     workers_list.sort(key=lambda w: (labor_requirement.labor_type not in w.labor_types.all(), w.name or ''))
@@ -378,6 +380,7 @@ def labor_request_list(request, slug):
         'confirmed_count': confirmed_requests.count(),
         'declined_requests': declined_requests,
         'declined_count': declined_requests.count(),
+        'canceled_requests': canceled_requests,
         'is_filled': labor_requirement.needed_labor <= confirmed_requests.count(),
         'workers': page_obj,
         'worker_conflicts': worker_conflicts,

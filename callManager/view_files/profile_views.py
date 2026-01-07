@@ -23,8 +23,8 @@ def user_profile(request):
     ).order_by('labor_requirement__call_time__date')
     #requests from today forward
     confirmed = labor_requests.filter(confirmed=True)
-    upcoming = labor_requests.filter(labor_requirement__call_time__date__gte=timezone.now().date()).order_by('labor_requirement__call_time__call_unixtime')
-    past = confirmed.filter(labor_requirement__call_time__date__lt=timezone.now().date())
+    upcoming = labor_requests.filter(labor_requirement__call_time__date__gte=timezone.now().date(), sms_sent=True).order_by('labor_requirement__call_time__call_unixtime')
+    past = confirmed.filter(labor_requirement__call_time__date__lt=timezone.now().date(), sms_sent=True)
 
     context = {
             'labor_requests': labor_requests, 

@@ -17,7 +17,9 @@
                                    class="mr-2 text-text-blue dark:text-dark-text-blue" 
                                    {% if worker.id in worker_conflicts %}title="Worker has conflicting requests"{% endif %}>
                             <div>
-                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }}) {% if worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>{% endif %}
+                                {{ worker.name|default:"Unnamed Worker" }} ({{ worker.phone_number|default:"No phone" }}) 
+
+                                {% if worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ worker.nocallnoshow }} NCNS</span>{% endif %}
                                 {% if worker.id in worker_conflicts %}
                                     <ul class="ml-4 {% if worker_data.is_confirmed %}text-text-green dark:text-dark-text-green{% else %}text-text-red dark:text-dark-text-red{% endif %}">
                                         {% for conflict in worker_data.conflicts %}

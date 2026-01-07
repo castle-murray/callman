@@ -70,6 +70,8 @@ def custom_400(request, exception):
     return render(request, 'callManager/400.html', status=400)
 
 def index(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard_redirect')
     return render(request, 'callManager/index.html')
 
 def log_sms(company):
@@ -272,30 +274,16 @@ def confirm_event_requests(request, slug, event_token):
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time__event=event,
         requested=True,
-        availability_response__isnull=True,
         worker__phone_number=worker_phone).select_related(
         'labor_requirement__call_time',
         'labor_requirement__labor_type').annotate(
         confirmed_count=Count('labor_requirement__labor_requests', filter=Q(labor_requirement__labor_requests__confirmed=True))).order_by(
         'labor_requirement__call_time__date',
         'labor_requirement__call_time__time')
-    confirmed_call_times = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event,
-        confirmed=True,
-        worker__phone_number=worker_phone).select_related(
-        'labor_requirement__call_time',
-        'labor_requirement__labor_type').order_by(
-        'labor_requirement__call_time__date',
-        'labor_requirement__call_time__time')
-    available_call_times = LaborRequest.objects.filter(
-        labor_requirement__call_time__event=event,
-        availability_response='yes',
-        confirmed=False,
-        worker__phone_number=worker_phone).select_related(
-        'labor_requirement__call_time',
-        'labor_requirement__labor_type').order_by(
-        'labor_requirement__call_time__date',
-        'labor_requirement__call_time__time')
+    confirmed_call_times = labor_requests.filter(confirmed=True)
+    pending_call_times = labor_requests.filter(availability_response__isnull=True)
+    labor_requests = labor_requests.filter(sms_sent=True)
+    available_call_times = labor_requests.filter(availability_response='yes', confirmed=False)
     registration_url = request.build_absolute_uri(f"/user/register/?phone={worker_phone}")
     calendar_links = []
     for req in confirmed_call_times:
@@ -312,6 +300,7 @@ def confirm_event_requests(request, slug, event_token):
             f"details={details}&"
             f"location={location}")
         calendar_links.append({
+            'slug': req.token_short,
             'call_time': call_time,
             'position': req.labor_requirement.labor_type.name,
             'message': call_time.message if call_time.message else '',
@@ -333,7 +322,7 @@ def confirm_event_requests(request, slug, event_token):
         qr_code_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
     if request.method == "POST":
         sms_errors = []
-        for labor_request in labor_requests:
+        for labor_request in pending_call_times:
             worker = labor_request.worker
             company = event.company
             call_time = labor_request.labor_requirement.call_time
@@ -430,7 +419,7 @@ def confirm_event_requests(request, slug, event_token):
     context = {
         'company': company,
         'event': event,
-        'labor_requests': labor_requests,
+        'labor_requests': pending_call_times,
         'registration_url': registration_url,
         'available_call_times': available_call_times,
         'confirmed_call_times': calendar_links,
@@ -439,6 +428,25 @@ def confirm_event_requests(request, slug, event_token):
         context['message'] = "No requests found for this link."
         return render(request, 'callManager/confirm_error.html', context)
     return render(request, 'callManager/confirm_event_requests.html', context)
+
+
+def cancel_confirmed_request(request, slug):
+    labor_request = get_object_or_404(LaborRequest, token_short=slug)
+    worker = labor_request.worker
+    labor_requirement = labor_request.labor_requirement
+    call_time = labor_requirement.call_time
+    call_time_time = call_time.time.strftime('%I:%M %p')
+    event = call_time.event
+    labor_request.confirmed = False
+    labor_request.availability_response = 'no'
+    labor_request.canceled = True
+    labor_request.save()
+    worker.canceled_requests += 1
+    worker.save()
+    message_body = f"{worker.name} has canceled on {event.event_name} - {call_time.name}, {call_time.date} @ {call_time_time} - {labor_requirement.labor_type.name}"
+    notify(labor_request.id, 'Canceled', message_body)
+
+    return render(request, 'callManager/canceled_request_partial.html')
 
 
 @login_required
@@ -540,6 +548,8 @@ def notifications(request):
     company = request.user.manager.company
     notifications = Notifications.objects.filter(
         company=request.user.manager.company).order_by('-sent_at')
+    for notification in notifications:
+        print(notification.response)
     channel_layer = get_channel_layer()
     if request.method == "POST":
         action = request.POST.get('action')

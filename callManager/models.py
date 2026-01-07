@@ -262,10 +262,12 @@ class LaborRequest(models.Model):
     event_token = models.CharField(max_length=36, null=True, blank=True)
     sent_time = models.DateTimeField(null=True, blank=True)
     reminder_sent = models.BooleanField(default=False)
+    canceled = models.BooleanField(default=False)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
         return f"Request: {worker_name} - {self.labor_requirement.labor_type.name}"
+
 
 class TimeChangeConfirmation(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -292,6 +294,7 @@ class Worker(models.Model):
     stop_sms = models.BooleanField(default=False)
     nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
     slug = models.CharField(max_length=10, unique=True, editable=False)
+    canceled_requests = models.IntegerField(default=0)
 
 
     def add_company(self, company):
@@ -470,6 +473,7 @@ class MealBreak(models.Model):
     def __str__(self):
         return f"{self.break_type.capitalize()} Break for {self.time_entry.worker.name} at {self.break_time}"
 
+
 class TemporaryScanner(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     event = models.ForeignKey('Event', on_delete=models.CASCADE, related_name='temporary_scanners')
@@ -525,6 +529,8 @@ class Notifications(models.Model):
         ('Available', 'Available'),
         ('Confirmed', 'Confirmed'),
         ('Declined', 'Declined'),
+        ('Time Change', 'Time Change'),
+        ('Canceled', 'Canceled')
     ]
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='notifications')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='notifications')

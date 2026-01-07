@@ -177,6 +177,17 @@
         {% else %}
             <p class="text-text-secondary mb-4 dark:text-dark-text-secondary">No no-call no-show requests.</p>
         {% endif %}
+        {% if canceled_requests %}
+            <h2 class="text-xl font-semibold mb-2 text-text-red dark:text-dark-text-red">Canceled Requests</h2>
+            <ul class="space-y-2 mb-4">
+                {% for request in canceled_requests %}
+                    <li class="flex items-center justify-between text-text-red dark:text-dark-text-red">
+                        {{ request.worker.name|default:"Unnamed Worker" }} ({{ request.worker.phone_number }}) {% if request.worker.nocallnoshow >= 2 %}<span class="text-purple dark:text-dark-purple">{{ request.worker.nocallnoshow }} NCNS</span>{% endif %} - {{ request.labor_requirement.labor_type.name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
 
         <a href="{% url 'event_detail' call_time.event.slug %}" class="mt-4 inline-block text-primary hover:underline dark:text-dark-text-blue dark:hover:text-dark-primary-hover">Back to Event</a>
     </div>
