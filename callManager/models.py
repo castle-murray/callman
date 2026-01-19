@@ -295,6 +295,7 @@ class Worker(models.Model):
     nocallnoshow = models.IntegerField(default=0)  # No-call, no-show counter
     slug = models.CharField(max_length=10, unique=True, editable=False)
     canceled_requests = models.IntegerField(default=0)
+    notes = models.TextField(blank=True, null=True)
 
 
     def add_company(self, company):

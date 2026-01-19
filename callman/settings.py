@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -50,6 +51,9 @@ INSTALLED_APPS = [
     'django_htmx',
     'channels',
     'stripe',
+    'rest_framework',
+    'api',
+    'rest_framework.authtoken',
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')
@@ -64,6 +68,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+
 
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
@@ -86,6 +92,20 @@ TEMPLATES = [
         },
     },
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
 
 WSGI_APPLICATION = 'callman.wsgi.application'
 
@@ -411,3 +431,6 @@ CHANNEL_LAYERS = {
 
 #else:
 #
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWS_CREDENTIALS = True

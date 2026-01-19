@@ -47,3 +47,33 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             "type": "htmx_trigger",
             "event": "notification-update"
         }))
+
+class LaborRequestConsumer(AsyncWebsocketConsumer):
+    """updates the labor request list when workers
+    responds to requests. """
+    async def connect(self):
+        user = self.scope["user"]
+        self.labor_requirement_slug = self.scope['url_route']['kwargs']['slug']
+        logger.info(f"User {user} connected to labor request updates for {self.labor_requirement_slug}.")
+
+        # Wrap DB access in sync_to_async   
+        manager = await get_user_manager(user)
+
+        if user.is_anonymous or not manager:
+            logger.warning(f"User {user} is anonymous or does not have a manager. Closing connection.")
+            await self.close()
+            return  
+        
+        self.group_name = f"labor_request_{self.labor_requirement_slug}_updates"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def labor_request_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "labor_request_update",
+            "data": event.get("data", {})
+        }))
