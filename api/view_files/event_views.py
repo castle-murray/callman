@@ -1,8 +1,10 @@
+from datetime import timedelta
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from callManager.models import Event, LaborRequirement, LaborType, LocationProfile
@@ -33,6 +35,9 @@ from api.serializers import (
         LaborRequirementSerializer,
         LaborTypeSerializer,
         LocationProfileSerializer,
+        WorkerSerializer,
+        CallTimeSerializer,
+        LaborRequestSerializer,
         )
 from callManager.models import generate_unique_slug
         WorkerSerializer,

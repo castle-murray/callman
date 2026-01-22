@@ -19,7 +19,8 @@ from .models import (
         StewardInvitation,
         LocationProfile,
         TimeChangeConfirmation,
-        ManagerInvitation
+        ManagerInvitation,
+        UserProfile,
         )
 
 
@@ -194,3 +195,8 @@ class NotificationsAdmin(admin.ModelAdmin):
     list_display = ('company', 'event', 'labor_request', 'message', 'sent_at', 'read')
     list_filter = ('company', 'event', 'read')
     search_fields = ('message',)
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone_number')
+    search_fields = ('user__username', 'phone_number')

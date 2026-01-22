@@ -29,10 +29,12 @@ def notify(labor_request_id, response, message):
 def push_notification(company):
     # Send via WebSocket to all users in the company
     channel_layer = get_channel_layer()
+    group_name = f"company_{company.id}_notifications"
+    print(f"Pushing notification to group: {group_name}")  # Debug print
     async_to_sync(channel_layer.group_send)(
-        f"company_{company.id}_notifications",
+        group_name,
         {
-            "type": "send.notification",
+            "type": "send_notification",
             "notification": {
                 "type": "send_notification",  # maps to send_notification() in consumer
             }

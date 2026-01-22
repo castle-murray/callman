@@ -37,10 +37,20 @@ class EventSerializer(serializers.ModelSerializer):
         event = Event.objects.create(**validated_data)
         return event
 
+class LaborTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LaborType
+        fields = '__all__'
+
+    def create(self, validated_data):
+        labor_type = LaborType.objects.create(**validated_data)
+        return labor_type
+
 class WorkerSerializer(serializers.ModelSerializer):
     conflicts = serializers.SerializerMethodField()
     requested = serializers.SerializerMethodField()
-    
+    labor_types = LaborTypeSerializer(many=True, read_only=True)
+
     def get_conflicts(self, obj):
         return getattr(obj, 'conflicts', [])
     
@@ -125,16 +135,6 @@ class CallTimeSerializer(serializers.ModelSerializer):
         call_time = CallTime.objects.create(**validated_data)
         return call_time
 
-
-class LaborTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LaborType
-
-        fields = '__all__'
-
-    def create(self, validated_data):
-        labor_type = LaborType.objects.create(**validated_data)
-        return labor_type
 
 class ManagerInvitationSerializer(serializers.ModelSerializer):
     class Meta:

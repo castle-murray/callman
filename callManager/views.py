@@ -100,9 +100,12 @@ def confirm_assignment(request, token):
 
 
 def generate_short_token(length=6):
-    """Generate a random alphanumeric token of specified length."""
+    """Generate a unique random alphanumeric token of specified length."""
     characters = string.ascii_letters + string.digits  # a-z, A-Z, 0-9
-    return ''.join(random.choice(characters) for _ in range(length))
+    while True:
+        token = ''.join(random.choice(characters) for _ in range(length))
+        if not LaborRequest.objects.filter(token_short=token).exists():
+            return token
 
 
 def send_message(message_body, worker, manager=None, company=None):

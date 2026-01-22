@@ -76,7 +76,6 @@ def user_info(request):
     context = {
         'user': {
             'slug': slug,
-            'has_userprofile': has_userprofile,
             'isManager': isManager,
             'isSteward': isSteward,
             'isAdministrator': isAdministrator,
