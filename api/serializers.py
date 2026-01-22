@@ -9,10 +9,7 @@ from callManager.models import (
         ManagerInvitation,
         Worker,
         CallTime,
-<<<<<<< Updated upstream
-=======
         UserProfile,
->>>>>>> Stashed changes
         )
 from rest_framework import serializers
 
@@ -40,7 +37,6 @@ class EventSerializer(serializers.ModelSerializer):
         event = Event.objects.create(**validated_data)
         return event
 
-<<<<<<< Updated upstream
 class WorkerSerializer(serializers.ModelSerializer):
     conflicts = serializers.SerializerMethodField()
     requested = serializers.SerializerMethodField()
@@ -48,7 +44,6 @@ class WorkerSerializer(serializers.ModelSerializer):
     def get_conflicts(self, obj):
         return getattr(obj, 'conflicts', [])
     
-=======
 class LaborTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LaborType
@@ -66,7 +61,6 @@ class WorkerSerializer(serializers.ModelSerializer):
     def get_conflicts(self, obj):
         return getattr(obj, 'conflicts', [])
 
->>>>>>> Stashed changes
     def get_requested(self, obj):
         return getattr(obj, 'requested', False)
 
@@ -121,10 +115,7 @@ class LaborRequirementCreateSerializer(serializers.ModelSerializer):
 
 class CallTimeSerializer(serializers.ModelSerializer):
     labor_requirements = LaborRequirementSerializer(many=True, read_only=True)
-<<<<<<< Updated upstream
-=======
     call_unixtime = serializers.ReadOnlyField()
->>>>>>> Stashed changes
     class Meta:
         model = CallTime
         fields = '__all__'
@@ -135,7 +126,6 @@ class CallTimeSerializer(serializers.ModelSerializer):
         return call_time
 
 
-<<<<<<< Updated upstream
 class LaborTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LaborType
@@ -146,18 +136,13 @@ class LaborTypeSerializer(serializers.ModelSerializer):
         labor_type = LaborType.objects.create(**validated_data)
         return labor_type
 
-=======
->>>>>>> Stashed changes
 class ManagerInvitationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ManagerInvitation
         fields = '__all__'
-<<<<<<< Updated upstream
-=======
 
 class UserSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(source='profile.phone_number', read_only=True)
     class Meta:
         model = User
         fields = '__all__'
->>>>>>> Stashed changes

@@ -20,10 +20,7 @@ from api.serializers import (
         LaborTypeSerializer,
         )
 import json
-<<<<<<< Updated upstream
-=======
 from callManager.views import generate_short_token, send_message
->>>>>>> Stashed changes
 
 @api_view(['GET','POST'])
 @authentication_classes([TokenAuthentication])
@@ -37,10 +34,7 @@ def add_call_time(request, slug):
     event = get_object_or_404(Event, slug=slug)
     if request.method == "POST":
         request.data['event'] = event.id
-<<<<<<< Updated upstream
-=======
         call_unixtime = timezone.datetime.combine(request.data['date'], request.data['time'])
->>>>>>> Stashed changes
         serializer = CallTimeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(event=event)
@@ -63,8 +57,6 @@ def add_call_time(request, slug):
         return Response({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
 
-<<<<<<< Updated upstream
-=======
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -119,7 +111,6 @@ def send_call_time_messages(request, slug):
     return Response({'status': 'success', 'message': message})
 
 
->>>>>>> Stashed changes
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])

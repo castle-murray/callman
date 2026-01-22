@@ -13,32 +13,23 @@ from api.view_files import (
         worker_views,
         call_times,
         owner_dashboard,
-<<<<<<< Updated upstream
-        )
-=======
         user_views,
         )
 from api.view_files.event_views import send_event_messages, confirm_requests
 from api.view_files.notifications import notifications, mark_as_read, delete_notification, clear_all_notifications, clear_read_notifications
->>>>>>> Stashed changes
 
 
 urlpatterns = [
     path('login/', login_view),
     path('user/info/', user_info),
-<<<<<<< Updated upstream
-=======
     path('user/register/', user_views.user_registration),
     path('user/profile/', user_views.user_profile),
->>>>>>> Stashed changes
     path('logout/', logout),
     path('events/list', event_views.list_events),
     path('create-event/', event_views.create_event),
     path('skills/', skills_list),
     path('event/<slug:slug>', event_views.event_details),
-<<<<<<< Updated upstream
     path('call-time/<slug:slug>/add-call-time/', call_times.add_call_time),
-=======
     path('event/<slug:slug>/send-messages/', send_event_messages),
     path('event/<slug:slug>/confirm/<event_token>/', confirm_requests),
     path('notifications/', notifications),
@@ -48,7 +39,6 @@ urlpatterns = [
     path('notifications/clear-read/', clear_read_notifications),
     path('call-time/<slug:slug>/add-call-time/', call_times.add_call_time),
     path('call-times/<slug:slug>/send-messages/', call_times.send_call_time_messages),
->>>>>>> Stashed changes
     path('upcoming-event-count/', event_views.upcoming_event_count),
     path('pending-count/', request_views.pending_count),
     path('declined-count/', request_views.declined_count),

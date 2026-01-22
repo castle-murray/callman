@@ -51,13 +51,10 @@ INSTALLED_APPS = [
     'django_htmx',
     'channels',
     'stripe',
-<<<<<<< Updated upstream
     'rest_framework',
     'api',
     'rest_framework.authtoken',
-=======
     'corsheaders',
->>>>>>> Stashed changes
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')

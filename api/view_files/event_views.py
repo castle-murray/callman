@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -7,7 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from callManager.models import Event, LaborRequirement, LaborType, LocationProfile
-=======
 from datetime import timedelta
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -28,7 +26,6 @@ from callManager.models import (
 import qrcode
 from io import BytesIO
 import base64
->>>>>>> Stashed changes
 from api.serializers import (
         CallTimeSerializer,
         CompanySerializer,
@@ -36,10 +33,8 @@ from api.serializers import (
         LaborRequirementSerializer,
         LaborTypeSerializer,
         LocationProfileSerializer,
-<<<<<<< Updated upstream
         )
 from callManager.models import generate_unique_slug
-=======
         WorkerSerializer,
         CallTimeSerializer,
         LaborRequestSerializer,
@@ -50,7 +45,6 @@ from callManager.view_files.notify import notify
 from django.db.models import Q, Count
 from callManager.views import log_sms
 
->>>>>>> Stashed changes
 
 
 @api_view(['GET'])
@@ -113,11 +107,8 @@ def upcoming_event_count(request):
     else:
         return 0
 
-<<<<<<< Updated upstream
 
-=======
 @permission_classes([AllowAny])
->>>>>>> Stashed changes
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -151,8 +142,6 @@ def create_event(request):
         return Response(context)
 
 
-<<<<<<< Updated upstream
-=======
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -302,10 +291,6 @@ def confirm_requests(request, slug, event_token):
     return Response(context)
 
 
-
-
-
->>>>>>> Stashed changes
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
