@@ -107,7 +107,6 @@ def upcoming_event_count(request):
     else:
         return 0
 
-
 @permission_classes([AllowAny])
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
