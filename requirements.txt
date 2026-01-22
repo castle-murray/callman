@@ -26,6 +26,7 @@ django-channels==0.7.0
 django-cors-headers==4.9.0
 django-dotenv==1.4.2
 django-htmx==1.23.0
+django-cors-headers==4.4.0
 django-phonenumber-field==8.1.0
 django-tailwind==4.4.2
 django-user-agents==0.4.0

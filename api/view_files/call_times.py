@@ -20,6 +20,10 @@ from api.serializers import (
         LaborTypeSerializer,
         )
 import json
+<<<<<<< Updated upstream
+=======
+from callManager.views import generate_short_token, send_message
+>>>>>>> Stashed changes
 
 @api_view(['GET','POST'])
 @authentication_classes([TokenAuthentication])
@@ -33,6 +37,10 @@ def add_call_time(request, slug):
     event = get_object_or_404(Event, slug=slug)
     if request.method == "POST":
         request.data['event'] = event.id
+<<<<<<< Updated upstream
+=======
+        call_unixtime = timezone.datetime.combine(request.data['date'], request.data['time'])
+>>>>>>> Stashed changes
         serializer = CallTimeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(event=event)
@@ -55,6 +63,63 @@ def add_call_time(request, slug):
         return Response({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
 
+<<<<<<< Updated upstream
+=======
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def send_call_time_messages(request, slug):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    manager = user.manager
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    company = call_time.event.company
+
+    queued_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        requested=True,
+        sms_sent=False
+    ).select_related('worker')
+
+    if not queued_requests.exists():
+        return Response({'status': 'success', 'message': 'No queued requests to send.'})
+
+    sms_errors = []
+    workers_to_notify = {}
+    for labor_request in queued_requests:
+        worker = labor_request.worker
+        if worker.id not in workers_to_notify:
+            workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
+        workers_to_notify[worker.id]['requests'].append(labor_request)
+
+    for _, data in workers_to_notify.items():
+        worker = data['worker']
+        requests = data['requests']
+        # Use existing token_short if available, otherwise generate new
+        token = next((req.token_short for req in requests if req.token_short), generate_short_token())
+        # For API, build URL assuming frontend handles it, but for now, use a placeholder
+        confirmation_url = request.build_absolute_uri(f"/event/{call_time.event.slug}/confirm/{token}/")
+        if call_time.event.is_single_day:
+            message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name} on {call_time.event.start_date}: {confirmation_url}"
+        else:
+            message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name}: {confirmation_url}"
+        if len(message_body) > 144:
+            message_body = message_body[:141] + "..."
+        sms_errors.extend(send_message(message_body, worker, manager, company))
+        for labor_request in requests:
+            if worker.sms_consent == True:
+                labor_request.sms_sent = True
+            labor_request.token_short = token
+            labor_request.save()
+
+    message = f"Messages processed for {len(workers_to_notify)} workers."
+    if sms_errors:
+        message += f" Errors: {', '.join(sms_errors)}."
+    return Response({'status': 'success', 'message': message})
+
+
+>>>>>>> Stashed changes
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])

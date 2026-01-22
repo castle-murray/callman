@@ -51,14 +51,19 @@ INSTALLED_APPS = [
     'django_htmx',
     'channels',
     'stripe',
+<<<<<<< Updated upstream
     'rest_framework',
     'api',
     'rest_framework.authtoken',
+=======
+    'corsheaders',
+>>>>>>> Stashed changes
 ]
 if os.environ.get('DJANGO_ENV') != 'production':
     INSTALLED_APPS.append('django_browser_reload')
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -224,6 +229,11 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 USE_TZ = False
 TIME_ZONE = 'America/New_York'  # Fallback, though Manager.timezone will override
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+]
 
 if os.environ.get('DJANGO_ENV') == 'production':
     LOGGING = {
