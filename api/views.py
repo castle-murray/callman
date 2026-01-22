@@ -69,9 +69,14 @@ def user_info(request):
         isOwner = True
     if hasattr(user, 'worker'):
         isWorker = True
-    
+
+    slug = user.userprofile.slug if hasattr(user, 'userprofile') else user.username
+    has_userprofile = hasattr(user, 'userprofile')
+
     context = {
         'user': {
+            'slug': slug,
+            'has_userprofile': has_userprofile,
             'isManager': isManager,
             'isSteward': isSteward,
             'isAdministrator': isAdministrator,
