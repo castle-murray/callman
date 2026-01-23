@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from callManager.models import (
+        AltPhone,
         Company,
         Event,
         LaborRequest,
@@ -46,27 +47,16 @@ class LaborTypeSerializer(serializers.ModelSerializer):
         labor_type = LaborType.objects.create(**validated_data)
         return labor_type
 
-class WorkerSerializer(serializers.ModelSerializer):
-    conflicts = serializers.SerializerMethodField()
-    requested = serializers.SerializerMethodField()
-    labor_types = LaborTypeSerializer(many=True, read_only=True)
-
-    def get_conflicts(self, obj):
-        return getattr(obj, 'conflicts', [])
-    
-class LaborTypeSerializer(serializers.ModelSerializer):
+class AltPhoneSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LaborType
-        fields = '__all__'
-
-    def create(self, validated_data):
-        labor_type = LaborType.objects.create(**validated_data)
-        return labor_type
+        model = AltPhone
+        fields = ['id', 'phone_number', 'label']
 
 class WorkerSerializer(serializers.ModelSerializer):
     conflicts = serializers.SerializerMethodField()
     requested = serializers.SerializerMethodField()
     labor_types = LaborTypeSerializer(many=True, read_only=True)
+    alt_phones = AltPhoneSerializer(many=True, read_only=True)
 
     def get_conflicts(self, obj):
         return getattr(obj, 'conflicts', [])
