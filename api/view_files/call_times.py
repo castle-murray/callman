@@ -170,9 +170,9 @@ def call_time_confirmations(request, slug):
         labor_requirement__call_time=call_time,
         confirmed=True
     ).select_related('worker', 'labor_requirement__labor_type')
-    confirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=True).filter(time_change_confirmations__cant_do_it=False)
-    unconfirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=False)
     cant_do_it_requests = labor_requests.filter(time_change_confirmations__cant_do_it=True)
+    confirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=True).exclude(time_change_confirmations__cant_do_it=True)
+    unconfirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=False).exclude(time_change_confirmations__cant_do_it=True)
     for item in cant_do_it_requests:
         confirmation = item.time_change_confirmations.first()
         item.message = confirmation.message if confirmation else ''
