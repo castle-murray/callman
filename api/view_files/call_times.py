@@ -174,59 +174,61 @@ def call_time_tracking(request, slug):
         manager = user.manager
         company = manager.company
         call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
-    labor_requests = LaborRequest.objects.filter(
-        labor_requirement__call_time=call_time,
-        confirmed=True).select_related('worker', 'labor_requirement__labor_type')
-    labor_type_filter = request.GET.get('labor_type', 'All')
-    if labor_type_filter != 'All':
-        labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
 
-    confirmed_requests = []
-    ncns_requests = []
-    for lr in labor_requests:
-        time_entry = lr.time_entries.first()
-        if time_entry:
-            meal_breaks = time_entry.meal_breaks.all()
-            time_entry_data = {
-                'id': time_entry.id,
-                'start_time': time_entry.start_time.isoformat() if time_entry.start_time else None,
-                'end_time': time_entry.end_time.isoformat() if time_entry.end_time else None,
-                'meal_breaks': [{'id': mb.id, 'start_time': mb.start_time.isoformat() if mb.start_time else None, 'end_time': mb.end_time.isoformat() if mb.end_time else None} for mb in meal_breaks]
-            }
-        else:
-            time_entry_data = None
-        lr_data = {
-            'id': lr.id,
-            'worker': {
-                'id': lr.worker.id,
-                'name': lr.worker.name,
-                'phone_number': lr.worker.phone_number,
-                'nocallnoshow': lr.worker.nocallnoshow
-            },
-            'labor_requirement': {
-                'id': lr.labor_requirement.id,
-                'labor_type': {
-                    'id': lr.labor_requirement.labor_type.id,
-                    'name': lr.labor_requirement.labor_type.name
+    if request.method == 'GET':
+        labor_requests = LaborRequest.objects.filter(
+            labor_requirement__call_time=call_time,
+            confirmed=True).select_related('worker', 'labor_requirement__labor_type')
+        labor_type_filter = request.GET.get('labor_type', 'All')
+        if labor_type_filter != 'All':
+            labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
+
+        confirmed_requests = []
+        ncns_requests = []
+        for lr in labor_requests:
+            time_entry = lr.time_entries.first()
+            if time_entry:
+                meal_breaks = time_entry.meal_breaks.all()
+                time_entry_data = {
+                    'id': time_entry.id,
+                    'start_time': time_entry.start_time.isoformat() if time_entry.start_time else None,
+                    'end_time': time_entry.end_time.isoformat() if time_entry.end_time else None,
+                    'meal_breaks': [{'id': mb.id, 'start_time': mb.start_time.isoformat() if mb.start_time else None, 'end_time': mb.end_time.isoformat() if mb.end_time else None} for mb in meal_breaks]
+                }
+            else:
+                time_entry_data = None
+            lr_data = {
+                'id': lr.id,
+                'worker': {
+                    'id': lr.worker.id,
+                    'name': lr.worker.name,
+                    'phone_number': lr.worker.phone_number,
+                    'nocallnoshow': lr.worker.nocallnoshow
                 },
-                'minimum_hours': lr.labor_requirement.minimum_hours
-            },
-            'time_entry': time_entry_data
-        }
-        if lr.availability_response == 'no' and lr.worker.nocallnoshow > 0:
-            ncns_requests.append(lr_data)
-        else:
-            confirmed_requests.append(lr_data)
+                'labor_requirement': {
+                    'id': lr.labor_requirement.id,
+                    'labor_type': {
+                        'id': lr.labor_requirement.labor_type.id,
+                        'name': lr.labor_requirement.labor_type.name
+                    },
+                    'minimum_hours': lr.labor_requirement.minimum_hours
+                },
+                'time_entry': time_entry_data
+            }
+            if lr.availability_response == 'no' and lr.worker.nocallnoshow > 0:
+                ncns_requests.append(lr_data)
+            else:
+                confirmed_requests.append(lr_data)
 
-    labor_types = LaborType.objects.filter(company=company)
+        labor_types = LaborType.objects.filter(company=company)
 
-    return Response({
-        'call_time': CallTimeSerializer(call_time).data,
-        'confirmed_requests': confirmed_requests,
-        'ncns_requests': ncns_requests,
-        'labor_types': LaborTypeSerializer(labor_types, many=True).data,
-        'selected_labor_type': labor_type_filter
-    })
+        return Response({
+            'call_time': CallTimeSerializer(call_time).data,
+            'confirmed_requests': confirmed_requests,
+            'ncns_requests': ncns_requests,
+            'labor_types': LaborTypeSerializer(labor_types, many=True).data,
+            'selected_labor_type': labor_type_filter
+        })
     elif request.method == 'POST':
         request_id = request.data.get('request_id')
         action = request.data.get('action')
