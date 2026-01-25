@@ -5,7 +5,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from callManager.models import AltPhone, LaborRequest, LaborType, UserProfile, Worker
-from api.serializers import WorkerSerializer
+from api.serializers import LaborTypeSerializer, WorkerSerializer
 
 def valid_phone_number(phone_number):
     if not phone_number:
@@ -162,3 +162,31 @@ def list_workers(request):
         return Response(context, status=200)
 
 
+
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_history(request, slug):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    company = user.manager.company
+    worker = get_object_or_404(Worker, slug=slug, company=company)
+    labor_requests = worker.labor_requests.filter(labor_requirement__call_time__event__company=company)
+    confirmed_requests = labor_requests.filter(confirmed=True)
+    declined_requests = labor_requests.filter(availability_response='no')
+    ncns_requests = labor_requests.filter(availability_response='ncns')
+    pending_requests = labor_requests.filter(availability_response__isnull=True)
+    available_requests = labor_requests.filter(availability_response='yes', confirmed=False)
+
+    from api.serializers import LaborRequestSerializer
+    return Response({
+        'worker': WorkerSerializer(worker).data,
+        'confirmed_requests': LaborRequestSerializer(confirmed_requests, many=True).data,
+        'declined_requests': LaborRequestSerializer(declined_requests, many=True).data,
+        'ncns_requests': LaborRequestSerializer(ncns_requests, many=True).data,
+        'pending_requests': LaborRequestSerializer(pending_requests, many=True).data,
+        'available_requests': LaborRequestSerializer(available_requests, many=True).data,
+    })
