@@ -221,8 +221,8 @@ def call_time_tracking(request, slug):
                 confirmed_requests.append(lr_data)
 
         labor_types = LaborType.objects.filter(company=company)
-    meal_penalty_trigger_time = call_time.event.location_profile.meal_penalty_trigger_time or company.meal_penalty_trigger_time or datetime.time(18, 0)
-    meal_penalty_diff = company.meal_penalty_diff or 1.5
+        meal_penalty_trigger_time = call_time.event.location_profile.meal_penalty_trigger_time or company.meal_penalty_trigger_time or datetime.time(18, 0)
+        meal_penalty_diff = company.meal_penalty_diff or 1.5
 
         return Response({
             'call_time': CallTimeSerializer(call_time).data,
