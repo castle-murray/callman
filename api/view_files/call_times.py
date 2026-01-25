@@ -293,7 +293,7 @@ def call_time_tracking(request, slug):
                 meal_break.save()
             elif action == 'delete_meal_break':
                 meal_break_id = request.data.get('meal_break_id')
-                MealBreak.objects.filter(id=meal_break_id, time_entry=time_entry).delete()
+                MealBreak.objects.filter(id=meal_break_id).delete()
             # Other actions can be added similarly
         return Response({'status': 'success'})
 
