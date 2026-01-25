@@ -282,6 +282,17 @@ def call_time_tracking(request, slug):
                 if type_minutes == 60:  # walk away
                     time_entry.end_time = break_time
                     time_entry.save()
+            elif action == 'update_meal_break':
+                meal_break_id = request.data.get('meal_break_id')
+                meal_break = MealBreak.objects.get(id=meal_break_id, time_entry=time_entry)
+                break_time_str = request.data.get('break_time')
+                duration_min = int(request.data.get('duration'))
+                meal_break.break_time = datetime.fromisoformat(break_time_str)
+                meal_break.duration = timedelta(minutes=duration_min)
+                meal_break.save()
+            elif action == 'delete_meal_break':
+                meal_break_id = request.data.get('meal_break_id')
+                MealBreak.objects.filter(id=meal_break_id, time_entry=time_entry).delete()
             # Other actions can be added similarly
         return Response({'status': 'success'})
 
