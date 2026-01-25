@@ -289,6 +289,7 @@ def call_time_tracking(request, slug):
                 duration_min = int(request.data.get('duration'))
                 meal_break.break_time = datetime.fromisoformat(break_time_str)
                 meal_break.duration = timedelta(minutes=duration_min)
+                meal_break.break_type = 'paid' if duration_min == 30 else 'unpaid'
                 meal_break.save()
             elif action == 'delete_meal_break':
                 meal_break_id = request.data.get('meal_break_id')
