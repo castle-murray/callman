@@ -29,6 +29,8 @@ def list_workers(request):
     if not hasattr(user, 'manager'):
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     company = user.manager.company
+    labor_types = LaborType.objects.filter(company=company).order_by('name')
+    labor_type_serializer = LaborTypeSerializer(labor_types, many=True)
     if request.method == "POST":
         name = request.data.get('name')
         phone_number = request.data.get('phone_number')
@@ -43,9 +45,14 @@ def list_workers(request):
             worker.save()
         else:
             registration_token = RegistrationToken.objects.create(worker=worker)
+            registration_token.save()
         workers = Worker.objects.filter(company=company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
-        return Response(serializer.data, status=201)
+        context = {
+            'workers': serializer.data,
+            'labor_types': labor_type_serializer.data,
+        }
+        return Response(context, status=201)
     elif request.method == "PATCH":
         if 'alt_id' in request.data:
             alt_id = request.data.get('alt_id')
@@ -56,6 +63,12 @@ def list_workers(request):
             alt_phone.phone_number = phone_number
             alt_phone.label = request.data.get('label', alt_phone.label)
             alt_phone.save()
+        elif 'labor_types' in request.data:
+            labor_type_ids = request.data.get('labor_types', [])
+            labor_types = LaborType.objects.filter(id__in=labor_type_ids, company=company)
+            worker = get_object_or_404(Worker, id=request.data.get('id'), company=company)
+            worker.labor_types.set(labor_types)
+            worker.save()
         else:
             phone_number = valid_phone_number(request.data.get('phone_number'))
             if not phone_number:
@@ -71,7 +84,13 @@ def list_workers(request):
             worker.save()
         workers = Worker.objects.filter(company=company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
-        return Response(serializer.data, status=200)
+        labor_types = LaborType.objects.filter(company=company)
+        labor_type_serializer = LaborTypeSerializer(labor_types, many=True)
+        context = {
+            'workers': serializer.data,
+            'labor_types': labor_type_serializer.data,
+        }
+        return Response(context, status=200)
     elif request.method == "PUT":
         if 'make_primary' in request.data and request.data.get('make_primary'):
             worker_id = request.data.get('id')
@@ -94,7 +113,13 @@ def list_workers(request):
             alt_phone.save()
         workers = Worker.objects.filter(company=company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
-        return Response(serializer.data, status=200)
+        labor_types = LaborType.objects.filter(company=company)
+        labor_type_serializer = LaborTypeSerializer(labor_types, many=True)
+        context = {
+            'workers': serializer.data,
+            'labor_types': labor_type_serializer.data,
+        }
+        return Response(context, status=200)
     elif request.method == "DELETE":
         worker_id = request.data.get('id')
         worker = get_object_or_404(Worker, id=worker_id, company=company)
@@ -104,7 +129,13 @@ def list_workers(request):
         worker.delete()
         workers = Worker.objects.filter(company=company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
-        return Response(serializer.data, status=200)
+        labor_types = LaborType.objects.filter(company=company)
+        labor_type_serializer = LaborTypeSerializer(labor_types, many=True)
+        context = {
+            'workers': serializer.data,
+            'labor_types': labor_type_serializer.data,
+        }
+        return Response(context, status=200)
     elif request.method == "DELETE":
         if 'alt_id' in request.data:
             alt_id = request.data.get('alt_id')
@@ -124,19 +155,10 @@ def list_workers(request):
     elif request.method == "GET":
         workers = Worker.objects.filter(company=user.manager.company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
-        return Response(serializer.data)
+        context = {
+            'workers': serializer.data,
+            'labor_types': labor_type_serializer.data,
+        }
+        return Response(context, status=200)
 
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def list_labor_types(request):
-    user = request.user
-    if not hasattr(user, 'manager'):
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    company = user.manager.company
-    labor_types = LaborType.objects.filter(company=company)
-    from api.serializers import LaborTypeSerializer
-    serializer = LaborTypeSerializer(labor_types, many=True)
-    return Response(serializer.data)
 
