@@ -155,7 +155,7 @@ def confirm_time_change_api(request, token):
     elif request.method == 'POST':
         confirmation.confirmed = True
         confirmation.labor_request.save()
-        confirmation.cant_do_it = request.data.get('cant_do_it') == 'True'
+        confirmation.cant_do_it = request.data.get('cant_do_it') == 'true'
         confirmation.message = request.data.get('message')
         confirmation.save()
         return Response({'status': 'success', 'message': 'Confirmation processed'})
