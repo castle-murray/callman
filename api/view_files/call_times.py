@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Q, Count
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -12,7 +12,9 @@ from callManager.models import(
         LaborRequest,
         LaborRequirement,
         LaborType,
-        TimeChangeConfirmation
+        TimeChangeConfirmation,
+        TimeEntry,
+        MealBreak
         )
 from api.serializers import (
         CallTimeSerializer,
@@ -159,6 +161,108 @@ def confirm_time_change_api(request, token):
         confirmation.message = request.data.get('message')
         confirmation.save()
         return Response({'status': 'success', 'message': 'Confirmation processed'})
+
+@api_view(['GET', 'POST'])
+def call_time_tracking(request, slug):
+    user = request.user
+    if not hasattr(user, 'administrator') and not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    if hasattr(user, 'administrator'):
+        call_time = get_object_or_404(CallTime, slug=slug)
+        company = call_time.event.company
+    else:
+        manager = user.manager
+        company = manager.company
+        call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=True).select_related('worker', 'labor_requirement__labor_type')
+    labor_type_filter = request.GET.get('labor_type', 'All')
+    if labor_type_filter != 'All':
+        labor_requests = labor_requests.filter(labor_requirement__labor_type__id=labor_type_filter)
+
+    confirmed_requests = []
+    ncns_requests = []
+    for lr in labor_requests:
+        time_entry = lr.time_entries.first()
+        if time_entry:
+            meal_breaks = time_entry.meal_breaks.all()
+            time_entry_data = {
+                'id': time_entry.id,
+                'start_time': time_entry.start_time.isoformat() if time_entry.start_time else None,
+                'end_time': time_entry.end_time.isoformat() if time_entry.end_time else None,
+                'meal_breaks': [{'id': mb.id, 'start_time': mb.start_time.isoformat() if mb.start_time else None, 'end_time': mb.end_time.isoformat() if mb.end_time else None} for mb in meal_breaks]
+            }
+        else:
+            time_entry_data = None
+        lr_data = {
+            'id': lr.id,
+            'worker': {
+                'id': lr.worker.id,
+                'name': lr.worker.name,
+                'phone_number': lr.worker.phone_number,
+                'nocallnoshow': lr.worker.nocallnoshow
+            },
+            'labor_requirement': {
+                'id': lr.labor_requirement.id,
+                'labor_type': {
+                    'id': lr.labor_requirement.labor_type.id,
+                    'name': lr.labor_requirement.labor_type.name
+                },
+                'minimum_hours': lr.labor_requirement.minimum_hours
+            },
+            'time_entry': time_entry_data
+        }
+        if lr.availability_response == 'no' and lr.worker.nocallnoshow > 0:
+            ncns_requests.append(lr_data)
+        else:
+            confirmed_requests.append(lr_data)
+
+    labor_types = LaborType.objects.filter(company=company)
+
+    return Response({
+        'call_time': CallTimeSerializer(call_time).data,
+        'confirmed_requests': confirmed_requests,
+        'ncns_requests': ncns_requests,
+        'labor_types': LaborTypeSerializer(labor_types, many=True).data,
+        'selected_labor_type': labor_type_filter
+    })
+    elif request.method == 'POST':
+        request_id = request.data.get('request_id')
+        action = request.data.get('action')
+        labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
+        minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
+        worker = labor_request.worker
+        if action in ['sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
+            time_entry, created = TimeEntry.objects.get_or_create(
+                labor_request=labor_request,
+                worker=worker,
+                call_time=call_time,
+                defaults={'start_time': datetime.combine(call_time.date, call_time.time)})
+            was_ncns = worker.nocallnoshow > 0 and labor_request.availability_response == 'no'
+            if action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
+                end_time = datetime.now()
+                if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
+                    end_time = time_entry.start_time + timedelta(hours=minimum_hours)
+                minutes = end_time.minute
+                round_up = call_time.event.location_profile.hour_round_up or company.hour_round_up or 0
+                if minutes > 30 + round_up:
+                    end_time = end_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+                elif minutes > round_up:
+                    end_time = end_time.replace(minute=30, second=0, microsecond=0)
+                else:
+                    end_time = end_time.replace(minute=0, second=0, microsecond=0)
+                time_entry.end_time = end_time
+                time_entry.save()
+            elif action == 'ncns' and not was_ncns:
+                labor_request.confirmed = False
+                labor_request.availability_response = 'no'
+                labor_request.save()
+                worker.nocallnoshow += 1
+                worker.save()
+            # Other actions can be added similarly
+        return Response({'status': 'success'})
+
 
 @api_view(['GET'])
 def call_time_confirmations(request, slug):

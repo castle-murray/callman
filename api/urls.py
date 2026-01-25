@@ -48,6 +48,7 @@ urlpatterns = [
     path('call-time/<slug:slug>/add-call-time/', call_times.add_call_time),
     path('call-times/<slug:slug>/send-messages/', call_times.send_call_time_messages),
     path('call-times/<slug:slug>/edit/', call_times.edit_call_time),
+    path('call-times/<slug:slug>/tracking/', call_times.call_time_tracking),
     path('call-times/<slug:slug>/confirmations/', call_times.call_time_confirmations),
     path('call-time/<slug:slug>/copy/', call_times.copy_call_time),
     path('call-times/<slug:slug>/delete/', call_times.delete_call_time),
