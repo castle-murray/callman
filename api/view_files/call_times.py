@@ -235,14 +235,17 @@ def call_time_tracking(request, slug):
         labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
         minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
         worker = labor_request.worker
-        if action in ['sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
+        if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
             time_entry, created = TimeEntry.objects.get_or_create(
                 labor_request=labor_request,
                 worker=worker,
                 call_time=call_time,
                 defaults={'start_time': datetime.combine(call_time.date, call_time.time)})
             was_ncns = worker.nocallnoshow > 0 and labor_request.availability_response == 'no'
-            if action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
+            if action == 'sign_in' and not time_entry.start_time:
+                time_entry.start_time = datetime.combine(call_time.date, call_time.time)
+                time_entry.save()
+            elif action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
                 end_time = datetime.now()
                 if time_entry.start_time + timedelta(hours=minimum_hours) > end_time:
                     end_time = time_entry.start_time + timedelta(hours=minimum_hours)
