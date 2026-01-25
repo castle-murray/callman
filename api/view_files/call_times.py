@@ -273,6 +273,14 @@ def call_time_tracking(request, slug):
                 new_time_str = request.data.get('new_time')
                 time_entry.end_time = datetime.fromisoformat(new_time_str)
                 time_entry.save()
+            elif action == 'add_meal_break':
+                type_minutes = int(request.data.get('type', '30'))
+                start_time = datetime.now()
+                end_time = start_time + timedelta(minutes=type_minutes)
+                MealBreak.objects.create(time_entry=time_entry, start_time=start_time, end_time=end_time)
+                if type_minutes == 60:  # walk away
+                    time_entry.end_time = start_time
+                    time_entry.save()
             # Other actions can be added similarly
         return Response({'status': 'success'})
 
