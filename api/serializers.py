@@ -73,6 +73,12 @@ class WorkerSerializer(serializers.ModelSerializer):
             return worker
 
 class LaborRequestSerializer(serializers.ModelSerializer):
+    message = serializers.SerializerMethodField()
+
+    def get_message(self, obj):
+        confirmation = obj.time_change_confirmations.first()
+        return confirmation.message if confirmation else None
+
     class Meta:
         model = LaborRequest
         fields = '__all__'

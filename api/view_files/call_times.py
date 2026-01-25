@@ -131,7 +131,8 @@ def confirm_time_change_api(request, token):
     confirmation = get_object_or_404(
             TimeChangeConfirmation,
             token=token,
-            expires_at__gt=timezone.now()
+            expires_at__gt=timezone.now(),
+            confirmed=False
             )
     labor_request = confirmation.labor_request
     call_time = labor_request.labor_requirement.call_time
@@ -152,9 +153,8 @@ def confirm_time_change_api(request, token):
         }
         return Response(context)
     elif request.method == 'POST':
-        if not confirmation.confirmed:
-            confirmation.confirmed = True
-            confirmation.labor_request.save()
+        confirmation.confirmed = True
+        confirmation.labor_request.save()
         confirmation.cant_do_it = request.data.get('cant_do_it') == 'true'
         confirmation.message = request.data.get('message')
         confirmation.save()
@@ -173,9 +173,6 @@ def call_time_confirmations(request, slug):
     cant_do_it_requests = labor_requests.filter(time_change_confirmations__cant_do_it=True)
     confirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=True).exclude(time_change_confirmations__cant_do_it=True)
     unconfirmed_requests = labor_requests.filter(time_change_confirmations__confirmed=False).exclude(time_change_confirmations__cant_do_it=True)
-    for item in cant_do_it_requests:
-        confirmation = item.time_change_confirmations.first()
-        item.message = confirmation.message if confirmation else ''
     from api.serializers import CallTimeSerializer, LaborRequestSerializer
     return Response({
         'call_time': CallTimeSerializer(call_time).data,
