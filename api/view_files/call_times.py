@@ -235,7 +235,7 @@ def call_time_tracking(request, slug):
         labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
         minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
         worker = labor_request.worker
-        if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break']:
+        if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break', 'delete_meal_break']:
             time_entry, created = TimeEntry.objects.get_or_create(
                 labor_request=labor_request,
                 worker=worker,
@@ -292,6 +292,7 @@ def call_time_tracking(request, slug):
                 meal_break.break_type = 'paid' if duration_min == 30 else 'unpaid'
                 meal_break.save()
             elif action == 'delete_meal_break':
+                print("bacon")
                 meal_break_id = request.data.get('meal_break_id')
                 MealBreak.objects.filter(id=meal_break_id).delete()
             # Other actions can be added similarly
