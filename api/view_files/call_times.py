@@ -265,6 +265,14 @@ def call_time_tracking(request, slug):
                 labor_request.save()
                 worker.nocallnoshow += 1
                 worker.save()
+            elif action == 'update_start_time':
+                new_time_str = request.data.get('new_time')
+                time_entry.start_time = datetime.fromisoformat(new_time_str)
+                time_entry.save()
+            elif action == 'update_end_time':
+                new_time_str = request.data.get('new_time')
+                time_entry.end_time = datetime.fromisoformat(new_time_str)
+                time_entry.save()
             # Other actions can be added similarly
         return Response({'status': 'success'})
 
