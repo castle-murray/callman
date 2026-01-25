@@ -4,10 +4,12 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from callManager.models import AltPhone, LaborRequest, UserProfile, Worker
+from callManager.models import AltPhone, LaborRequest, LaborType, UserProfile, Worker
 from api.serializers import WorkerSerializer
 
 def valid_phone_number(phone_number):
+    if not phone_number:
+        return None
     phone_number = phone_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('.', '')
     if phone_number.startswith('+1') and len(phone_number) == 12:
         return phone_number
@@ -63,6 +65,9 @@ def list_workers(request):
             worker = get_object_or_404(Worker, id=worker_id, company=company)
             worker.name = request.data.get('name', worker.name)
             worker.phone_number = phone_number or worker.phone_number
+            if 'labor_types' in request.data:
+                labor_type_ids = request.data.get('labor_types', [])
+                worker.labor_types.set(labor_type_ids)
             worker.save()
         workers = Worker.objects.filter(company=company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
@@ -120,4 +125,18 @@ def list_workers(request):
         workers = Worker.objects.filter(company=user.manager.company).order_by('name')
         serializer = WorkerSerializer(workers, many=True)
         return Response(serializer.data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def list_labor_types(request):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    company = user.manager.company
+    labor_types = LaborType.objects.filter(company=company)
+    from api.serializers import LaborTypeSerializer
+    serializer = LaborTypeSerializer(labor_types, many=True)
+    return Response(serializer.data)
 
