@@ -5,3 +5,4 @@ __pycache__/
 /static/
 /passenger_wsgi.py
 /logs/
+/run_daphne.py
