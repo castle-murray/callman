@@ -131,8 +131,7 @@ def confirm_time_change_api(request, token):
     confirmation = get_object_or_404(
             TimeChangeConfirmation,
             token=token,
-            expires_at__gt=timezone.now(),
-            confirmed=False
+            expires_at__gt=timezone.now()
             )
     labor_request = confirmation.labor_request
     call_time = labor_request.labor_requirement.call_time
@@ -153,8 +152,9 @@ def confirm_time_change_api(request, token):
         }
         return Response(context)
     elif request.method == 'POST':
-        confirmation.confirmed = True
-        confirmation.labor_request.save()
+        if not confirmation.confirmed:
+            confirmation.confirmed = True
+            confirmation.labor_request.save()
         confirmation.cant_do_it = request.data.get('cant_do_it') == 'true'
         confirmation.message = request.data.get('message')
         confirmation.save()
