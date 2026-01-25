@@ -221,13 +221,17 @@ def call_time_tracking(request, slug):
                 confirmed_requests.append(lr_data)
 
         labor_types = LaborType.objects.filter(company=company)
+    meal_penalty_trigger_time = call_time.event.location_profile.meal_penalty_trigger_time or company.meal_penalty_trigger_time or datetime.time(18, 0)
+    meal_penalty_diff = company.meal_penalty_diff or 1.5
 
         return Response({
             'call_time': CallTimeSerializer(call_time).data,
             'confirmed_requests': confirmed_requests,
             'ncns_requests': ncns_requests,
             'labor_types': LaborTypeSerializer(labor_types, many=True).data,
-            'selected_labor_type': labor_type_filter
+            'selected_labor_type': labor_type_filter,
+            'meal_penalty_trigger_time': meal_penalty_trigger_time.strftime('%H:%M'),
+            'meal_penalty_diff': meal_penalty_diff
         })
     elif request.method == 'POST':
         request_id = request.data.get('request_id')
@@ -292,7 +296,6 @@ def call_time_tracking(request, slug):
                 meal_break.break_type = 'paid' if duration_min == 30 else 'unpaid'
                 meal_break.save()
             elif action == 'delete_meal_break':
-                print("bacon")
                 meal_break_id = request.data.get('meal_break_id')
                 MealBreak.objects.filter(id=meal_break_id).delete()
             # Other actions can be added similarly
