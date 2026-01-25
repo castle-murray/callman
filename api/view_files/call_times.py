@@ -193,7 +193,7 @@ def call_time_tracking(request, slug):
                     'id': time_entry.id,
                     'start_time': time_entry.start_time.isoformat() if time_entry.start_time else None,
                     'end_time': time_entry.end_time.isoformat() if time_entry.end_time else None,
-                    'meal_breaks': [{'id': mb.id, 'start_time': mb.start_time.isoformat() if mb.start_time else None, 'end_time': mb.end_time.isoformat() if mb.end_time else None} for mb in meal_breaks]
+                    'meal_breaks': [{'id': mb.id, 'break_time': mb.break_time.isoformat(), 'duration': mb.duration.total_seconds() / 60 if mb.duration else 0, 'break_type': mb.break_type} for mb in meal_breaks]
                 }
             else:
                 time_entry_data = None
@@ -275,11 +275,12 @@ def call_time_tracking(request, slug):
                 time_entry.save()
             elif action == 'add_meal_break':
                 type_minutes = int(request.data.get('type', '30'))
-                start_time = datetime.now()
-                end_time = start_time + timedelta(minutes=type_minutes)
-                MealBreak.objects.create(time_entry=time_entry, start_time=start_time, end_time=end_time)
+                break_time = datetime.now()
+                duration = timedelta(minutes=type_minutes)
+                break_type = 'paid' if type_minutes == 30 else 'unpaid'
+                MealBreak.objects.create(time_entry=time_entry, break_time=break_time, duration=duration, break_type=break_type)
                 if type_minutes == 60:  # walk away
-                    time_entry.end_time = start_time
+                    time_entry.end_time = break_time
                     time_entry.save()
             # Other actions can be added similarly
         return Response({'status': 'success'})
