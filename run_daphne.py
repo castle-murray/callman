@@ -18,5 +18,5 @@ def run_daphne():
     CommandLineInterface.entrypoint()
 
 if __name__ == '__main__':
-    reloader = hupper.start_reloader('__main__:run_daphne')
+    reloader = hupper.start_reloader(run_daphne)
     run_daphne()
