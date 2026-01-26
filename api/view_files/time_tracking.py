@@ -21,30 +21,16 @@ def call_time_tracking(request, slug):
         manager = user.manager
         company = manager.company
         call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
-
     if request.method == 'GET':
         labor_requests = LaborRequest.objects.filter(
             labor_requirement__call_time=call_time,
             confirmed=True).select_related('worker', 'labor_requirement__labor_type')
-
         lr_data_list = LaborRequestTrackingSerializer(labor_requests, many=True).data
-
-        labor_types = LaborType.objects.filter(company=company)
-        meal_penalty_trigger_time = call_time.event.location_profile.meal_penalty_trigger_time or company.meal_penalty_trigger_time or datetime.time(18, 0)
-        meal_penalty_diff = company.meal_penalty_diff or 1.5
-
-        if isinstance(meal_penalty_trigger_time, int):
-            meal_penalty_trigger_time_str = f"{meal_penalty_trigger_time}:00"
-        else:
-            meal_penalty_trigger_time_str = meal_penalty_trigger_time.strftime('%H:%M')
-
+        labor_types = LaborType.objects.filter(id__in=labor_requests.values_list('labor_requirement__labor_type', flat=True).distinct())
         return Response({
             'call_time': CallTimeSerializer(call_time).data,
             'labor_requests': lr_data_list,
             'labor_types': LaborTypeSerializer(labor_types, many=True).data,
-            'meal_penalty_trigger_time': meal_penalty_trigger_time_str,
-            'meal_penalty_diff': meal_penalty_diff,
-            'round_up_target': company.round_up_target or 30,
             'company_name': company.name
         })
     elif request.method == 'POST':
