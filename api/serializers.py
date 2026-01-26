@@ -11,6 +11,8 @@ from callManager.models import (
         Worker,
         CallTime,
         UserProfile,
+        TimeEntry,
+        MealBreak,
         )
 from rest_framework import serializers
 
@@ -72,8 +74,56 @@ class WorkerSerializer(serializers.ModelSerializer):
             worker = Worker.objects.create(**validated_data)
             return worker
 
+class MealBreakSerializer(serializers.ModelSerializer):
+    duration = serializers.SerializerMethodField()
+
+    def get_duration(self, obj):
+        return obj.duration.total_seconds() / 60 if obj.duration else 0
+
+    class Meta:
+        model = MealBreak
+        fields = ['id', 'break_time', 'duration', 'break_type']
+
+class TimeEntrySerializer(serializers.ModelSerializer):
+    normal_hours = serializers.SerializerMethodField()
+    meal_penalty_hours = serializers.SerializerMethodField()
+    total_hours_worked = serializers.SerializerMethodField()
+    meal_breaks = MealBreakSerializer(many=True, read_only=True)
+
+    def get_normal_hours(self, obj):
+        return obj.normal_hours
+
+    def get_meal_penalty_hours(self, obj):
+        return obj.meal_penalty_hours
+
+    def get_total_hours_worked(self, obj):
+        return obj.total_hours_worked
+
+    class Meta:
+        model = TimeEntry
+        fields = [
+            'id', 'labor_request', 'worker', 'call_time',
+            'start_time', 'end_time', 'created_at', 'updated_at',
+            'meal_breaks', 'normal_hours', 'meal_penalty_hours', 'total_hours_worked'
+        ]
+
+class LaborRequestTrackingSerializer(serializers.ModelSerializer):
+    time_entry = serializers.SerializerMethodField()
+
+    def get_time_entry(self, obj):
+        time_entry = obj.time_entries.first()
+        if time_entry:
+            return TimeEntrySerializer(time_entry).data
+        return None
+
+    class Meta:
+        model = LaborRequest
+        fields = ['id', 'worker', 'labor_requirement', 'time_entry', 'ncns']
+        depth = 2
+
 class LaborRequestSerializer(serializers.ModelSerializer):
     message = serializers.SerializerMethodField()
+    time_entries = TimeEntrySerializer(read_only=True, many=True)
 
     def get_message(self, obj):
         confirmation = obj.time_change_confirmations.first()
@@ -122,6 +172,8 @@ class LaborRequirementCreateSerializer(serializers.ModelSerializer):
 class CallTimeSerializer(serializers.ModelSerializer):
     labor_requirements = LaborRequirementSerializer(many=True, read_only=True)
     call_unixtime = serializers.ReadOnlyField()
+    event_slug = serializers.CharField(source='event.slug', read_only=True)
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
     class Meta:
         model = CallTime
         fields = '__all__'
