@@ -7,11 +7,11 @@ asgiref==3.10.0
 attrs==25.3.0
 autobahn==25.10.2
 Automat==25.4.16
-av
+av==16.1.0
 binaryornot==0.4.4
 certifi==2025.4.26
 cffi==2.0.0
-channels==4.3.1
+channels==4.3.2
 channels_redis==4.3.0
 chardet==5.2.0
 charset-normalizer==3.4.2
@@ -20,13 +20,12 @@ constantly==23.10.4
 cookiecutter==2.6.0
 cryptography==46.0.3
 daphne==4.2.1
-Django==5.2.3
+Django==6.0.2
 django-browser-reload==1.21.0
 django-channels==0.7.0
 django-cors-headers==4.9.0
 django-dotenv==1.4.2
 django-htmx==1.23.0
-django-cors-headers==4.4.0
 django-phonenumber-field==8.1.0
 django-tailwind==4.4.2
 django-user-agents==0.4.0
@@ -56,6 +55,7 @@ phonenumbers==9.0.7
 pillow==11.2.1
 propcache==0.3.2
 psycopg2==2.9.11
+psycopg2-binary==2.9.11
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22
