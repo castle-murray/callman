@@ -133,8 +133,6 @@ def event_detail(request, slug):
                     message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} on {event.start_date}: {confirmation_url}"
                 else:
                     message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name}: {confirmation_url}"
-                if len(message_body) > 144:
-                    message_body = message_body[:141] + "..."
                 sms_errors.extend(send_message(message_body, worker, manager, company))
                 for labor_request in requests:
                     if worker.sms_consent == True:

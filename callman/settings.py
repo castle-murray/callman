@@ -439,5 +439,14 @@ CHANNEL_LAYERS = {
 #else:
 #
 
+FRONTEND_URL = 'http://localhost:5173'
+
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWS_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "x-frontend-origin",
+]

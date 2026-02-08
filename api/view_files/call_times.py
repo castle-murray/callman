@@ -6,12 +6,14 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from api.serializers import TimeEntrySerializer, LaborRequestTrackingSerializer
 from callManager.models import(
         CallTime,
         Event,
         LaborRequest,
         LaborRequirement,
         LaborType,
+        RegistrationToken,
         TimeChangeConfirmation,
         TimeEntry,
         MealBreak
@@ -28,17 +30,22 @@ from api.serializers import (
         )
 import json
 from callManager.views import generate_short_token, send_message
+from api.utils import frontend_url
 
 @api_view(['GET','POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def add_call_time(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    company = manager.company
-    event = get_object_or_404(Event, slug=slug)
+    event = get_object_or_404(Event, slug=slug, company=company)
+    if hasattr(user, 'steward') and event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "POST":
         request.data['event'] = event.id
         from datetime import datetime
@@ -71,12 +78,16 @@ def add_call_time(request, slug):
 @permission_classes([IsAuthenticated])
 def edit_call_time(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     original_time = call_time.call_unixtime
-    company = call_time.event.company
     serializer = CallTimeSerializer(call_time, data=request.data, partial=True)
 
     if serializer.is_valid():
@@ -98,8 +109,8 @@ def edit_call_time(request, slug):
                     labor_request=req,
                     expires_at=timezone.now() + timezone.timedelta(days=7),
                 )
-                confirm_url = request.build_absolute_uri(
-                    f"/call/confirm-time-change/{confirmation.token}/"
+                confirm_url = frontend_url(
+                    request, f"/call/confirm-time-change/{confirmation.token}/"
                 )
                 message_body = (
                     f"{company.name_short or company.name}: {call_time.event.event_name} {call_time.name} time changed. "
@@ -119,10 +130,15 @@ def edit_call_time(request, slug):
 @permission_classes([IsAuthenticated])
 def delete_call_time(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time.delete()
     return Response({'status': 'success', 'message': 'Call time deleted'})
 
@@ -185,36 +201,9 @@ def call_time_tracking(request, slug):
 
         confirmed_requests = []
         ncns_requests = []
-        for lr in labor_requests:
-            time_entry = lr.time_entries.first()
-            if time_entry:
-                meal_breaks = time_entry.meal_breaks.all()
-                time_entry_data = {
-                    'id': time_entry.id,
-                    'start_time': time_entry.start_time.isoformat() if time_entry.start_time else None,
-                    'end_time': time_entry.end_time.isoformat() if time_entry.end_time else None,
-                    'meal_breaks': [{'id': mb.id, 'break_time': mb.break_time.isoformat(), 'duration': mb.duration.total_seconds() / 60 if mb.duration else 0, 'break_type': mb.break_type} for mb in meal_breaks]
-                }
-            else:
-                time_entry_data = None
-            lr_data = {
-                'id': lr.id,
-                'worker': {
-                    'id': lr.worker.id,
-                    'name': lr.worker.name,
-                    'phone_number': lr.worker.phone_number,
-                    'nocallnoshow': lr.worker.nocallnoshow
-                },
-                'labor_requirement': {
-                    'id': lr.labor_requirement.id,
-                    'labor_type': {
-                        'id': lr.labor_requirement.labor_type.id,
-                        'name': lr.labor_requirement.labor_type.name
-                    },
-                    'minimum_hours': lr.labor_requirement.minimum_hours
-                },
-                'time_entry': time_entry_data
-            }
+        lr_data_list = LaborRequestTrackingSerializer(labor_requests, many=True).data
+        for lr_data in lr_data_list:
+            lr = labor_requests.get(id=lr_data['id'])
             if lr.availability_response == 'no' and lr.worker.nocallnoshow > 0:
                 ncns_requests.append(lr_data)
             else:
@@ -224,14 +213,21 @@ def call_time_tracking(request, slug):
         meal_penalty_trigger_time = call_time.event.location_profile.meal_penalty_trigger_time or company.meal_penalty_trigger_time or datetime.time(18, 0)
         meal_penalty_diff = company.meal_penalty_diff or 1.5
 
+        if isinstance(meal_penalty_trigger_time, int):
+            meal_penalty_trigger_time_str = f"{meal_penalty_trigger_time}:00"
+        else:
+            meal_penalty_trigger_time_str = meal_penalty_trigger_time.strftime('%H:%M')
+
         return Response({
             'call_time': CallTimeSerializer(call_time).data,
             'confirmed_requests': confirmed_requests,
             'ncns_requests': ncns_requests,
             'labor_types': LaborTypeSerializer(labor_types, many=True).data,
             'selected_labor_type': labor_type_filter,
-            'meal_penalty_trigger_time': meal_penalty_trigger_time.strftime('%H:%M'),
-            'meal_penalty_diff': meal_penalty_diff
+            'meal_penalty_trigger_time': meal_penalty_trigger_time_str,
+            'meal_penalty_diff': meal_penalty_diff,
+            'round_up_target': company.round_up_target or 30,
+            'company_name': company.name
         })
     elif request.method == 'POST':
         request_id = request.data.get('request_id')
@@ -239,6 +235,22 @@ def call_time_tracking(request, slug):
         labor_request = get_object_or_404(LaborRequest, id=request_id, labor_requirement__call_time=call_time)
         minimum_hours = labor_request.labor_requirement.minimum_hours or call_time.minimum_hours or call_time.event.location_profile.minimum_hours or company.minimum_hours
         worker = labor_request.worker
+        def round_time(dt, target):
+            if target == 0:
+                # round to nearest hour
+                if dt.minute >= 30:
+                    dt = dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+                else:
+                    dt = dt.replace(minute=0, second=0, microsecond=0)
+            else:
+                # round to nearest target
+                rounded_min = round(dt.minute / target) * target
+                if rounded_min == 60:
+                    dt = dt.replace(hour=dt.hour + 1, minute=0, second=0, microsecond=0)
+                else:
+                    dt = dt.replace(minute=rounded_min, second=0, microsecond=0)
+            return dt
+
         if action in ['sign_in', 'sign_out', 'ncns', 'call_out', 'update_start_time', 'update_end_time', 'add_meal_break', 'update_meal_break', 'delete_meal_break']:
             time_entry, created = TimeEntry.objects.get_or_create(
                 labor_request=labor_request,
@@ -247,7 +259,8 @@ def call_time_tracking(request, slug):
                 defaults={'start_time': datetime.combine(call_time.date, call_time.time)})
             was_ncns = worker.nocallnoshow > 0 and labor_request.availability_response == 'no'
             if action == 'sign_in' and not time_entry.start_time:
-                time_entry.start_time = datetime.combine(call_time.date, call_time.time)
+                start_time = datetime.combine(call_time.date, call_time.time)
+                time_entry.start_time = round_time(start_time, company.round_up_target or 30)
                 time_entry.save()
             elif action == 'sign_out' and time_entry.start_time and not time_entry.end_time:
                 end_time = datetime.now()
@@ -266,20 +279,30 @@ def call_time_tracking(request, slug):
             elif action == 'ncns' and not was_ncns:
                 labor_request.confirmed = False
                 labor_request.availability_response = 'no'
+                labor_request.ncns = True
                 labor_request.save()
                 worker.nocallnoshow += 1
                 worker.save()
             elif action == 'update_start_time':
                 new_time_str = request.data.get('new_time')
-                time_entry.start_time = datetime.fromisoformat(new_time_str)
+                dt = datetime.fromisoformat(new_time_str)
+                rounded_dt = round_time(dt, company.round_up_target or 30)
+                time_entry.start_time = rounded_dt
                 time_entry.save()
             elif action == 'update_end_time':
                 new_time_str = request.data.get('new_time')
-                time_entry.end_time = datetime.fromisoformat(new_time_str)
+                dt = datetime.fromisoformat(new_time_str)
+                rounded_dt = round_time(dt, company.round_up_target or 30)
+                time_entry.end_time = rounded_dt
                 time_entry.save()
             elif action == 'add_meal_break':
                 type_minutes = int(request.data.get('type', '30'))
-                break_time = datetime.now()
+                break_time_str = request.data.get('break_time')
+                if break_time_str:
+                    break_time = datetime.fromisoformat(break_time_str)
+                    break_time = round_time(break_time, company.round_up_target or 30)
+                else:
+                    break_time = datetime.now()
                 duration = timedelta(minutes=type_minutes)
                 break_type = 'paid' if type_minutes == 30 else 'unpaid'
                 MealBreak.objects.create(time_entry=time_entry, break_time=break_time, duration=duration, break_type=break_type)
@@ -291,7 +314,9 @@ def call_time_tracking(request, slug):
                 meal_break = MealBreak.objects.get(id=meal_break_id, time_entry=time_entry)
                 break_time_str = request.data.get('break_time')
                 duration_min = int(request.data.get('duration'))
-                meal_break.break_time = datetime.fromisoformat(break_time_str)
+                break_time = datetime.fromisoformat(break_time_str)
+                break_time = round_time(break_time, company.round_up_target or 30)
+                meal_break.break_time = break_time
                 meal_break.duration = timedelta(minutes=duration_min)
                 meal_break.break_type = 'paid' if duration_min == 30 else 'unpaid'
                 meal_break.save()
@@ -328,10 +353,15 @@ def call_time_confirmations(request, slug):
 @permission_classes([IsAuthenticated])
 def copy_call_time(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    original_call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
+    original_call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and original_call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = original_call_time.event
     formdata = request.data.copy()
     formdata['event'] = event.id
@@ -374,13 +404,62 @@ def copy_call_time(request, slug):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
+def send_reminder(request, slug):
+    user = request.user
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    labor_requests = LaborRequest.objects.filter(
+        labor_requirement__call_time=call_time,
+        confirmed=True
+    ).select_related('worker', 'labor_requirement__labor_type')
+    sms_errors = []
+    sent_count = 0
+    location_name = call_time.event.location_profile.name if call_time.event.location_profile else ''
+    for labor_request in labor_requests:
+        if labor_request.reminder_sent:
+            continue
+        message = (
+            f"Reminder:\n"
+            f"{call_time.event.event_name} @ {location_name}\n\n"
+            f"{call_time.date.strftime('%B %d')}\n\n"
+            f"{call_time.name} at {call_time.time.strftime('%I:%M %p')}\n\n"
+            f"{labor_request.labor_requirement.labor_type.name}\n\n"
+            f"Do not respond to this message."
+        )
+        errors = send_message(message, labor_request.worker, company)
+        if errors:
+            sms_errors.extend(errors)
+        else:
+            labor_request.reminder_sent = True
+            labor_request.save()
+            sent_count += 1
+    if sms_errors:
+        return Response({'status': 'success', 'message': f'Reminders sent to {sent_count} workers. Errors: {", ".join(sms_errors)}'})
+    return Response({'status': 'success', 'message': f'Reminders sent to {sent_count} workers.'})
+    
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def send_call_time_messages(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+        sender = user.manager
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+        sender = user.steward
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    call_time = get_object_or_404(CallTime, slug=slug, event__company=manager.company)
-    company = call_time.event.company
+    call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     queued_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
         requested=True,
@@ -392,6 +471,7 @@ def send_call_time_messages(request, slug):
     workers_to_notify = {}
     for labor_request in queued_requests:
         worker = labor_request.worker
+        RegistrationToken.objects.get_or_create(worker=worker)
         if worker.id not in workers_to_notify:
             workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
         workers_to_notify[worker.id]['requests'].append(labor_request)
@@ -401,12 +481,12 @@ def send_call_time_messages(request, slug):
         for labor_request in requests:
             if not labor_request.token_short:
                 labor_request.token_short = generate_short_token()
-            confirmation_url = request.build_absolute_uri(f"/event/{call_time.event.slug}/confirm/{labor_request.token_short}/")
+            confirmation_url = frontend_url(request, f"/event/{call_time.event.slug}/confirm/{labor_request.token_short}/")
             if call_time.event.is_single_day:
-                message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name} - {call_time.name} on {call_time.event.start_date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
+                message_body = f"This is {user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name} - {call_time.name} on {call_time.event.start_date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
             else:
-                message_body = f"This is {manager.user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name} - {call_time.name} on {call_time.date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
-            sms_errors.extend(send_message(message_body, worker, manager, company))
+                message_body = f"This is {user.first_name}/{company.name_short or company.name}: Confirm availability for {call_time.event.event_name} - {call_time.name} on {call_time.date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
+            sms_errors.extend(send_message(message_body, worker, sender, company))
             if worker.sms_consent == True:
                 labor_request.sms_sent = True
             labor_request.save()
@@ -421,11 +501,15 @@ def send_call_time_messages(request, slug):
 @permission_classes([IsAuthenticated])
 def add_labor_to_call(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
-    company = manager.company
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
+    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "POST":
         serializer = LaborRequirementCreateSerializer(data=request.data)
         if serializer.is_valid():
@@ -452,13 +536,17 @@ def add_labor_to_call(request, slug):
 @permission_classes([IsAuthenticated])
 def labor_requirement_status(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     lr_serializer = LaborRequirementSerializer(labor_requirement)
-    company = labor_requirement.call_time.event.company
-    if not manager.company == company:
+    if labor_requirement.call_time.event.company != company:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    if hasattr(user, 'steward') and labor_requirement.call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "GET":
         labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement)
@@ -485,14 +573,18 @@ def labor_requirement_status(request, slug):
 @permission_classes([IsAuthenticated])
 def edit_labor_requirement(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     call_time = labor_requirement.call_time
     event = call_time.event
     company = event.company
-    if not manager.company == company:
+
+    if hasattr(user, 'manager'):
+        if user.manager.company != company:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    elif hasattr(user, 'steward'):
+        if user.steward.company != company or event.steward != user.steward:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "POST":
         serializer = LaborRequirementSerializer(labor_requirement, data=request.data)
@@ -504,8 +596,11 @@ def edit_labor_requirement(request, slug):
     elif request.method == "GET":
         labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
         labor_requirement_serializer = LaborRequirementSerializer(labor_requirement)
+        labor_types = LaborType.objects.filter(company=company)
+        labor_types_serializer = LaborTypeSerializer(labor_types, many=True)
         context = {
             'labor_requirement': labor_requirement_serializer.data,
+            'labor_types': labor_types_serializer.data,
             'event_slug': event.slug
         }
         return Response(context, status=200)
@@ -518,17 +613,63 @@ def edit_labor_requirement(request, slug):
 @permission_classes([IsAuthenticated])
 def delete_labor_requirement(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     call_time = labor_requirement.call_time
     event = call_time.event
-    company = event.company
-    if not manager.company == company:
+    if event.company != company:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    if hasattr(user, 'steward') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "DELETE":
         labor_requirement.delete()
         return Response({'status': 'success', 'message': 'Labor requirement deleted', 'event_slug': event.slug})
     else:
         return Response({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def bulk_confirm_requests(request):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    manager = user.manager
+    company = manager.company
+    if not manager.company == company:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    labor_request_ids = request.data.get('labor_requests', [])
+    confirmed_count = 0
+    errors = []
+    for req_data in labor_request_ids:
+        req_id = req_data.get('id')
+        if not req_id:
+            errors.append({'id': req_id, 'error': 'Missing id'})
+            continue
+        try:
+            labor_request = LaborRequest.objects.get(pk=req_id)
+            # Check if belongs to company
+            if labor_request.labor_requirement.call_time.event.company != company:
+                errors.append({'id': req_id, 'error': 'Unauthorized'})
+                continue
+            labor_request.availability_response = 'yes'
+            labor_request.canceled = False
+            labor_request.confirmed = True
+            labor_request.save()
+            confirmed_count += 1
+        except LaborRequest.DoesNotExist:
+            errors.append({'id': req_id, 'error': 'Not found'})
+    
+    return Response({
+        'status': 'success',
+        'message': f'{confirmed_count} requests confirmed',
+        'confirmed_count': confirmed_count,
+        'errors': errors
+    })
+

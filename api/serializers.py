@@ -13,6 +13,7 @@ from callManager.models import (
         UserProfile,
         TimeEntry,
         MealBreak,
+        ScheduledReminder,
         )
 from rest_framework import serializers
 
@@ -132,7 +133,7 @@ class LaborRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = LaborRequest
         fields = '__all__'
-        depth = 2
+        depth = 3
 
         def create(self, validated_data):
             labor_request = LaborRequest.objects.create(**validated_data)
@@ -193,4 +194,9 @@ class UserSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(source='profile.phone_number', read_only=True)
     class Meta:
         model = User
+        fields = '__all__'
+
+class ScheduledReminderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduledReminder
         fields = '__all__'

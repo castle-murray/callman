@@ -6,11 +6,15 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from twilio.rest import notify
 from api.serializers import CallTimeSerializer, EventSerializer, LaborRequestSerializer, LaborRequirementSerializer, LaborTypeSerializer, WorkerSerializer
-from callManager.models import CallTime, LaborRequest, LaborRequirement, Worker
+from callManager.models import CallTime, LaborRequest, LaborRequirement, RegistrationToken, Worker
 import json
 
-from callManager.views import generate_short_token
+from callManager.view_files.notify import notify
+
+from callManager.views import generate_short_token, send_message
+from api.utils import frontend_url
 
 @api_view(['GET']) 
 @authentication_classes([TokenAuthentication])
@@ -67,16 +71,18 @@ def declined_count(request):
 @permission_classes([IsAuthenticated])
 def call_time_list(request, slug):
     user = request.user
-    
-    if hasattr(user, 'manager'):
-        manager = user.manager
-    else:
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    call_time = get_object_or_404(CallTime, slug=slug)
 
+    call_time = get_object_or_404(CallTime, slug=slug)
     event = call_time.event
     company = event.company
-    if not manager.company == company:
+
+    if hasattr(user, 'manager'):
+        if user.manager.company != company:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    elif hasattr(user, 'steward'):
+        if user.steward.company != company or event.steward != user.steward:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     labor_requests = LaborRequest.objects.filter(labor_requirement__call_time=call_time)
     
@@ -162,6 +168,48 @@ def request_action(request, token):
         return Response({'status': 'error', 'message': 'Invalid action'}, status=400)
     return Response({'status': 'success'})
 
+@api_view(['POST']) 
+def user_request_action(request, token):
+    data = json.loads(request.body)
+    action = data.get('action')
+    labor_request = get_object_or_404(LaborRequest, token_short=token)
+    worker = labor_request.worker
+    labor_requirement = labor_request.labor_requirement
+    fcfs = labor_requirement.fcfs_positions
+    response = data.get('response')
+    
+    if action == "available":
+        if response not in ['yes', 'no']:
+            return Response({'status': 'error', 'message': 'Invalid response'}, status=400)
+        if response == 'yes':
+            labor_request.availability_response = 'yes'
+            if labor_request.is_reserved:
+                labor_request.confirmed = True
+            if fcfs > 0:
+                labor_request.confirmed = True
+                labor_requirement.fcfs_positions -= 1
+                labor_requirement.save() 
+            
+            message = f"{worker.name} Available for {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}, Requires confirmation"
+            notify(labor_request.id, 'Available', message)
+            labor_request.save()
+        else:
+            labor_request.availability_response = 'no'
+            message = f"{worker.name} declined {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}"
+            notify(labor_request.id, 'Declined', message)
+            labor_request.save()
+    elif action == "cancel":
+        labor_request.confirmed = False
+        worker.canceled_requests += 1
+        worker.save()
+        labor_request.availability_response = 'no'
+        labor_request.canceled = True
+        message = f"{worker.name} has canceled on {labor_request.labor_requirement.call_time.event.event_name} - {labor_request.labor_requirement.call_time.name}, {labor_request.labor_requirement.labor_type.name}"
+        notify(labor_request.id, 'Canceled', message)
+        labor_request.save()
+    else:
+        return Response({'status': 'error', 'message': 'Invalid action'}, status=400)
+    return Response({'status': 'success'})
 
 
 @api_view(['GET']) 
@@ -169,19 +217,22 @@ def request_action(request, token):
 @permission_classes([IsAuthenticated])
 def fill_labor_request_list(request, slug):
     user = request.user
-    if not hasattr(user, 'manager'):
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    
-    manager = user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     call_time = labor_requirement.call_time
-    call_datetime = datetime.combine(call_time.date, call_time.time)
+    event = call_time.event
+    company = event.company
 
-    labor_type = [labor_requirement.labor_type]
-
-    company = labor_requirement.call_time.event.company
-    if not manager.company == company:
+    if hasattr(user, 'manager'):
+        if user.manager.company != company:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    elif hasattr(user, 'steward'):
+        if user.steward.company != company or event.steward != user.steward:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+
+    call_datetime = datetime.combine(call_time.date, call_time.time)
+    labor_type = [labor_requirement.labor_type]
     workers = Worker.objects.filter(company=labor_requirement.call_time.event.company)
     workers = workers.order_by('name')
     for worker in workers:
@@ -235,13 +286,19 @@ def request_worker(request, slug):
     data = json.loads(request.body)
     worker_id = data.get('worker_id')
     user = request.user
-    if not hasattr(user, 'manager'):
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    manager = user.manager
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
-    company = labor_requirement.call_time.event.company
-    if not manager.company == company:
+    event = labor_requirement.call_time.event
+    company = event.company
+
+    if hasattr(user, 'manager'):
+        if user.manager.company != company:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    elif hasattr(user, 'steward'):
+        if user.steward.company != company or event.steward != user.steward:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    action = data.get('action', 'request')
     worker = get_object_or_404(Worker, id=worker_id)
     _, created = LaborRequest.objects.get_or_create(
         worker=worker,
@@ -249,12 +306,68 @@ def request_worker(request, slug):
         defaults={
             'requested': True,
             'sms_sent': False,
-            'is_reserved': False,
+            'is_reserved': action == 'reserve',
             'token_short': generate_short_token()
         }
     )
     if not created:
         return Response({'status': 'error', 'message': 'Worker already requested'}, status=400)
-        
+
     return Response({'status': 'success'})
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def send_labor_requirement_messages(request, slug):
+    user = request.user
+    if hasattr(user, 'manager'):
+        company = user.manager.company
+        sender = user.manager
+    elif hasattr(user, 'steward'):
+        company = user.steward.company
+        sender = user.steward
+    else:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
+    call_time = labor_requirement.call_time
+    event = call_time.event
+    if event.company != company:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    if hasattr(user, 'steward') and event.steward != user.steward:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    queued_requests = LaborRequest.objects.filter(
+        labor_requirement=labor_requirement,
+        requested=True,
+        sms_sent=False
+    ).select_related('worker')
+    if not queued_requests.exists():
+        return Response({'status': 'success', 'message': 'No queued requests to send.'})
+    sms_errors = []
+    workers_to_notify = {}
+    for labor_request in queued_requests:
+        worker = labor_request.worker
+        RegistrationToken.objects.get_or_create(worker=worker)
+        if worker.id not in workers_to_notify:
+            workers_to_notify[worker.id] = {'worker': worker, 'requests': []}
+        workers_to_notify[worker.id]['requests'].append(labor_request)
+    for _, data in workers_to_notify.items():
+        worker = data['worker']
+        requests = data['requests']
+        for labor_request in requests:
+            if not labor_request.token_short:
+                labor_request.token_short = generate_short_token()
+            confirmation_url = frontend_url(request, f"/event/{event.slug}/confirm/{labor_request.token_short}/")
+            if event.is_single_day:
+                message_body = f"This is {user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} - {call_time.name} on {event.start_date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
+            else:
+                message_body = f"This is {user.first_name}/{company.name_short or company.name}: Confirm availability for {event.event_name} - {call_time.name} on {call_time.date} at {call_time.time.strftime('%I:%M %p')}: {confirmation_url}"
+            sms_errors.extend(send_message(message_body, worker, sender, company))
+            if worker.sms_consent == True:
+                labor_request.sms_sent = True
+            labor_request.save()
+    message = f"Messages processed for {len(workers_to_notify)} workers."
+    if sms_errors:
+        message += f" Errors: {', '.join(sms_errors)}."
+    return Response({'status': 'success', 'message': message})
 

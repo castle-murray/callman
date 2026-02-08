@@ -4,15 +4,21 @@ from api.serializers import CompanySerializer, LaborTypeSerializer, LocationProf
 from callManager.models import (
         LaborType,
         LocationProfile,
+        PasswordResetToken,
         )
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from rest_framework.authtoken.models import Token
+from django.contrib.auth.models import User
+from datetime import timedelta
+from django.utils import timezone
+from callManager.utils.email import send_custom_email
+from api.utils import frontend_url
 import json
 
 
@@ -49,6 +55,55 @@ def logout(request):
     return Response({'status': 'success'})
 
 
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    email = request.data.get('email', '').strip()
+    user = User.objects.filter(email=email).first()
+    if user:
+        token = PasswordResetToken.objects.create(
+            user=user,
+            expires_at=timezone.now() + timedelta(hours=1)
+        )
+        reset_url = frontend_url(request, f"/reset-password/{token.token}")
+        send_custom_email(
+            subject="CallMan Password Reset",
+            to_email=user.email,
+            template_name='callManager/emails/password_reset_email.html',
+            context={'reset_url': reset_url, 'user': user}
+        )
+    return Response({'status': 'success', 'message': 'If an account with that email exists, a password reset link has been sent.'})
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def reset_password(request, token):
+    try:
+        reset_token = PasswordResetToken.objects.get(
+            token=token,
+            expires_at__gt=timezone.now(),
+            used=False
+        )
+    except PasswordResetToken.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Invalid or expired reset link.'}, status=400)
+
+    new_password = request.data.get('new_password', '')
+    confirm_password = request.data.get('confirm_password', '')
+
+    if not new_password or len(new_password) < 8:
+        return Response({'status': 'error', 'message': 'Password must be at least 8 characters.'}, status=400)
+    if new_password != confirm_password:
+        return Response({'status': 'error', 'message': 'Passwords do not match.'}, status=400)
+
+    reset_token.user.set_password(new_password)
+    reset_token.user.save()
+    reset_token.used = True
+    reset_token.save()
+    return Response({'status': 'success', 'message': 'Your password has been reset successfully.'})
+
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -70,8 +125,8 @@ def user_info(request):
     if hasattr(user, 'worker'):
         isWorker = True
     
-    slug = user.userprofile.slug if hasattr(user, 'userprofile') else user.username
-    has_userprofile = hasattr(user, 'userprofile')
+    slug = user.profile.slug if hasattr(user, 'profile') else user.username
+    has_userprofile = hasattr(user, 'profile')
 
     context = {
         'user': {
@@ -81,6 +136,7 @@ def user_info(request):
             'isAdministrator': isAdministrator,
             'isOwner': isOwner,
             'isWorker': isWorker,
+            'has_userprofile': has_userprofile,
         }
     }
     return Response(context)

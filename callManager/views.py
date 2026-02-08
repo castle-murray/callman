@@ -47,6 +47,7 @@ from urllib.parse import quote
 # channels imports
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from api.utils import frontend_url
 
 from callManager.view_files.notify import notify, push_notification
 from time import sleep
@@ -230,7 +231,7 @@ def sms_webhook(request):
                     requests = data['requests']
                     # Use existing token_short if available, otherwise generate new
                     token = next((req.token_short for req in requests if req.token_short), generate_short_token())
-                    confirmation_url = request.build_absolute_uri(f"/event/{event.slug}/confirm/{token}/")
+                    confirmation_url = frontend_url(request, f"/event/{event.slug}/confirm/{token}/")
                     response.message(
                         f"This is {company.name}: Confirm availability for {event.event_name} "
                         f"on {event.start_date}: {confirmation_url}"

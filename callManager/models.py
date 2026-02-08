@@ -6,6 +6,10 @@ import uuid
 import random
 import pytz
 from datetime import datetime, timedelta
+from django.utils import timezone
+
+def get_expiry_time():
+    return timezone.now() + timedelta(minutes=5)
 
 def generate_unique_slug(model_class, length=7):
     """Generate a unique slug for a model instance."""
@@ -14,6 +18,8 @@ def generate_unique_slug(model_class, length=7):
         slug = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
         if not model_class.objects.filter(slug=slug).exists():
             return slug
+def generate_random_integer():
+    return random.randint(100000, 999999)
 
 class Administrator(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='administrator')
@@ -22,10 +28,15 @@ class Administrator(models.Model):
 
 # Company model (e.g., "ABC Production Co.")
 class Company(models.Model):
+    ROUNDUP_CHOICES = [
+        (30, '30 minutes'),
+        (0, '1 Hour'),
+    ]
     name = models.CharField(max_length=200)
     name_short = models.CharField(max_length=10, null=True, blank=True)
     meal_penalty_trigger_time = models.PositiveIntegerField(default=5, help_text="Hours after start time to trigger meal penalty")
     hour_round_up = models.PositiveIntegerField(default=15, help_text="Minutes to round up hours worked")
+    round_up_target = models.PositiveIntegerField(choices=ROUNDUP_CHOICES, default=30, help_text="Round up target")
     address = models.CharField(max_length=200, null=True, blank=True)
     city = models.CharField(max_length=200, null=True, blank=True)
     state = models.CharField(max_length=200,null=True, blank=True)
@@ -36,6 +47,7 @@ class Company(models.Model):
     time_tracking = models.BooleanField(default=False, help_text="Enable time tracking for this company")
     minimum_hours = models.PositiveIntegerField(default=4, help_text="Minimum hours for a call time")
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
+    meal_penalty_diff = models.DecimalField(max_digits=4, decimal_places=2, default=1.50, help_text="Meal penalty multiplier")
 
     def natural_key(self):
         return (self.slug,)
@@ -87,7 +99,7 @@ class Steward(models.Model):
 
 class StewardInvitation(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='steward_invitations')
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='steward_invitations', null=True, blank=True)
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='steward_invitations')
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
@@ -142,6 +154,9 @@ class Event(models.Model):
     slug = models.CharField(max_length=7, unique=True, blank=True, null=True)
     steward = models.ForeignKey('Steward', on_delete=models.SET_NULL, null=True, blank=True)
     canceled = models.BooleanField(default=False)
+    minimum_hours = models.PositiveIntegerField(default=4, help_text="Minimum hours for a call time")
+    meal_penalty_trigger_time = models.PositiveIntegerField(default=5, help_text="Hours after start time to trigger meal penalty")
+    hour_round_up = models.PositiveIntegerField(default=15, help_text="Minutes to round up hours worked")
 
     def natural_key(self):
         return (self.slug,)
@@ -172,6 +187,12 @@ class CallTime(models.Model):
     original_time = models.TimeField(null=True, blank=True)
     last_modified = models.DateTimeField(auto_now=True)
     message = models.TextField(null=True, blank=True)
+    time_has_changed = models.BooleanField(null=True, blank=True)
+
+    def update_call_unixtime(self):
+        datetime_obj = datetime.combine(self.date, self.time)
+        self.call_unixtime = int(datetime_obj.timestamp())
+        self.save(update_fields=['call_unixtime'])
 
     def save(self, *args, **kwargs):
         datetime_obj = datetime.combine(self.date, self.time)
@@ -263,6 +284,7 @@ class LaborRequest(models.Model):
     sent_time = models.DateTimeField(null=True, blank=True)
     reminder_sent = models.BooleanField(default=False)
     canceled = models.BooleanField(default=False)
+    ncns = models.BooleanField(default=False)
 
     def __str__(self):
         worker_name = self.worker.name if self.worker.name else "Unnamed Worker"
@@ -296,6 +318,7 @@ class Worker(models.Model):
     slug = models.CharField(max_length=10, unique=True, editable=False)
     canceled_requests = models.IntegerField(default=0)
     notes = models.TextField(blank=True, null=True)
+    is_steward = models.BooleanField(default=False)
 
 
     def add_company(self, company):
@@ -418,7 +441,7 @@ class TimeEntry(models.Model):
             end_normal = min(trigger_time, self.end_time)
             normal_hours += (end_normal - current_time).total_seconds() / 3600
 
-        normal_hours -= unpaid_breaks
+        #normal_hours -= unpaid_breaks
         return max(0, normal_hours)
 
     @property
@@ -556,13 +579,67 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"Profile for {self.user.username}"
 
-class WorkerRegistrationToken(models.Model):
+class RegistrationToken(models.Model):
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
-    verification_code = models.CharField(max_length=6)
+    verification_code = models.CharField(max_length=6, blank=True, null=True)
+    veri_expires_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
     used = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.verification_code = generate_random_integer()
+        self.veri_expires_at = timezone.now() + timedelta(minutes=5)
+        if not self.veri_expires_at:
+            self.veri_expires_at = timezone.now() + timedelta(minutes=5)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        return not self.used and not self.is_expired()
+
+    def __str__(self):
+        return f"Registration token for {self.worker.name}"
+
+
+class VerificationToken(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    token = models.IntegerField(default=100000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=get_expiry_time)
+
+    def refresh(self):
+        self.token = generate_random_integer()
+        self.expires_at = timezone.now() + timedelta(minutes=5)
+        self.save()
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(minutes=5)
+            self.token = generate_random_integer()
+        super().save(*args, **kwargs)
 
     def is_expired(self):
         return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"Verification token for {self.user.username}"
+
+
+class AltPhone(models.Model):
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='alt_phones')
+    phone_number = models.CharField(max_length=20)
+    label = models.CharField(max_length=100, blank=True, null=True)
+
+    def formatted_phone_number(self):
+        phone = self.phone_number.replace('-', '').replace('(', '').replace(')', '').replace(' ', '')
+        if phone.startswith('+1'):
+            phone = phone[2:]  # Remove +1 prefix
+        if len(phone) == 10 and phone.isdigit():
+            return f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
+        return self.phone_number
+
+class ScheduledReminder(models.Model):
+    call_time = models.ForeignKey('CallTime', on_delete=models.CASCADE, related_name='reminders')
+    time_to_send = models.DateTimeField()
+    def __str__(self):
+        return f"Reminder for {self.call_time} at {self.time_to_send}"

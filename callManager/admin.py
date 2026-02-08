@@ -20,6 +20,7 @@ from .models import (
         LocationProfile,
         TimeChangeConfirmation,
         ManagerInvitation,
+        RegistrationToken,
         UserProfile,
         )
 
@@ -200,3 +201,9 @@ class NotificationsAdmin(admin.ModelAdmin):
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number')
     search_fields = ('user__username', 'phone_number')
+
+
+@admin.register(RegistrationToken)
+class RegistrationTokenAdmin(admin.ModelAdmin):
+    list_display = ('worker', 'token', 'verification_code', 'veri_expires_at', 'created_at', 'used')
+    search_fields = ('worker__name',)
