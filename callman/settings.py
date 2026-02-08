@@ -439,7 +439,7 @@ CHANNEL_LAYERS = {
 #else:
 #
 
-FRONTEND_URL = 'http://localhost:5173'
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWS_CREDENTIALS = True
