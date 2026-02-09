@@ -228,7 +228,6 @@ TIME_ZONE = 'America/New_York'  # Fallback, though Manager.timezone will overrid
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
-print(f"cors allowed origins: {CORS_ALLOWED_ORIGINS}")
 
 if os.environ.get('DJANGO_ENV') == 'production':
     LOGGING = {
