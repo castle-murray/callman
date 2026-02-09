@@ -315,7 +315,7 @@ def request_worker(request, slug):
         labor_request.is_reserved = True
         labor_request.save()
     elif not created:
-        return Response({status':
+        return Response({'status': 'error', 'message': 'Worker already requested'}, status=400)
     return Response({'status': 'success'})
 
 
