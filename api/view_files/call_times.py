@@ -508,7 +508,7 @@ def add_labor_to_call(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "POST":
         serializer = LaborRequirementCreateSerializer(data=request.data)
