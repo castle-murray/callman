@@ -273,6 +273,11 @@ if os.environ.get('DJANGO_ENV') == 'production':
                 'level': 'DEBUG',
                 'propagate': True,
             },
+            'api': {
+                'handlers': ['file', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
             'django': {
                 'handlers': ['file'],
                 'level': 'WARNING',
@@ -323,6 +328,11 @@ else:
         },
         'loggers': {
             'callManager': {
+                'handlers': ['file', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+            'api': {
                 'handlers': ['file', 'console'],
                 'level': 'DEBUG',
                 'propagate': True,
