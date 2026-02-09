@@ -8,6 +8,7 @@ def frontend_url(request, path):
     Falls back to settings.FRONTEND_URL (for non-browser callers like Twilio webhooks).
     """
     origin = request.META.get('HTTP_X_FRONTEND_ORIGIN') or settings.FRONTEND_URL
+    return f"{origin.rstrip('/')}{path}"
 
 
 def get_client_ip(request):
@@ -18,4 +19,3 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
-    return f"{origin.rstrip('/')}{path}"
