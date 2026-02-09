@@ -551,13 +551,13 @@ def labor_requirement_status(request, slug):
         company = user.steward.company
     else:
         logger.info(f"[labor_requirement_status] 401 — user {user} has no manager or steward role")
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        return Response({'status': 'error', 'message': 'Unauthorized 1'}, status=401)
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     lr_serializer = LaborRequirementSerializer(labor_requirement)
     if labor_requirement.call_time.event.company != company:
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        return Response({'status': 'error', 'message': 'Unauthorized 2'}, status=401)
     if hasattr(user, 'steward') and labor_requirement.call_time.event.steward != user.steward:
-        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        return Response({'status': 'error', 'message': 'Unauthorized 3'}, status=401)
     if request.method == "GET":
         labor_requests = LaborRequest.objects.filter(labor_requirement=labor_requirement)
         pending = labor_requests.filter(availability_response__isnull=True).count()
