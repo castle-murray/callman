@@ -24,6 +24,9 @@ import json
 
     
 @csrf_exempt
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def login_view(request):
     if request.method == "POST":
         data = json.loads(request.body)
