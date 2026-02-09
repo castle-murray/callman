@@ -31,6 +31,12 @@ from api.serializers import (
 import json
 from callManager.views import generate_short_token, send_message
 from api.utils import frontend_url
+from callManager.view_files.notify import notify
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 @api_view(['GET','POST'])
 @authentication_classes([TokenAuthentication])
@@ -80,12 +86,14 @@ def edit_call_time(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
+        manager = user.manager
     elif hasattr(user, 'steward'):
         company = user.steward.company
+        manager = company.managers.first()
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     original_time = call_time.call_unixtime
     serializer = CallTimeSerializer(call_time, data=request.data, partial=True)
@@ -137,7 +145,7 @@ def delete_call_time(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time.delete()
     return Response({'status': 'success', 'message': 'Call time deleted'})
@@ -413,7 +421,7 @@ def send_reminder(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     labor_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -458,7 +466,7 @@ def send_call_time_messages(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     queued_requests = LaborRequest.objects.filter(
         labor_requirement__call_time=call_time,
@@ -506,6 +514,7 @@ def add_labor_to_call(request, slug):
     elif hasattr(user, 'steward'):
         company = user.steward.company
     else:
+        logger.warning(f"[add_labor_to_call] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
     if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
@@ -541,6 +550,7 @@ def labor_requirement_status(request, slug):
     elif hasattr(user, 'steward'):
         company = user.steward.company
     else:
+        logger.info(f"[labor_requirement_status] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     lr_serializer = LaborRequirementSerializer(labor_requirement)
