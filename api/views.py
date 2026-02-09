@@ -23,6 +23,7 @@ import json
 
 
     
+@csrf_exempt
 def login_view(request):
     if request.method == "POST":
         data = json.loads(request.body)
