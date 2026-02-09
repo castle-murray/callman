@@ -51,11 +51,8 @@ from api.utils import frontend_url
 
 from callManager.view_files.notify import notify, push_notification
 from time import sleep
-import logging
 from io import BytesIO
 
-# Create a logger instance
-logger = logging.getLogger('callManager')
 
 
 def custom_404(request, exception):

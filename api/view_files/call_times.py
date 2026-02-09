@@ -32,10 +32,6 @@ import json
 from callManager.views import generate_short_token, send_message
 from api.utils import frontend_url
 from callManager.view_files.notify import notify
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 
 @api_view(['GET','POST'])
@@ -517,7 +513,6 @@ def add_labor_to_call(request, slug):
     elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
-        logger.warning(f"[add_labor_to_call] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
     if hasattr(user, 'steward') and not hasattr(user, 'manager') and call_time.event.steward != user.steward:
@@ -553,7 +548,6 @@ def labor_requirement_status(request, slug):
     elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
-        logger.info(f"[labor_requirement_status] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     labor_requirement = get_object_or_404(LaborRequirement, slug=slug)
     lr_serializer = LaborRequirementSerializer(labor_requirement)
