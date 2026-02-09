@@ -189,7 +189,7 @@ def send_event_messages(request, slug):
     if hasattr(user, 'manager'):
         company = user.manager.company
         sender = user.manager
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
         sender = user.steward
     else:
@@ -352,7 +352,7 @@ def event_details(request, slug):
     logger.info(f"[event_details] has manager={hasattr(user, 'manager')}, has steward={hasattr(user, 'steward')}")
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         logger.warning(f"[event_details] 401 — user {user} has no manager or steward role")
@@ -411,7 +411,7 @@ def generate_signin_station(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)

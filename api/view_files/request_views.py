@@ -79,7 +79,7 @@ def call_time_list(request, slug):
     if hasattr(user, 'manager'):
         if user.manager.company != company:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         if user.steward.company != company or event.steward != user.steward:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     else:
@@ -225,7 +225,7 @@ def fill_labor_request_list(request, slug):
     if hasattr(user, 'manager'):
         if user.manager.company != company:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         if user.steward.company != company or event.steward != user.steward:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     else:
@@ -293,7 +293,7 @@ def request_worker(request, slug):
     if hasattr(user, 'manager'):
         if user.manager.company != company:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         if user.steward.company != company or event.steward != user.steward:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     else:
@@ -324,7 +324,7 @@ def send_labor_requirement_messages(request, slug):
     if hasattr(user, 'manager'):
         company = user.manager.company
         sender = user.manager
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
         sender = user.steward
     else:

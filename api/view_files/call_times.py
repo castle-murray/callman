@@ -45,7 +45,7 @@ def add_call_time(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
@@ -87,7 +87,7 @@ def edit_call_time(request, slug):
     if hasattr(user, 'manager'):
         company = user.manager.company
         manager = user.manager
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
         manager = company.managers.first()
     else:
@@ -140,7 +140,7 @@ def delete_call_time(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
@@ -363,7 +363,7 @@ def copy_call_time(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
@@ -416,7 +416,7 @@ def send_reminder(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
@@ -460,7 +460,7 @@ def send_call_time_messages(request, slug):
     if hasattr(user, 'manager'):
         company = user.manager.company
         sender = user.manager
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
         sender = user.steward
     else:
@@ -511,7 +511,7 @@ def add_labor_to_call(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         logger.warning(f"[add_labor_to_call] 401 — user {user} has no manager or steward role")
@@ -547,7 +547,7 @@ def labor_requirement_status(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         logger.info(f"[labor_requirement_status] 401 — user {user} has no manager or steward role")
@@ -591,7 +591,7 @@ def edit_labor_requirement(request, slug):
     if hasattr(user, 'manager'):
         if user.manager.company != company:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         if user.steward.company != company or event.steward != user.steward:
             return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     else:
@@ -625,7 +625,7 @@ def delete_labor_requirement(request, slug):
     user = request.user
     if hasattr(user, 'manager'):
         company = user.manager.company
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)

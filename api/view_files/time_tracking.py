@@ -20,7 +20,7 @@ def call_time_tracking(request, slug):
     elif hasattr(user, 'manager'):
         company = user.manager.company
         call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    elif hasattr(user, 'steward'):
+    elif hasattr(user, 'steward') and not hasattr(user, 'manager'):
         company = user.steward.company
         call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
         if call_time.event.steward != user.steward:
