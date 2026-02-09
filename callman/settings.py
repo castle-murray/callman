@@ -228,9 +228,7 @@ USE_TZ = False
 TIME_ZONE = 'America/New_York'  # Fallback, though Manager.timezone will override
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-]
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
 
 if os.environ.get('DJANGO_ENV') == 'production':
     LOGGING = {
