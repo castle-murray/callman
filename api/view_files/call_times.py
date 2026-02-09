@@ -368,7 +368,7 @@ def copy_call_time(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     original_call_time = get_object_or_404(CallTime, slug=slug, event__company=company)
-    if hasattr(user, 'steward') and original_call_time.event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and original_call_time.event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = original_call_time.event
     formdata = request.data.copy()
