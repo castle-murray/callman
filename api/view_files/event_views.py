@@ -1,4 +1,7 @@
+import logging
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -343,11 +346,16 @@ def confirm_requests(request, slug, event_token):
 @permission_classes([IsAuthenticated])
 def event_details(request, slug):
     user = request.user
+    logger.info(f"[event_details] slug={slug}, method={request.method}")
+    logger.info(f"[event_details] user={user}, is_authenticated={user.is_authenticated}")
+    logger.info(f"[event_details] auth header={request.META.get('HTTP_AUTHORIZATION', 'MISSING')}")
+    logger.info(f"[event_details] has manager={hasattr(user, 'manager')}, has steward={hasattr(user, 'steward')}")
     if hasattr(user, 'manager'):
         company = user.manager.company
     elif hasattr(user, 'steward'):
         company = user.steward.company
     else:
+        logger.warning(f"[event_details] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = get_object_or_404(Event, slug=slug, company=company)
     if hasattr(user, 'steward') and event.steward != user.steward:
