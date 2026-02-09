@@ -240,6 +240,7 @@ def fill_labor_request_list(request, slug):
         for labor_request in worker.labor_requests.all():
             if labor_request.labor_requirement == labor_requirement:
                 worker.requested = True
+                worker.reserved = labor_request.is_reserved
                 continue
             request_datetime = datetime.combine(
                 labor_request.labor_requirement.call_time.date,
@@ -300,7 +301,8 @@ def request_worker(request, slug):
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     action = data.get('action', 'request')
     worker = get_object_or_404(Worker, id=worker_id)
-    _, created = LaborRequest.objects.get_or_create(
+        worker=worker,
+    labor_request, created = LaborRequest.objects.get_or_create(
         worker=worker,
         labor_requirement=labor_requirement,
         defaults={
@@ -310,9 +312,11 @@ def request_worker(request, slug):
             'token_short': generate_short_token()
         }
     )
-    if not created:
-        return Response({'status': 'error', 'message': 'Worker already requested'}, status=400)
-
+    if not created and action == 'reserve':
+        labor_request.is_reserved = True
+        labor_request.save()
+    elif not created:
+        return Response({status':
     return Response({'status': 'success'})
 
 

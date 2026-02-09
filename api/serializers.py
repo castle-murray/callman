@@ -58,6 +58,7 @@ class AltPhoneSerializer(serializers.ModelSerializer):
 class WorkerSerializer(serializers.ModelSerializer):
     conflicts = serializers.SerializerMethodField()
     requested = serializers.SerializerMethodField()
+    reserved = serializers.SerializerMethodField()
     labor_types = LaborTypeSerializer(many=True, read_only=True)
     alt_phones = AltPhoneSerializer(many=True, read_only=True)
 
@@ -66,6 +67,9 @@ class WorkerSerializer(serializers.ModelSerializer):
 
     def get_requested(self, obj):
         return getattr(obj, 'requested', False)
+
+    def get_reserved(self, obj):
+        return getattr(obj, 'reserved', False)
 
     class Meta:
         model = Worker
