@@ -20,6 +20,12 @@ from django.utils import timezone
 from callManager.utils.email import send_custom_email
 from api.utils import frontend_url
 import json
+import logging
+from django.conf import settings
+
+from callman.settings import CORS_ALLOW_ALL_ORIGINS
+
+logger = logging.getLogger(__name__)
 
 
     
@@ -28,6 +34,7 @@ import json
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
+    logger.info(f"{CORS_ALLOW_ALL_ORIGINS}")
     if request.method == "POST":
         data = json.loads(request.body)
         username = data.get('username')
