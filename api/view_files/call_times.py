@@ -375,7 +375,7 @@ def copy_call_time(request, slug):
     formdata['event'] = event.id
     from datetime import datetime
     date_obj = datetime.strptime(formdata['date'], '%Y-%m-%d').date()
-    time_obj = datetime.strptime(formdata['time'], '%H:%M').time()
+    time_obj = datetime.strptime(formdata['time'], '%H:%M:%S').time()
     call_unixtime = timezone.datetime.combine(date_obj, time_obj)
     formdata['call_unixtime'] = call_unixtime
     serializer = CallTimeSerializer(data=formdata)
