@@ -301,7 +301,6 @@ def request_worker(request, slug):
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     action = data.get('action', 'request')
     worker = get_object_or_404(Worker, id=worker_id)
-        worker=worker,
     labor_request, created = LaborRequest.objects.get_or_create(
         worker=worker,
         labor_requirement=labor_requirement,
