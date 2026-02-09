@@ -358,7 +358,7 @@ def event_details(request, slug):
         logger.warning(f"[event_details] 401 — user {user} has no manager or steward role")
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = get_object_or_404(Event, slug=slug, company=company)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "PATCH":
         serializer = EventSerializer(event, data=request.data, partial=True)
@@ -385,6 +385,7 @@ def event_details(request, slug):
         'labor_requirements': labor_requirement_serializer.data,
     }
     return Response(context)
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
