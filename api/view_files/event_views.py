@@ -195,7 +195,7 @@ def send_event_messages(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = get_object_or_404(Event, slug=slug, company=company)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
 
     queued_requests = LaborRequest.objects.filter(
@@ -416,7 +416,7 @@ def generate_signin_station(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = get_object_or_404(Event, slug=slug, company=company)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
 
     # Create temp user for TemporaryScanner FK

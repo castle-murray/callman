@@ -334,7 +334,7 @@ def send_labor_requirement_messages(request, slug):
     event = call_time.event
     if event.company != company:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     queued_requests = LaborRequest.objects.filter(
         labor_requirement=labor_requirement,

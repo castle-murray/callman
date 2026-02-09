@@ -44,7 +44,7 @@ def add_call_time(request, slug):
     else:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     event = get_object_or_404(Event, slug=slug, company=company)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "POST":
         request.data['event'] = event.id
@@ -624,7 +624,7 @@ def delete_labor_requirement(request, slug):
     event = call_time.event
     if event.company != company:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
-    if hasattr(user, 'steward') and event.steward != user.steward:
+    if hasattr(user, 'steward') and not hasattr(user, 'manager') and event.steward != user.steward:
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
     if request.method == "DELETE":
         labor_requirement.delete()
