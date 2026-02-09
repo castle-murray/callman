@@ -18,8 +18,9 @@ from django.contrib.auth.models import User
 from datetime import timedelta
 from django.utils import timezone
 from callManager.utils.email import send_custom_email
-from api.utils import frontend_url
+from .utils import get_client_ip
 import json
+from api.utils import frontend_url
 from django.conf import settings
 
 
@@ -32,6 +33,8 @@ from django.conf import settings
 def login_view(request):
     if request.method == "POST":
         data = json.loads(request.body)
+        real_ip = get_client_ip(request)
+        request.META['REMOTE_ADDR'] = real_ip
         username = data.get('username')
         password = data.get('password')
         user = authenticate(request, username=username, password=password)
