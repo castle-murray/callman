@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from callManager.models import AltPhone, LaborRequest, LaborType, UserProfile, Worker
+from callManager.models import AltPhone, LaborRequest, LaborType, UserProfile, Worker, RegistrationToken
 from api.serializers import LaborTypeSerializer, WorkerSerializer
 
 def valid_phone_number(phone_number):
