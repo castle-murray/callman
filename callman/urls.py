@@ -14,6 +14,6 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('secrets/', admin.site.urls),
     path("__reload__/", include("django_browser_reload.urls")),
-    path("", include("callManager.urls")),
-    path("api/", include("api.urls")),
+    path("app/", include("callManager.urls")),
+    path("", include("api.urls")),
 ]
