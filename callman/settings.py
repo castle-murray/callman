@@ -136,6 +136,9 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 SERVER_EMAIL = os.environ.get('EMAIL_HOST_USER')
 
+SALES_EMAIL_HOST_USER = os.environ.get('SALES_EMAIL_HOST_USER')
+SALES_EMAIL_HOST_PASSWORD = os.environ.get('SALES_EMAIL_HOST_PASSWORD')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

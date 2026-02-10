@@ -17,6 +17,7 @@ from api.view_files import (
         time_tracking,
         owner_dashboard,
         user_views,
+        contact_views,
         )
 from api.view_files.event_views import send_event_messages, confirm_requests
 from api.view_files.notifications import notifications, mark_as_read, delete_notification, clear_all_notifications, clear_read_notifications
@@ -88,4 +89,5 @@ urlpatterns = [
     path('event/<slug:slug>/generate-station/', event_views.generate_signin_station),
     path('station/<uuid:token>/validate/', time_tracking.validate_station),
     path('station/<uuid:token>/clock/', time_tracking.station_clock),
+    path('contact/', contact_views.contact_form),
 ]
