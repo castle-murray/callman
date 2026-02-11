@@ -69,6 +69,8 @@ urlpatterns = [
     path('declined-count/', request_views.declined_count),
     path('sms-count/', sms_views.sms_count),
     path('workers/', worker_views.list_workers),
+    path('workers/import/', worker_views.import_workers),
+    path('workers/import-contacts/', worker_views.import_contacts_json),
     path('workers/<slug:slug>/history/', worker_views.worker_history),
     path('call-times/<slug:slug>/add-labor/', call_times.add_labor_to_call),
     path('call-times/<slug:slug>/requests/', request_views.call_time_list),

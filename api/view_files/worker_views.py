@@ -1,7 +1,10 @@
+from io import TextIOWrapper
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, parser_classes
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from callManager.models import AltPhone, LaborRequest, LaborType, UserProfile, Worker, RegistrationToken
@@ -189,4 +192,142 @@ def worker_history(request, slug):
         'ncns_requests': LaborRequestSerializer(ncns_requests, many=True).data,
         'pending_requests': LaborRequestSerializer(pending_requests, many=True).data,
         'available_requests': LaborRequestSerializer(available_requests, many=True).data,
+    })
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser])
+def import_workers(request):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    company = user.manager.company
+
+    vcf_file_obj = request.FILES.get('file')
+    if not vcf_file_obj:
+        return Response({'status': 'error', 'message': 'No file provided'}, status=400)
+    if not vcf_file_obj.name.endswith('.vcf'):
+        return Response({'status': 'error', 'message': 'File must be a .vcf file'}, status=400)
+
+    vcf_file = TextIOWrapper(vcf_file_obj.file, encoding='utf-8')
+    imported = 0
+    skipped = 0
+    errors = []
+    current_name = None
+    current_phones = []
+
+    for line in vcf_file:
+        line = line.strip()
+        try:
+            if line.startswith('END:VCARD'):
+                if current_phones:
+                    primary_phone = valid_phone_number(current_phones[0]['number'])
+                    if not primary_phone:
+                        errors.append(f"Invalid phone number for {current_name or 'Unnamed'}")
+                        current_name = None
+                        current_phones = []
+                        continue
+                    worker, created = Worker.objects.get_or_create(
+                        phone_number=primary_phone,
+                        company=company,
+                        defaults={'name': current_name.strip() if current_name else 'Unnamed'},
+                    )
+                    if created:
+                        imported += 1
+                        for extra in current_phones[1:]:
+                            alt_num = valid_phone_number(extra['number'])
+                            if alt_num:
+                                AltPhone.objects.get_or_create(
+                                    worker=worker,
+                                    phone_number=alt_num,
+                                    defaults={'label': extra.get('label', '')},
+                                )
+                    else:
+                        skipped += 1
+                current_name = None
+                current_phones = []
+            elif line.startswith('FN:'):
+                current_name = line[3:].strip()
+            elif line.startswith('TEL'):
+                # Parse label from TEL params: TEL;CELL:, TEL;HOME:, TEL;TYPE=CELL:, TEL;CELL;PREF:
+                label = ''
+                header, _, number = line.partition(':')
+                params = header.split(';')[1:]  # everything after TEL
+                for param in params:
+                    p = param.upper().strip()
+                    if p in ('PREF', 'VOICE', 'ENCODING=QUOTED-PRINTABLE'):
+                        continue
+                    if p.startswith('TYPE='):
+                        label = param.split('=', 1)[1].strip()
+                    elif not label:
+                        label = param.strip()
+                if number.strip():
+                    current_phones.append({'number': number.strip(), 'label': label})
+        except Exception:
+            errors.append(f"Failed to import: {current_name or 'Unnamed'}")
+
+    return Response({
+        'imported': imported,
+        'skipped': skipped,
+        'errors': errors,
+    })
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def import_contacts_json(request):
+    user = request.user
+    if not hasattr(user, 'manager'):
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=401)
+    company = user.manager.company
+
+    contacts = request.data.get('contacts', [])
+    if not contacts:
+        return Response({'status': 'error', 'message': 'No contacts provided'}, status=400)
+
+    imported = 0
+    skipped = 0
+    errors = []
+
+    for contact in contacts:
+        name = contact.get('name', '').strip() or 'Unnamed'
+        phone_numbers = contact.get('phone_numbers', [])
+        # Backwards compat: single phone_number field
+        if not phone_numbers and contact.get('phone_number'):
+            phone_numbers = [{'phone_number': contact['phone_number']}]
+        if not phone_numbers:
+            errors.append(f"No phone number for {name}")
+            continue
+        primary = valid_phone_number(phone_numbers[0].get('phone_number', ''))
+        if not primary:
+            errors.append(f"Invalid phone number for {name}")
+            continue
+        try:
+            worker, created = Worker.objects.get_or_create(
+                phone_number=primary,
+                company=company,
+                defaults={'name': name},
+            )
+            if created:
+                imported += 1
+                for extra in phone_numbers[1:]:
+                    alt_num = valid_phone_number(extra.get('phone_number', ''))
+                    if alt_num:
+                        AltPhone.objects.get_or_create(
+                            worker=worker,
+                            phone_number=alt_num,
+                            defaults={'label': extra.get('label', '')},
+                        )
+            else:
+                skipped += 1
+        except Exception:
+            errors.append(f"Failed to import: {name}")
+
+    return Response({
+        'imported': imported,
+        'skipped': skipped,
+        'errors': errors,
     })
