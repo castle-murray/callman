@@ -297,6 +297,10 @@ def confirm_requests(request, slug, event_token):
                             labor_request.save()
                             notif_message = f"{worker.name} confirmed for {event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}"
                             notify(labor_request.id, 'Confirmed', notif_message)
+            elif response == 'no':
+                notif_message = f"{worker.name} declined {event.event_name} - {labor_request.labor_requirement.call_time.name} - {labor_request.labor_requirement.labor_type.name}"
+                notify(labor_request.id, 'Declined', notif_message)
+
         return Response({'status': 'success'})
 
     # Serialize data
